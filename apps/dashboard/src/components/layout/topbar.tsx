@@ -134,7 +134,7 @@ export function Topbar() {
               <img
                 src={settings.customerLogoUrl}
                 alt={settings.customerName ?? "Logo"}
-                className="h-8 max-w-[120px] object-contain"
+                className="h-11 max-w-[160px] object-contain"
               />
             ) : (
               <span className="text-sm font-semibold text-heading">{settings.customerName}</span>
