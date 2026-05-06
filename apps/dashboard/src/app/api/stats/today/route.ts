@@ -18,9 +18,6 @@ export async function GET() {
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     const sql = `
-      -- WICHTIG: cdr_answered_at = Queue nimmt sofort an (in ms) → nutzlos für Wartezeit!
-      -- Korrekte Wartezeit = cdr_ended_at - cdr_started_at (wie lange der Anruf in der Queue war)
-      -- "abandoned" existiert nicht → korrekt: src_participant_terminated
       WITH incoming_queue_calls AS (
         SELECT
           q.main_call_history_id,
@@ -37,7 +34,6 @@ export async function GET() {
           AND q.cdr_started_at < $2
           AND q.source_entity_type != 'queue'
       ),
-      -- Direkt von Agent angenommen (first hop → extension)
       direct_answered AS (
         SELECT DISTINCT iqc.main_call_history_id
         FROM incoming_queue_calls iqc
@@ -57,14 +53,29 @@ export async function GET() {
           AND q2.destination_dn_type = 'queue'
         JOIN public.cdroutput q3 ON q3.cdr_id = q2.continued_in_cdr_id
           AND q3.destination_dn_type = 'queue'
+      ),
+      -- Max-Wartezeit über ALLE Queue-Segmente (inkl. Abwurf-Queues)
+      max_wait AS (
+        SELECT destination_dn_name,
+          EXTRACT(EPOCH FROM (cdr_ended_at - cdr_started_at)) AS secs
+        FROM public.cdroutput
+        WHERE destination_dn_type = 'queue'
+          AND source_participant_is_incoming = true
+          AND cdr_started_at >= $1
+          AND cdr_started_at < $2
+        ORDER BY secs DESC
+        LIMIT 1
       )
       SELECT
-        COUNT(*)::int                                                                AS total_incoming,
-        (SELECT COUNT(*)::int FROM direct_answered)                                  AS answered,
-        COUNT(*) FILTER (WHERE termination_reason = 'src_participant_terminated')::int AS abandoned,
-        COUNT(*) FILTER (WHERE wait_seconds > 20)::int                              AS not_in_20s,
-        (SELECT COUNT(*)::int FROM abwurf1)                                          AS abwurf1_reached,
-        (SELECT COUNT(*)::int FROM abwurf2)                                          AS abwurf2_reached
+        COUNT(*)::int                                                                      AS total_incoming,
+        (SELECT COUNT(*)::int FROM direct_answered)                                        AS answered,
+        COUNT(*) FILTER (WHERE termination_reason = 'src_participant_terminated')::int    AS abandoned,
+        COUNT(*) FILTER (WHERE wait_seconds > 20)::int                                    AS not_in_20s,
+        ROUND(AVG(wait_seconds)::numeric, 0)::int                                         AS avg_wait_seconds,
+        (SELECT ROUND(secs::numeric, 0)::int FROM max_wait)                               AS max_wait_seconds,
+        (SELECT destination_dn_name FROM max_wait)                                        AS max_wait_queue,
+        (SELECT COUNT(*)::int FROM abwurf1)                                                AS abwurf1_reached,
+        (SELECT COUNT(*)::int FROM abwurf2)                                                AS abwurf2_reached
       FROM incoming_queue_calls;
     `;
 
@@ -76,6 +87,9 @@ export async function GET() {
       answered: Number(row.answered ?? 0),
       abandoned: Number(row.abandoned ?? 0),
       not_in_20s: Number(row.not_in_20s ?? 0),
+      avg_wait_seconds: Number(row.avg_wait_seconds ?? 0),
+      max_wait_seconds: Number(row.max_wait_seconds ?? 0),
+      max_wait_queue: String(row.max_wait_queue ?? ""),
       abwurf1_reached: Number(row.abwurf1_reached ?? 0),
       abwurf2_reached: Number(row.abwurf2_reached ?? 0),
     };

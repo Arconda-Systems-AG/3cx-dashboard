@@ -9,21 +9,19 @@ import {
   useQueues,
   useDepartments,
   useToday,
-  useSlaLive,
   useHourly,
 } from "@/hooks/use-data";
 import {
   Phone,
   Users,
   ListOrdered,
-  AlertTriangle,
-  CheckCircle2,
   ChevronDown,
   ChevronUp,
-  TrendingDown,
   Clock,
   PhoneIncoming,
   PhoneMissed,
+  CheckCircle2,
+  Timer,
 } from "lucide-react";
 import {
   BarChart,
@@ -32,7 +30,6 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from "recharts";
 import { TiltCard } from "@/components/tilt-card";
 
@@ -61,7 +58,6 @@ export default function DashboardPage() {
   const { data: queuesData } = useQueues();
   const { data: deptData } = useDepartments();
   const { data: todayData } = useToday();
-  const { data: slaData } = useSlaLive();
   const { data: hourlyData } = useHourly();
   const [selectedDeptId, setSelectedDeptId] = useState<string>("");
   const [expandedQueues, setExpandedQueues] = useState<Set<number>>(new Set());
@@ -110,14 +106,6 @@ export default function DashboardPage() {
   const totalIncoming = today?.total_incoming ?? 0;
   const answerRate = totalIncoming > 0 ? Math.round((answered / totalIncoming) * 100) : null;
 
-  // SLA-Violations
-  const violations = slaData?.violations ?? [];
-
-  // Abwurf-Funnel
-  const abwurf1 = today?.abwurf1_reached ?? 0;
-  const abwurf2 = today?.abwurf2_reached ?? 0;
-  const directAnswered = answered - abwurf1;
-
   // Stunden-Chart
   const chartData = (hourlyData?.buckets ?? []).map((b) => ({
     hour: formatHour(b.hour),
@@ -156,159 +144,112 @@ export default function DashboardPage() {
         </GlassCard>
       )}
 
-      {/* ── Tages-KPIs ── */}
+      {/* ── Tages-KPIs (6 Kacheln) ── */}
       {today && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <TiltCard glowColor="rgba(59,130,246,0.3)" className="p-5" style={{ animation: "var(--animate-float)" }}>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+          {/* 1 — Eingehend */}
+          <TiltCard glowColor="rgba(59,130,246,0.3)" className="p-4" style={{ animation: "var(--animate-float)" }}>
             <div className="absolute inset-x-0 top-0 h-[2px] bg-blue-500 opacity-70" />
-            <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/10">
-              <PhoneIncoming className="h-4 w-4 text-blue-400" />
+            <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10">
+              <PhoneIncoming className="h-3.5 w-3.5 text-blue-400" />
             </div>
-            <p className="text-3xl font-bold tabular-nums tracking-tight text-blue-400">{totalIncoming}</p>
+            <p className="text-2xl font-bold tabular-nums tracking-tight text-blue-400">{totalIncoming}</p>
             <p className="mt-1 text-xs font-medium text-muted">Eingehend heute</p>
           </TiltCard>
 
-          <TiltCard glowColor={answerRate !== null && answerRate >= 80 ? "rgba(16,185,129,0.3)" : "rgba(245,158,11,0.3)"} className="p-5" style={{ animation: "var(--animate-float)", animationDelay: "1s" }}>
+          {/* 2 — Angenommen % */}
+          <TiltCard glowColor={answerRate !== null && answerRate >= 80 ? "rgba(16,185,129,0.3)" : "rgba(245,158,11,0.3)"} className="p-4" style={{ animation: "var(--animate-float)", animationDelay: "0.2s" }}>
             <div className={`absolute inset-x-0 top-0 h-[2px] ${answerRate !== null && answerRate >= 80 ? "bg-emerald-500" : "bg-amber-500"} opacity-70`} />
-            <div className={`mb-3 flex h-9 w-9 items-center justify-center rounded-lg ${answerRate !== null && answerRate >= 80 ? "bg-emerald-500/10" : "bg-amber-500/10"}`}>
-              <CheckCircle2 className={`h-4 w-4 ${answerRate !== null && answerRate >= 80 ? "text-emerald-400" : "text-amber-400"}`} />
+            <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${answerRate !== null && answerRate >= 80 ? "bg-emerald-500/10" : "bg-amber-500/10"}`}>
+              <CheckCircle2 className={`h-3.5 w-3.5 ${answerRate !== null && answerRate >= 80 ? "text-emerald-400" : "text-amber-400"}`} />
             </div>
-            <p className={`text-3xl font-bold tabular-nums tracking-tight ${answerRate !== null && answerRate >= 80 ? "text-emerald-400" : "text-amber-400"}`}>
+            <p className={`text-2xl font-bold tabular-nums tracking-tight ${answerRate !== null && answerRate >= 80 ? "text-emerald-400" : "text-amber-400"}`}>
               {answerRate !== null ? `${answerRate}%` : "–"}
             </p>
             <p className="mt-1 text-xs font-medium text-muted">Angenommen</p>
           </TiltCard>
 
-          <TiltCard glowColor={today.not_in_20s > 0 ? "rgba(239,68,68,0.35)" : "rgba(16,185,129,0.3)"} className="p-5" style={{ animation: "var(--animate-float)", animationDelay: "2s" }}>
+          {/* 3 — Nicht in 20s */}
+          <TiltCard glowColor={today.not_in_20s > 0 ? "rgba(239,68,68,0.35)" : "rgba(16,185,129,0.3)"} className="p-4" style={{ animation: "var(--animate-float)", animationDelay: "0.4s" }}>
             <div className={`absolute inset-x-0 top-0 h-[2px] ${today.not_in_20s > 0 ? "bg-red-500" : "bg-emerald-500"} opacity-70`} />
-            <div className={`mb-3 flex h-9 w-9 items-center justify-center rounded-lg ${today.not_in_20s > 0 ? "bg-red-500/10" : "bg-emerald-500/10"}`}>
-              <Clock className={`h-4 w-4 ${today.not_in_20s > 0 ? "text-red-400" : "text-emerald-400"}`} />
+            <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${today.not_in_20s > 0 ? "bg-red-500/10" : "bg-emerald-500/10"}`}>
+              <Clock className={`h-3.5 w-3.5 ${today.not_in_20s > 0 ? "text-red-400" : "text-emerald-400"}`} />
             </div>
-            <p className={`text-3xl font-bold tabular-nums tracking-tight ${today.not_in_20s > 0 ? "text-red-400" : "text-emerald-400"}`}>
+            <p className={`text-2xl font-bold tabular-nums tracking-tight ${today.not_in_20s > 0 ? "text-red-400" : "text-emerald-400"}`}>
               {today.not_in_20s}
             </p>
             <p className="mt-1 text-xs font-medium text-muted">Nicht in 20 Sek.</p>
           </TiltCard>
 
-          <TiltCard glowColor={today.abandoned > 0 ? "rgba(249,115,22,0.3)" : "rgba(16,185,129,0.3)"} className="p-5" style={{ animation: "var(--animate-float)", animationDelay: "3s" }}>
+          {/* 4 — Abgebrochen */}
+          <TiltCard glowColor={today.abandoned > 0 ? "rgba(249,115,22,0.3)" : "rgba(16,185,129,0.3)"} className="p-4" style={{ animation: "var(--animate-float)", animationDelay: "0.6s" }}>
             <div className={`absolute inset-x-0 top-0 h-[2px] ${today.abandoned > 0 ? "bg-orange-500" : "bg-emerald-500"} opacity-70`} />
-            <div className={`mb-3 flex h-9 w-9 items-center justify-center rounded-lg ${today.abandoned > 0 ? "bg-orange-500/10" : "bg-emerald-500/10"}`}>
-              <PhoneMissed className={`h-4 w-4 ${today.abandoned > 0 ? "text-orange-400" : "text-emerald-400"}`} />
+            <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${today.abandoned > 0 ? "bg-orange-500/10" : "bg-emerald-500/10"}`}>
+              <PhoneMissed className={`h-3.5 w-3.5 ${today.abandoned > 0 ? "text-orange-400" : "text-emerald-400"}`} />
             </div>
-            <p className={`text-3xl font-bold tabular-nums tracking-tight ${today.abandoned > 0 ? "text-orange-400" : "text-emerald-400"}`}>
+            <p className={`text-2xl font-bold tabular-nums tracking-tight ${today.abandoned > 0 ? "text-orange-400" : "text-emerald-400"}`}>
               {today.abandoned}
             </p>
             <p className="mt-1 text-xs font-medium text-muted">Abgebrochen</p>
           </TiltCard>
+
+          {/* 5 — Ø Wartezeit */}
+          <TiltCard glowColor="rgba(139,92,246,0.3)" className="p-4" style={{ animation: "var(--animate-float)", animationDelay: "0.8s" }}>
+            <div className="absolute inset-x-0 top-0 h-[2px] bg-violet-500 opacity-70" />
+            <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10">
+              <Timer className="h-3.5 w-3.5 text-violet-400" />
+            </div>
+            <p className="text-2xl font-bold tabular-nums tracking-tight text-violet-400">
+              {formatWait(today.avg_wait_seconds)}
+            </p>
+            <p className="mt-1 text-xs font-medium text-muted">Ø Wartezeit</p>
+          </TiltCard>
+
+          {/* 6 — Max. Wartezeit */}
+          <TiltCard glowColor={today.max_wait_seconds > 60 ? "rgba(239,68,68,0.35)" : "rgba(245,158,11,0.3)"} className="p-4" style={{ animation: "var(--animate-float)", animationDelay: "1s" }}>
+            <div className={`absolute inset-x-0 top-0 h-[2px] ${today.max_wait_seconds > 60 ? "bg-red-500" : "bg-amber-500"} opacity-70`} />
+            <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${today.max_wait_seconds > 60 ? "bg-red-500/10" : "bg-amber-500/10"}`}>
+              <Clock className={`h-3.5 w-3.5 ${today.max_wait_seconds > 60 ? "text-red-400" : "text-amber-400"}`} />
+            </div>
+            <p className={`text-2xl font-bold tabular-nums tracking-tight ${today.max_wait_seconds > 60 ? "text-red-400" : "text-amber-400"}`}>
+              {formatWait(today.max_wait_seconds)}
+            </p>
+            <p className="mt-1 text-xs font-medium text-muted truncate" title={today.max_wait_queue || "Max. Wartezeit"}>
+              {today.max_wait_queue ? `Max. · ${today.max_wait_queue.replace(" Zentrale", "").replace(" Abwurf", "↩")}` : "Max. Wartezeit"}
+            </p>
+          </TiltCard>
         </div>
       )}
 
-      {/* ── SLA Live Widget ── */}
-      {violations.length > 0 ? (
-        <GlassCard className="p-5 ring-1 ring-inset ring-red-500/30 bg-red-500/5">
-          <div className="mb-3 flex items-center gap-2">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
-            </span>
-            <h2 className="text-sm font-semibold text-red-300">
-              Warten länger als 20 Sekunden — {violations.length} {violations.length === 1 ? "Anruf" : "Anrufe"}
-            </h2>
-          </div>
-          <div className="space-y-2">
-            {violations.map((v) => (
-              <div key={v.callId} className="flex items-center justify-between rounded-lg bg-red-500/10 px-3 py-2">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 text-red-400" />
-                  <span className="text-sm text-body">{v.caller}</span>
-                  <span className="text-xs text-muted">→ {v.callee}</span>
-                </div>
-                <span className="tabular-nums text-sm font-bold text-red-300">{formatWait(v.waitingSeconds)}</span>
-              </div>
-            ))}
-          </div>
+      {/* ── Stunden-Chart (full width) ── */}
+      {chartData.length > 0 && (
+        <GlassCard className="p-5">
+          <h2 className="mb-4 text-sm font-semibold text-heading">Anrufaufkommen heute (stündlich)</h2>
+          <ResponsiveContainer width="100%" height={160}>
+            <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+              <XAxis
+                dataKey="hour"
+                tick={{ fontSize: 10, fill: "var(--color-muted, #64748b)" }}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis
+                tick={{ fontSize: 10, fill: "var(--color-muted, #64748b)" }}
+                tickLine={false}
+                axisLine={false}
+                allowDecimals={false}
+              />
+              <Tooltip
+                contentStyle={{ background: "#0f1f35", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", fontSize: "12px" }}
+                labelStyle={{ color: "#e2e8f0" }}
+                itemStyle={{ color: "#94a3b8" }}
+              />
+              <Bar dataKey="Eingehend" fill="#3b82f6" radius={[3, 3, 0, 0]} maxBarSize={28} />
+              <Bar dataKey="Angenommen" fill="#10b981" radius={[3, 3, 0, 0]} maxBarSize={28} />
+              <Bar dataKey="Abgebrochen" fill="#f97316" radius={[3, 3, 0, 0]} maxBarSize={28} />
+            </BarChart>
+          </ResponsiveContainer>
         </GlassCard>
-      ) : slaData !== undefined ? (
-        <GlassCard className="p-4 ring-1 ring-inset ring-emerald-500/20">
-          <div className="flex items-center gap-2 text-emerald-400">
-            <CheckCircle2 className="h-4 w-4" />
-            <span className="text-sm font-medium">Alle Anrufe werden innerhalb von 20 Sekunden angenommen</span>
-          </div>
-        </GlassCard>
-      ) : null}
-
-      {/* ── Abwurf-Funnel + Stunden-Chart ── */}
-      {(today || chartData.length > 0) && (
-        <div className="grid gap-4 lg:grid-cols-5">
-          {/* Abwurf-Funnel */}
-          {today && (
-            <GlassCard className="p-5 lg:col-span-2">
-              <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-heading">
-                <TrendingDown className="h-4 w-4 text-primary" />
-                Abwurf-Funnel heute
-              </h2>
-              <div className="space-y-3">
-                {[
-                  { label: "Direkt angenommen", value: Math.max(0, directAnswered), color: "bg-emerald-500", textColor: "text-emerald-400" },
-                  { label: "Abwurf 1 erreicht", value: abwurf1, color: "bg-amber-500", textColor: "text-amber-400" },
-                  { label: "Abwurf 2 erreicht", value: abwurf2, color: "bg-red-500", textColor: "text-red-400" },
-                ].map((item) => {
-                  const pct = totalIncoming > 0 ? Math.round((item.value / totalIncoming) * 100) : 0;
-                  return (
-                    <div key={item.label}>
-                      <div className="mb-1 flex items-center justify-between">
-                        <span className="text-xs text-muted">{item.label}</span>
-                        <span className={`text-xs font-semibold ${item.textColor}`}>{item.value} ({pct}%)</span>
-                      </div>
-                      <div className="h-2 w-full overflow-hidden rounded-full bg-surface-muted">
-                        <div
-                          className={`h-full rounded-full transition-all duration-700 ${item.color}`}
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-                <div className="mt-2 border-t border-glass pt-2 flex justify-between text-xs text-muted">
-                  <span>Gesamt eingehend heute</span>
-                  <span className="font-semibold text-secondary">{totalIncoming}</span>
-                </div>
-              </div>
-            </GlassCard>
-          )}
-
-          {/* Stunden-Chart */}
-          {chartData.length > 0 && (
-            <GlassCard className="p-5 lg:col-span-3">
-              <h2 className="mb-4 text-sm font-semibold text-heading">Anrufaufkommen heute (stündlich)</h2>
-              <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                  <XAxis
-                    dataKey="hour"
-                    tick={{ fontSize: 10, fill: "var(--color-muted, #64748b)" }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 10, fill: "var(--color-muted, #64748b)" }}
-                    tickLine={false}
-                    axisLine={false}
-                    allowDecimals={false}
-                  />
-                  <Tooltip
-                    contentStyle={{ background: "#0f1f35", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", fontSize: "12px" }}
-                    labelStyle={{ color: "#e2e8f0" }}
-                    itemStyle={{ color: "#94a3b8" }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }} />
-                  <Bar dataKey="Eingehend" fill="#3b82f6" radius={[3, 3, 0, 0]} maxBarSize={24} />
-                  <Bar dataKey="Angenommen" fill="#10b981" radius={[3, 3, 0, 0]} maxBarSize={24} />
-                  <Bar dataKey="Abgebrochen" fill="#f97316" radius={[3, 3, 0, 0]} maxBarSize={24} />
-                </BarChart>
-              </ResponsiveContainer>
-            </GlassCard>
-          )}
-        </div>
       )}
 
       {/* ── Warteschlangen (kompakt) ── */}
@@ -319,7 +260,7 @@ export default function DashboardPage() {
             Warteschlangen
             <span className="ml-auto text-xs text-muted font-normal">{onlineCount} Nebenstellen online</span>
           </h2>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredQueues.map((queue) => {
               const totalAgents = queue.Agents?.length ?? 0;
               const loggedIn = queue.LoggedInAgents ?? 0;

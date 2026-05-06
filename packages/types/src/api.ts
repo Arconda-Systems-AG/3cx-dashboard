@@ -190,6 +190,9 @@ export interface TodayStats {
   answered: number;           // davon angenommen
   abandoned: number;          // davon abgebrochen (Kunde hat aufgelegt)
   not_in_20s: number;         // Wartezeit > 20s (angenommen ODER abgebrochen)
+  avg_wait_seconds: number;   // Ø Wartezeit in erster Queue (Sekunden)
+  max_wait_seconds: number;   // Längste Wartezeit über alle Queue-Segmente (Sekunden)
+  max_wait_queue: string;     // Queue-Name mit längster Wartezeit
   abwurf1_reached: number;    // Calls die Abwurf-Queue 1 erreichten
   abwurf2_reached: number;    // Calls die Abwurf-Queue 2 erreichten
 }
