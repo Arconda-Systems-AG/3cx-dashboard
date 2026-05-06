@@ -103,6 +103,25 @@ export default function QueuesPage() {
                   </div>
                 </div>
 
+                {/* Auslastungsbalken */}
+                {totalAgents > 0 && (
+                  <div className="mb-4">
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <span className="text-xs text-muted">Auslastung</span>
+                      <span className="text-xs font-semibold text-secondary">{Math.round((loggedIn / totalAgents) * 100)}%</span>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-muted">
+                      <div
+                        className="h-full rounded-full transition-all duration-700"
+                        style={{
+                          width: `${Math.round((loggedIn / totalAgents) * 100)}%`,
+                          background: loggedIn === 0 ? '#475569' : 'linear-gradient(90deg, #10b981, #34d399)',
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {/* Agenten-Liste */}
                 {queue.Agents && queue.Agents.length > 0 && (
                   <div>

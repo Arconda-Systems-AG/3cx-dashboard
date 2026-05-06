@@ -36,7 +36,7 @@ export function Sidebar() {
     <aside className="flex h-screen w-56 flex-shrink-0 flex-col border-r border-glass bg-surface-glass backdrop-blur-xl">
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 border-b border-glass px-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary/30 to-primary/10 ring-1 ring-inset ring-primary/20 shadow-[0_0_12px_rgba(240,128,23,0.15)]">
           <Phone className="h-4 w-4 text-primary" />
         </div>
         <div>
@@ -70,7 +70,7 @@ export function Sidebar() {
                   className={cn(
                     "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
                     isActive
-                      ? "bg-primary/15 text-primary"
+                      ? "bg-primary/12 text-primary ring-1 ring-inset ring-primary/20 shadow-[0_0_20px_rgba(240,128,23,0.08)]"
                       : "text-secondary hover:bg-surface-muted hover:text-heading"
                   )}
                 >

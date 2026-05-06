@@ -63,12 +63,12 @@ export default function DashboardPage() {
   const recentMissed = missedData?.missed_count ?? null;
 
   const stats = [
-    { label: "Aktive Anrufe", value: filteredCalls.length, icon: Phone, color: "text-emerald-400", bg: "bg-emerald-500/10" },
-    { label: "In Warteschlangen", value: activeInQueues, icon: Phone, color: "text-amber-400", bg: "bg-amber-500/10" },
-    { label: "Nebenstellen online", value: onlineCount, icon: Users, color: "text-blue-400", bg: "bg-blue-500/10" },
-    { label: "Offline", value: offlineCount, icon: Users, color: "text-red-400", bg: "bg-red-500/10" },
-    { label: "Warteschlangen", value: filteredQueues.length, icon: ListOrdered, color: "text-amber-400", bg: "bg-amber-500/10" },
-    ...(recentMissed !== null ? [{ label: "Verpasst/Überlauf (60 Min)", value: recentMissed, icon: Phone, color: recentMissed > 0 ? "text-red-400" : "text-muted", bg: recentMissed > 0 ? "bg-red-500/10" : "bg-surface-muted" }] : []),
+    { label: "Aktive Anrufe", value: filteredCalls.length, icon: Phone, color: "text-emerald-400", bg: "bg-emerald-500/10", accent: "bg-emerald-500" },
+    { label: "In Warteschlangen", value: activeInQueues, icon: Phone, color: "text-amber-400", bg: "bg-amber-500/10", accent: "bg-amber-500" },
+    { label: "Online", value: onlineCount, icon: Users, color: "text-blue-400", bg: "bg-blue-500/10", accent: "bg-blue-500" },
+    { label: "Offline", value: offlineCount, icon: Users, color: "text-red-400", bg: "bg-red-500/10", accent: "bg-red-500" },
+    { label: "Warteschlangen", value: filteredQueues.length, icon: ListOrdered, color: "text-violet-400", bg: "bg-violet-500/10", accent: "bg-violet-500" },
+    ...(recentMissed !== null ? [{ label: "Verpasst (60 Min)", value: recentMissed, icon: Phone, color: recentMissed > 0 ? "text-red-400" : "text-muted", bg: recentMissed > 0 ? "bg-red-500/10" : "bg-surface-muted", accent: recentMissed > 0 ? "bg-red-500" : "bg-gray-600" }] : []),
   ];
 
   return (
@@ -103,24 +103,25 @@ export default function DashboardPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         {stats.map((stat) => (
-          <GlassCard key={stat.label} className="p-5">
-            <div className="flex items-center gap-3">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${stat.bg}`}>
-                <stat.icon className={`h-5 w-5 ${stat.color}`} />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-heading">{stat.value}</p>
-                <p className="text-xs text-muted">{stat.label}</p>
-              </div>
+          <GlassCard key={stat.label} className="relative overflow-hidden p-5">
+            {/* Farbige Akzentlinie oben */}
+            <div className={`absolute inset-x-0 top-0 h-[2px] ${stat.accent} opacity-70`} />
+            {/* Icon */}
+            <div className={`mb-4 flex h-9 w-9 items-center justify-center rounded-lg ${stat.bg}`}>
+              <stat.icon className={`h-4 w-4 ${stat.color}`} />
             </div>
+            {/* Große farbige Zahl */}
+            <p className={`text-3xl font-bold tabular-nums tracking-tight ${stat.color}`}>{stat.value}</p>
+            {/* Label */}
+            <p className="mt-1 text-xs font-medium leading-tight text-muted">{stat.label}</p>
           </GlassCard>
         ))}
       </div>
 
       {/* Aktive Anrufe */}
-      <GlassCard className="p-5">
+      <GlassCard className={`p-5 transition-all duration-500 ${filteredCalls.length > 0 ? "ring-1 ring-inset ring-emerald-500/15" : ""}`}>
         <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-heading">
-          <Activity className="h-4 w-4 text-primary" />
+          <Activity className={`h-4 w-4 ${filteredCalls.length > 0 ? "text-emerald-400" : "text-primary"}`} />
           Aktive Anrufe
           {filteredCalls.length > 0 && (
             <span className="ml-auto rounded-full bg-primary/15 px-2 py-0.5 text-xs text-primary">
@@ -198,6 +199,25 @@ export default function DashboardPage() {
                       <p className="text-xs text-muted">Gesamt</p>
                     </div>
                   </div>
+
+                  {/* Auslastungsbalken */}
+                  {totalAgents > 0 && (
+                    <div className="mb-3">
+                      <div className="mb-1 flex items-center justify-between">
+                        <span className="text-xs text-muted">Auslastung</span>
+                        <span className="text-xs font-semibold text-secondary">{Math.round((loggedIn / totalAgents) * 100)}%</span>
+                      </div>
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-muted">
+                        <div
+                          className="h-full rounded-full transition-all duration-700"
+                          style={{
+                            width: `${Math.round((loggedIn / totalAgents) * 100)}%`,
+                            background: loggedIn === 0 ? '#475569' : 'linear-gradient(90deg, #10b981, #34d399)',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   {/* Agenten-Liste */}
                   {totalAgents > 0 && (
