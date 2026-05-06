@@ -54,18 +54,33 @@ export function Sidebar() {
 
       {/* Arconda Logo */}
       <div className={cn(
-        "flex items-center border-b border-glass",
-        collapsed ? "justify-center px-2 py-3" : "px-4 py-3"
+        "flex flex-col items-center border-b border-glass pt-4 pb-3",
+        collapsed ? "px-2" : "px-4"
       )}>
         <Image
           src="/arconda-logo.png"
           alt="Arconda"
-          width={collapsed ? 28 : 110}
-          height={28}
+          width={collapsed ? 24 : 130}
+          height={collapsed ? 24 : 34}
           className="object-contain transition-all duration-300"
-          style={{ maxHeight: 28 }}
           priority
         />
+        {!collapsed && (
+          <div className="mt-3 flex items-center gap-2.5 self-start">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary/30 to-primary/10 ring-1 ring-inset ring-primary/20 shadow-[0_0_12px_rgba(240,128,23,0.15)]">
+              <Phone className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <div className="text-sm font-bold text-heading">3CX</div>
+              <div className="text-xs text-muted">Dashboard</div>
+            </div>
+          </div>
+        )}
+        {collapsed && (
+          <div className="mt-2 flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary/30 to-primary/10 ring-1 ring-inset ring-primary/20">
+            <Phone className="h-3.5 w-3.5 text-primary" />
+          </div>
+        )}
       </div>
 
       {/* Navigation */}
