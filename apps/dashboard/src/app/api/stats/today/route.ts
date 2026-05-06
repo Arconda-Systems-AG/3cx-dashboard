@@ -53,7 +53,10 @@ export async function GET() {
         COUNT(*)::int                                                        AS total_incoming,
         COUNT(cdr_answered_at)::int                                          AS answered,
         COUNT(*) FILTER (WHERE termination_reason = 'abandoned')::int       AS abandoned,
-        COUNT(*) FILTER (WHERE wait_seconds > 20)::int                      AS not_in_20s,
+        COUNT(*) FILTER (WHERE
+          wait_seconds > 20
+          OR main_call_history_id IN (SELECT main_call_history_id FROM abwurf1)
+        )::int                                                              AS not_in_20s,
         (SELECT COUNT(*)::int FROM abwurf1)                                 AS abwurf1_reached,
         (SELECT COUNT(*)::int FROM abwurf2)                                 AS abwurf2_reached
       FROM incoming_queue_calls;

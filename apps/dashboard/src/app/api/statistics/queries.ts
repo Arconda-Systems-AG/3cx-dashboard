@@ -2546,44 +2546,66 @@ ORDER BY c.started_at DESC
       key: "kpi_sla",
       title: "SLA-Kennzahlen",
       type: "stat",
-      sql: `SELECT
-  COUNT(*)::int                                                         AS total_incoming,
-  COUNT(q.cdr_answered_at)::int                                        AS answered,
-  COUNT(*) FILTER (WHERE q.termination_reason = 'abandoned')::int     AS abandoned,
+      sql: `WITH incoming AS (
+  SELECT
+    q.main_call_history_id,
+    q.cdr_id,
+    q.cdr_answered_at,
+    q.cdr_ended_at,
+    q.cdr_started_at,
+    q.termination_reason,
+    q.continued_in_cdr_id
+  FROM public.cdroutput q
+  WHERE q.destination_dn_type = 'queue'
+    AND q.source_participant_is_incoming = true
+    AND q.source_entity_type != 'queue'
+    AND q.cdr_started_at >= $1
+    AND q.cdr_started_at <= $2
+),
+abwurf1 AS (
+  SELECT DISTINCT i.main_call_history_id
+  FROM incoming i
+  JOIN public.cdroutput q2 ON q2.cdr_id = i.continued_in_cdr_id
+    AND q2.destination_dn_type = 'queue'
+)
+SELECT
+  COUNT(*)::int                                                               AS total_incoming,
+  COUNT(cdr_answered_at)::int                                                AS answered,
+  COUNT(*) FILTER (WHERE termination_reason = 'abandoned')::int             AS abandoned,
   COUNT(*) FILTER (WHERE
-    EXTRACT(EPOCH FROM (COALESCE(q.cdr_answered_at, q.cdr_ended_at) - q.cdr_started_at)) > 20
-  )::int                                                               AS over_20s
-FROM public.cdroutput q
-WHERE q.destination_dn_type = 'queue'
-  AND q.source_participant_is_incoming = true
-  AND q.source_entity_type != 'queue'
-  AND q.cdr_started_at >= $1
-  AND q.cdr_started_at <= $2;`,
+    EXTRACT(EPOCH FROM (COALESCE(cdr_answered_at, cdr_ended_at) - cdr_started_at)) > 20
+    OR main_call_history_id IN (SELECT main_call_history_id FROM abwurf1)
+  )::int                                                                     AS over_20s
+FROM incoming;`,
     },
     {
       key: "sla_by_queue",
       title: "SLA nach Warteschlange",
       type: "table",
       sql: `SELECT
-  q.destination_dn_number                                                   AS queue_number,
-  q.destination_dn_name                                                     AS queue_name,
-  COUNT(*)::int                                                              AS total,
-  COUNT(q.cdr_answered_at)::int                                             AS answered,
-  COUNT(*) FILTER (WHERE wait_seconds > 20)::int                           AS over_20s,
-  ROUND(100.0 * COUNT(*) FILTER (WHERE wait_seconds > 20) / NULLIF(COUNT(*), 0), 1) AS over_20s_pct,
-  ROUND(AVG(wait_seconds)::numeric, 1)                                      AS avg_wait_seconds
+  q.destination_dn_number                                                        AS queue_number,
+  q.destination_dn_name                                                          AS queue_name,
+  COUNT(*)::int                                                                   AS total,
+  COUNT(q.cdr_answered_at)::int                                                  AS answered,
+  COUNT(*) FILTER (WHERE wait_seconds > 20 OR has_abwurf)::int                 AS over_20s,
+  ROUND(100.0 * COUNT(*) FILTER (WHERE wait_seconds > 20 OR has_abwurf) / NULLIF(COUNT(*), 0), 1) AS over_20s_pct,
+  ROUND(AVG(wait_seconds)::numeric, 1)                                           AS avg_wait_seconds
 FROM (
   SELECT
-    destination_dn_number,
-    destination_dn_name,
-    cdr_answered_at,
-    EXTRACT(EPOCH FROM (COALESCE(cdr_answered_at, cdr_ended_at) - cdr_started_at)) AS wait_seconds
-  FROM public.cdroutput
-  WHERE destination_dn_type = 'queue'
-    AND source_participant_is_incoming = true
-    AND source_entity_type != 'queue'
-    AND cdr_started_at >= $1
-    AND cdr_started_at <= $2
+    c.destination_dn_number,
+    c.destination_dn_name,
+    c.cdr_answered_at,
+    EXTRACT(EPOCH FROM (COALESCE(c.cdr_answered_at, c.cdr_ended_at) - c.cdr_started_at)) AS wait_seconds,
+    (q2.cdr_id IS NOT NULL) AS has_abwurf
+  FROM public.cdroutput c
+  LEFT JOIN public.cdroutput q2
+    ON q2.cdr_id = c.continued_in_cdr_id
+    AND q2.destination_dn_type = 'queue'
+  WHERE c.destination_dn_type = 'queue'
+    AND c.source_participant_is_incoming = true
+    AND c.source_entity_type != 'queue'
+    AND c.cdr_started_at >= $1
+    AND c.cdr_started_at <= $2
 ) q
 GROUP BY 1, 2
 ORDER BY total DESC;`,
