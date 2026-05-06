@@ -1,0 +1,2945 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_MYSQL",
+      "label": "mysql",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "mysql",
+      "pluginName": "MySQL"
+    }
+  ],
+  "__elements": {},
+  "__requires": [
+    {
+      "type": "panel",
+      "id": "barchart",
+      "name": "Bar chart",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "gauge",
+      "name": "Gauge",
+      "version": ""
+    },
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "12.2.0-16677249643"
+    },
+    {
+      "type": "datasource",
+      "id": "mysql",
+      "name": "MySQL",
+      "version": "12.2.0-16677249643"
+    },
+    {
+      "type": "panel",
+      "id": "piechart",
+      "name": "Pie chart",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "text",
+      "name": "Text",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Ring group dashboard analytics",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 7,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "# ${ring_group:text}",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.2.0-16677249643",
+      "type": "text",
+      "title": ""
+    },
+    {
+      "datasource": {
+        "type": "mysql",
+        "uid": "${DS_MYSQL}"
+      },
+      "description": "Gesamtzahl der eingegangenen Anrufe im Zeitraum",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 0,
+        "y": 2
+      },
+      "id": 8,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.2.0-16677249643",
+      "targets": [
+        {
+          "dataset": "panagianbo",
+          "datasource": {
+            "type": "mysql",
+            "uid": "${DS_MYSQL}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n  COUNT(DISTINCT rg.cdr_id) AS total_calls\r\nFROM public_cdroutput AS rg\r\nWHERE $__timeFilter(rg.cdr_started_at)\r\nAND ('${ring_group:value}' = 'All' OR rg.destination_dn_number = '${ring_group:value}')\r\nAND rg.destination_dn_type IN ('ring_group_ring_all', 'ring_group_hunt')\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Eingegangene Anrufe",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "total_calls": "Eingegangene Anrufe"
+            }
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "mysql",
+        "uid": "${DS_MYSQL}"
+      },
+      "description": "Anzahl der Anrufe, die erfolgreich angenommen wurden",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 3,
+        "y": 2
+      },
+      "id": 9,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.2.0-16677249643",
+      "targets": [
+        {
+          "dataset": "panagianbo",
+          "datasource": {
+            "type": "mysql",
+            "uid": "${DS_MYSQL}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n  COUNT(DISTINCT\r\n    CASE\r\n      WHEN rg.termination_reason IN ('continued_in', 'redirected') AND rg.termination_reason_details = 'polling' AND continued_in_cdr.cdr_id IS NOT NULL AND continued_in_cdr.cdr_answered_at IS NOT NULL AND continued_in_cdr.destination_entity_type = 'extension'\r\n      THEN rg.cdr_id\r\n    END\r\n  ) AS answered_calls\r\nFROM public_cdroutput AS rg\r\nLEFT JOIN public_cdroutput AS continued_in_cdr ON\r\n  continued_in_cdr.cdr_id = rg.continued_in_cdr_id\r\n  AND continued_in_cdr.creation_forward_reason = 'polling'\r\nWHERE $__timeFilter(rg.cdr_started_at)\r\nAND ('${ring_group:value}' = 'All' OR rg.destination_dn_number = '${ring_group:value}')\r\nAND rg.destination_dn_type IN ('ring_group_ring_all', 'ring_group_hunt')\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Angenommene Anrufe",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "answered_calls": "Angenommene Anrufe"
+            }
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "mysql",
+        "uid": "${DS_MYSQL}"
+      },
+      "description": "Prozentualer Anteil der Anrufe, die erfolgreich angenommen wurden",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 6,
+        "y": 2
+      },
+      "id": 10,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "text": {
+          "percentSize": 1
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.2.0-16677249643",
+      "targets": [
+        {
+          "dataset": "panagianbo",
+          "datasource": {
+            "type": "mysql",
+            "uid": "${DS_MYSQL}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n  COUNT(DISTINCT\r\n    CASE\r\n      WHEN rg.termination_reason IN ('continued_in', 'redirected') AND rg.termination_reason_details = 'polling' AND continued_in_cdr.cdr_id IS NOT NULL AND continued_in_cdr.cdr_answered_at IS NOT NULL AND continued_in_cdr.destination_entity_type = 'extension'\r\n      THEN rg.cdr_id\r\n    END\r\n  ) * 100.0 /\r\n  NULLIF(COUNT(DISTINCT rg.cdr_id), 0)\r\n  AS percent_answered\r\nFROM public_cdroutput AS rg\r\nLEFT JOIN public_cdroutput AS continued_in_cdr ON\r\n  continued_in_cdr.cdr_id = rg.continued_in_cdr_id\r\n  AND continued_in_cdr.creation_forward_reason = 'polling'\r\nWHERE $__timeFilter(rg.cdr_started_at)\r\nAND ('${ring_group:value}' = 'All' OR rg.destination_dn_number = '${ring_group:value}')\r\nAND rg.destination_dn_type IN ('ring_group_ring_all', 'ring_group_hunt')\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "% Angenommene Anrufe",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "percent_answered": "Angenommene Anrufe"
+            }
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "mysql",
+        "uid": "${DS_MYSQL}"
+      },
+      "description": "Anzahl der Anrufe, die nicht angenommen wurden",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "red",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 9,
+        "y": 2
+      },
+      "id": 11,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.2.0-16677249643",
+      "targets": [
+        {
+          "dataset": "panagianbo",
+          "datasource": {
+            "type": "mysql",
+            "uid": "${DS_MYSQL}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n  COALESCE(COUNT(DISTINCT rg.cdr_id), 0) -\r\n  COALESCE(COUNT(DISTINCT\r\n    CASE\r\n      WHEN rg.termination_reason IN ('continued_in', 'redirected') AND rg.termination_reason_details = 'polling' AND continued_in_cdr.cdr_id IS NOT NULL AND continued_in_cdr.cdr_answered_at IS NOT NULL AND continued_in_cdr.destination_entity_type = 'extension'\r\n      THEN rg.cdr_id\r\n    END\r\n  ), 0)\r\n  AS unanswered_calls\r\nFROM public_cdroutput AS rg\r\nLEFT JOIN public_cdroutput AS continued_in_cdr ON\r\n  continued_in_cdr.cdr_id = rg.continued_in_cdr_id\r\n  AND continued_in_cdr.creation_forward_reason = 'polling'\r\nWHERE $__timeFilter(rg.cdr_started_at)\r\nAND ('${ring_group:value}' = 'All' OR rg.destination_dn_number = '${ring_group:value}')\r\nAND rg.destination_dn_type IN ('ring_group_ring_all', 'ring_group_hunt')\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Nicht angenommene Anrufe",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "unanswered_calls": "Nicht angenommene Anrufe"
+            }
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "mysql",
+        "uid": "${DS_MYSQL}"
+      },
+      "description": "Summe aller Gesprächszeiten im gewählten Zeitraum",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 12,
+        "y": 2
+      },
+      "id": 12,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.2.0-16677249643",
+      "targets": [
+        {
+          "dataset": "panagianbo",
+          "datasource": {
+            "type": "mysql",
+            "uid": "${DS_MYSQL}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n  coalesce(SUM(\r\n    CASE\r\n      WHEN rg.termination_reason IN ('continued_in', 'redirected') AND rg.termination_reason_details = 'polling' AND continued_in_cdr.cdr_id IS NOT NULL AND continued_in_cdr.cdr_answered_at IS NOT NULL AND continued_in_cdr.destination_entity_type = 'extension'\r\n      THEN TIMESTAMPDIFF(SECOND, continued_in_cdr.cdr_answered_at, continued_in_cdr.cdr_ended_at)\r\n      ELSE 0\r\n    END\r\n  ), 0) AS total_talking_time\r\nFROM public_cdroutput AS rg\r\nLEFT JOIN public_cdroutput AS continued_in_cdr\r\n  ON continued_in_cdr.cdr_id = rg.continued_in_cdr_id\r\n  AND continued_in_cdr.creation_forward_reason = 'polling'\r\nWHERE $__timeFilter(rg.cdr_started_at)\r\n  AND ('${ring_group:value}' = 'All' OR rg.destination_dn_number = '${ring_group:value}')\r\n  AND rg.destination_dn_type IN ('ring_group_ring_all', 'ring_group_hunt')\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Gesamte Gesprächsdauer",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "total_talking_time": "Gesamte Gesprächsdauer"
+            }
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "mysql",
+        "uid": "${DS_MYSQL}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 15,
+        "y": 2
+      },
+      "id": 13,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.2.0-16677249643",
+      "targets": [
+        {
+          "dataset": "panagianbo",
+          "datasource": {
+            "type": "mysql",
+            "uid": "${DS_MYSQL}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n  coalesce(AVG(\r\n    CASE\r\n      WHEN rg.termination_reason IN ('continued_in', 'redirected') AND rg.termination_reason_details = 'polling' AND continued_in_cdr.cdr_id IS NOT NULL AND continued_in_cdr.cdr_answered_at IS NOT NULL AND continued_in_cdr.destination_entity_type = 'extension'\r\n      THEN TIMESTAMPDIFF(SECOND, continued_in_cdr.cdr_answered_at, continued_in_cdr.cdr_ended_at)\r\n    END\r\n  ), 0) AS total_talking_time\r\nFROM public_cdroutput AS rg\r\nLEFT JOIN public_cdroutput AS continued_in_cdr ON\r\n  continued_in_cdr.cdr_id = rg.continued_in_cdr_id\r\n  AND continued_in_cdr.creation_forward_reason = 'polling'\r\nWHERE $__timeFilter(rg.cdr_started_at)\r\nAND ('${ring_group:value}' = 'All' OR rg.destination_dn_number = '${ring_group:value}')\r\nAND rg.destination_dn_type IN ('ring_group_ring_all', 'ring_group_hunt')\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Ø Gesprächsdauer",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "total_talking_time": "Ø Gesprächsdauer"
+            }
+          }
+        }
+      ],
+      "type": "stat",
+      "description": "Durchschnittliche Gesprächszeit pro angenommenem Anruf"
+    },
+    {
+      "datasource": {
+        "type": "mysql",
+        "uid": "${DS_MYSQL}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 18,
+        "y": 2
+      },
+      "id": 14,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.2.0-16677249643",
+      "targets": [
+        {
+          "dataset": "panagianbo",
+          "datasource": {
+            "type": "mysql",
+            "uid": "${DS_MYSQL}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n  coalesce(AVG(\r\n    CASE\r\n      WHEN rg.termination_reason IN ('continued_in', 'redirected') AND rg.termination_reason_details = 'polling' AND continued_in_cdr.cdr_id IS NOT NULL AND continued_in_cdr.cdr_answered_at IS NOT NULL AND continued_in_cdr.destination_entity_type = 'extension'\r\n        THEN TIMESTAMPDIFF(SECOND, rg.cdr_started_at, continued_in_cdr.cdr_ended_at)\r\n      ELSE TIMESTAMPDIFF(SECOND, rg.cdr_started_at, rg.cdr_ended_at)\r\n    END\r\n  ), 0) AS duration\r\nFROM public_cdroutput AS rg\r\nLEFT JOIN public_cdroutput AS continued_in_cdr ON\r\n  continued_in_cdr.cdr_id = rg.continued_in_cdr_id\r\n  AND continued_in_cdr.creation_forward_reason = 'polling'\r\nWHERE $__timeFilter(rg.cdr_started_at)\r\nAND ('${ring_group:value}' = 'All' OR rg.destination_dn_number = '${ring_group:value}')\r\nAND rg.destination_dn_type IN ('ring_group_ring_all', 'ring_group_hunt')\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Ø Anrufdauer",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "duration": "Ø Anrufdauer"
+            }
+          }
+        }
+      ],
+      "type": "stat",
+      "description": "Durchschnittliche Gesamtdauer aller Anrufe inkl. Klingelzeit"
+    },
+    {
+      "datasource": {
+        "type": "mysql",
+        "uid": "${DS_MYSQL}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 21,
+        "y": 2
+      },
+      "id": 15,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.2.0-16677249643",
+      "targets": [
+        {
+          "dataset": "panagianbo",
+          "datasource": {
+            "type": "mysql",
+            "uid": "${DS_MYSQL}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n  coalesce(MAX(\r\n    CASE\r\n      WHEN rg.termination_reason IN ('continued_in', 'redirected') AND rg.termination_reason_details = 'polling' AND continued_in_cdr.cdr_id IS NOT NULL AND continued_in_cdr.cdr_answered_at IS NOT NULL AND continued_in_cdr.destination_entity_type = 'extension'\r\n        THEN TIMESTAMPDIFF(SECOND, rg.cdr_started_at, continued_in_cdr.cdr_ended_at)\r\n      ELSE TIMESTAMPDIFF(SECOND, rg.cdr_started_at, rg.cdr_ended_at)\r\n    END\r\n  ), 0) AS duration\r\nFROM public_cdroutput AS rg\r\nLEFT JOIN public_cdroutput AS continued_in_cdr ON\r\n  continued_in_cdr.cdr_id = rg.continued_in_cdr_id\r\n  AND continued_in_cdr.creation_forward_reason = 'polling'\r\nWHERE $__timeFilter(rg.cdr_started_at)\r\nAND ('${ring_group:value}' = 'All' OR rg.destination_dn_number = '${ring_group:value}')\r\nAND rg.destination_dn_type IN ('ring_group_ring_all', 'ring_group_hunt')\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Längste Anrufdauer",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "duration": "Längste Anrufdauer"
+            }
+          }
+        }
+      ],
+      "type": "stat",
+      "description": "Dauer des längsten Anrufs im gewählten Zeitraum"
+    },
+    {
+      "datasource": {
+        "type": "mysql",
+        "uid": "${DS_MYSQL}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 25
+              },
+              {
+                "color": "orange",
+                "value": 50
+              },
+              {
+                "color": "red",
+                "value": 75
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 3,
+        "x": 0,
+        "y": 6
+      },
+      "id": 16,
+      "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "sizing": "auto"
+      },
+      "pluginVersion": "12.2.0-16677249643",
+      "targets": [
+        {
+          "dataset": "panagianbo",
+          "datasource": {
+            "type": "mysql",
+            "uid": "${DS_MYSQL}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n  COUNT(DISTINCT\r\n    CASE\r\n      WHEN NOT (rg.termination_reason IN ('continued_in', 'redirected') AND rg.termination_reason_details = 'polling' AND continued_in_cdr.cdr_id IS NOT NULL AND continued_in_cdr.cdr_answered_at IS NOT NULL AND continued_in_cdr.destination_entity_type = 'extension')\r\n      THEN rg.cdr_id\r\n    END\r\n  ) * 100.0 /\r\n  NULLIF(COUNT(DISTINCT rg.cdr_id), 0)\r\n  AS missed_call_rate\r\nFROM public_cdroutput AS rg\r\nLEFT JOIN public_cdroutput AS continued_in_cdr ON\r\n  continued_in_cdr.cdr_id = rg.continued_in_cdr_id\r\n  AND continued_in_cdr.creation_forward_reason = 'polling'\r\nWHERE $__timeFilter(rg.cdr_started_at)\r\nAND ('${ring_group:value}' = 'All' OR rg.destination_dn_number = '${ring_group:value}')\r\nAND rg.destination_dn_type IN ('ring_group_ring_all', 'ring_group_hunt')\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "% Verpasste Anrufe",
+      "type": "gauge",
+      "description": "Prozentualer Anteil nicht angenommener Anrufe"
+    },
+    {
+      "datasource": {
+        "type": "mysql",
+        "uid": "${DS_MYSQL}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "yellow",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 3,
+        "x": 3,
+        "y": 6
+      },
+      "id": 18,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.2.0-16677249643",
+      "targets": [
+        {
+          "dataset": "panagianbo",
+          "datasource": {
+            "type": "mysql",
+            "uid": "${DS_MYSQL}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n  coalesce(AVG(TIMESTAMPDIFF(SECOND, rg.cdr_started_at, rg.cdr_ended_at)), 0) AS duration\r\nFROM public_cdroutput AS rg\r\nWHERE $__timeFilter(rg.cdr_started_at)\r\nAND ('${ring_group:value}' = 'All' OR rg.destination_dn_number = '${ring_group:value}')\r\nAND rg.destination_dn_type IN ('ring_group_ring_all', 'ring_group_hunt')\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Ø Klingelzeit",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "duration": "Ø Klingelzeit"
+            }
+          }
+        }
+      ],
+      "type": "stat",
+      "description": "Durchschnittliche Wartezeit bis zur Annahme"
+    },
+    {
+      "datasource": {
+        "type": "mysql",
+        "uid": "${DS_MYSQL}"
+      },
+      "description": "Verteilung der Anrufergebnisse (angenommen, verpasst, etc.)",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [
+            {
+              "options": {
+                "cancelled": {
+                  "index": 3,
+                  "text": "Canceled"
+                },
+                "continued_in": {
+                  "index": 2,
+                  "text": "Continued further"
+                },
+                "deflected": {
+                  "index": 4,
+                  "text": "Deflected"
+                },
+                "dst_participant_terminated": {
+                  "index": 0,
+                  "text": "Ended by ring group user"
+                },
+                "not_answered__cancelled": {
+                  "index": 9,
+                  "text": "Not answered, canceled"
+                },
+                "not_answered__continued_in": {
+                  "index": 8,
+                  "text": "Not answered, continued further"
+                },
+                "not_answered__deflected": {
+                  "index": 10,
+                  "text": "Not answered, deflected"
+                },
+                "not_answered__redirected": {
+                  "index": 11,
+                  "text": "Not answered, redirected"
+                },
+                "not_answered__rejected": {
+                  "index": 12,
+                  "text": "Not answered, rejected"
+                },
+                "not_answered__src_participant_terminated": {
+                  "index": 7,
+                  "text": "Not answered, ended by caller"
+                },
+                "redirected": {
+                  "index": 5,
+                  "text": "Redirected"
+                },
+                "rejected": {
+                  "index": 6,
+                  "text": "Rejected"
+                },
+                "src_participant_terminated": {
+                  "index": 1,
+                  "text": "Ended by caller"
+                }
+              },
+              "type": "value"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 6,
+        "y": 6
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": []
+        },
+        "pieType": "pie",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.2.0-16677249643",
+      "targets": [
+        {
+          "dataset": "panagianbo",
+          "datasource": {
+            "type": "mysql",
+            "uid": "${DS_MYSQL}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n    CASE\r\n      WHEN rg.termination_reason IN ('continued_in', 'redirected') AND rg.termination_reason_details = 'polling' AND continued_in_cdr.cdr_id IS NOT NULL AND continued_in_cdr.cdr_answered_at IS NOT NULL AND continued_in_cdr.destination_entity_type = 'extension'\r\n        THEN COALESCE(continued_in_cdr.termination_reason, 'other')\r\n      ELSE COALESCE(CONCAT('not_answered__', rg.termination_reason), 'other')\r\n    END\r\n    AS call_outcome,\r\n    COUNT(*) AS call_count\r\nFROM public_cdroutput AS rg\r\nLEFT JOIN public_cdroutput AS continued_in_cdr ON\r\n  continued_in_cdr.cdr_id = rg.continued_in_cdr_id\r\n  AND continued_in_cdr.creation_forward_reason = 'polling'\r\nWHERE $__timeFilter(rg.cdr_started_at)\r\nAND ('${ring_group:value}' = 'All' OR rg.destination_dn_number = '${ring_group:value}')\r\nAND rg.destination_dn_type IN ('ring_group_ring_all', 'ring_group_hunt')\r\nGROUP BY call_outcome\r\nORDER BY call_count DESC\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Anrufergebnis",
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "mysql",
+        "uid": "${DS_MYSQL}"
+      },
+      "description": "Zeitlicher Vergleich von eingegangenen und angenommenen Anrufen",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "palette-classic",
+            "seriesBy": "last"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "fieldMinMax": false,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "answered_calls"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "answered calls"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "total_calls"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "received calls"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "id": 4,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "12.2.0-16677249643",
+      "targets": [
+        {
+          "dataset": "panagianbo",
+          "datasource": {
+            "type": "mysql",
+            "uid": "${DS_MYSQL}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n    STR_TO_DATE(DATE_FORMAT(rg.cdr_started_at, '%Y-%m-%d %H:00:00'), '%Y-%m-%d %H:%i:%s') AS time,\r\n    COUNT(DISTINCT rg.cdr_id) AS total_calls,\r\n    COUNT(DISTINCT\r\n    CASE\r\n        WHEN rg.termination_reason IN ('continued_in', 'redirected') AND rg.termination_reason_details = 'polling' AND continued_in_cdr.cdr_id IS NOT NULL AND continued_in_cdr.cdr_answered_at IS NOT NULL AND continued_in_cdr.destination_entity_type = 'extension'\r\n        THEN rg.cdr_id\r\n    END\r\n    ) AS answered_calls\r\nFROM public_cdroutput AS rg\r\nLEFT JOIN public_cdroutput AS continued_in_cdr ON\r\n  continued_in_cdr.cdr_id = rg.continued_in_cdr_id\r\n  AND continued_in_cdr.creation_forward_reason = 'polling'\r\nWHERE $__timeFilter(rg.cdr_started_at)\r\nAND ('${ring_group:value}' = 'All' OR rg.destination_dn_number = '${ring_group:value}')\r\nAND rg.destination_dn_type IN ('ring_group_ring_all', 'ring_group_hunt')\r\nGROUP BY 1\r\nORDER BY 1\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Eingegangene / Angenommene Anrufe (Verlauf)",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "mysql",
+        "uid": "${DS_MYSQL}"
+      },
+      "description": "Ring group call statistics",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false,
+            "wrapHeaderText": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "extension"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Ring group / Extension"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "calls_received"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Calls received"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "calls_unanswered"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Calls not answered"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "calls_answered"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Calls answered"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "polls_received"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Polls received"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "polls_missed"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Polls missed"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "row_order_no"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anruf-ID"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Durchwahl"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "DID"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Begonnen am"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Beendet am"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Angenommen am"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Startzeit"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückruf begonnen am"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Dauer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesprächsdauer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Klingeldauer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückruf Gesprächsdauer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Kosten"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Abrechnungskosten"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Abrechnungscode"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Abrechnungsrate"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Abrechnungsratename"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "% angenommen"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Externer Teilnehmer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 190
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Lokaler Teilnehmer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Teilnehmer (Quelle)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anrufer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Angerufener"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Eingehender Anrufer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Wer hat zurückgerufen?"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückrufstatus"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückruftyp"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückruftyp (final)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückrufverzögerung"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückrufreaktionszeit"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 170
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ø Rückrufreaktionszeit"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 170
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückruf in 24h"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Warteschlange"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Eingehend [angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Eingehend [nicht angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ausgehend [angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ausgehend [nicht angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamt [angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 140
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamt [nicht angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesprächszeit"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Dateiname"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Zusammenfassung"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 250
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Transkription"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 300
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Stimmungswert"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anrufteilstrecken"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anrufer-Adresse"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Angerufener-Adresse"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Modus"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamtwert"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamtzusammenfassung"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anzahl Anrufe"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamte Anrufe"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Eingehende Anrufe"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ausgehende Anrufe"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anrufe"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Speicher (MB)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Dienstname"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Dienst"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Verbindungen"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Verbindungen mit Kosten"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 170
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamtkosten"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Teilnehmer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ziel"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 12
+      },
+      "id": 19,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "12.2.0-16677249643",
+      "targets": [
+        {
+          "dataset": "panagianbo",
+          "datasource": {
+            "type": "mysql",
+            "uid": "${DS_MYSQL}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "-- Ring group info with last name\r\nWITH rg_info AS (\r\n  SELECT\r\n    rg.destination_dn_number AS dn_number,\r\n    CASE WHEN '${ring_group:value}' = 'All' THEN 'All ring groups' ELSE COALESCE(rg.destination_dn_name, 'Unknown') END AS name\r\n  FROM public_cdroutput AS rg\r\n  WHERE rg.cdr_started_at = ( -- Changed this line\r\n    SELECT\r\n      MAX(sub_rg.cdr_started_at) -- Changed this to MAX(cdr_started_at)\r\n    FROM public_cdroutput AS sub_rg\r\n    WHERE $__timeFilter(sub_rg.cdr_started_at)\r\n      AND ('${ring_group:value}' = 'All' OR sub_rg.destination_dn_number = '${ring_group:value}')\r\n      AND sub_rg.destination_dn_type IN ('ring_group_ring_all', 'ring_group_hunt')\r\n  )\r\n),\r\n-- Ring group totals\r\nrg_totals AS (\r\n  SELECT\r\n    0 AS row_order_no,\r\n    MAX(rg.destination_dn_number) AS rg_dn,\r\n    MAX(rg_info.name) AS rg_name,\r\n    COUNT(DISTINCT rg.cdr_id) AS rg_received_count,\r\n    COUNT(DISTINCT\r\n      CASE\r\n        WHEN rg.termination_reason IN ('continued_in', 'redirected') AND rg.termination_reason_details = 'polling' AND continued_in_cdr.cdr_id IS NOT NULL AND continued_in_cdr.cdr_answered_at IS NOT NULL AND continued_in_cdr.destination_entity_type = 'extension'\r\n        THEN rg.cdr_id\r\n      END\r\n    ) AS rg_answered_count\r\n  FROM public_cdroutput AS rg\r\n  INNER JOIN rg_info ON TRUE \r\n  LEFT JOIN public_cdroutput AS continued_in_cdr ON\r\n    continued_in_cdr.cdr_id = rg.continued_in_cdr_id\r\n    AND continued_in_cdr.creation_forward_reason = 'polling'\r\n  WHERE $__timeFilter(rg.cdr_started_at)\r\n    AND ('${ring_group:value}' = 'All' OR rg.destination_dn_number = '${ring_group:value}')\r\n    AND rg.destination_dn_type IN ('ring_group_ring_all', 'ring_group_hunt')\r\n  GROUP BY rg.destination_dn_number -- Added GROUP BY for rg_totals\r\n),\r\n-- Ring group users statistics\r\nrg_users_stat AS (\r\n  SELECT\r\n    1 AS row_order_no,\r\n    MAX(rg.destination_dn_number) AS rg_dn,\r\n    MAX(rg_info.name) AS rg_name,\r\n    agent_polls.destination_dn_number AS agent_dn,\r\n    COALESCE(agent_polls.destination_dn_name, 'Unknown') AS agent_name,\r\n    COUNT(DISTINCT CASE WHEN rg.termination_reason IN ('continued_in', 'redirected') AND rg.termination_reason_details = 'polling' AND agent_polls.cdr_answered_at IS NOT NULL THEN rg.cdr_id END) AS agent_answered_polls_count,\r\n    COUNT(agent_polls.cdr_id) AS agent_received_polls_count\r\n  FROM public_cdroutput AS rg\r\n  INNER JOIN rg_info ON TRUE -- This will cause issues if rg_info returns multiple rows. See note below.\r\n  INNER JOIN public_cdroutput AS agent_polls ON\r\n    agent_polls.call_history_id = rg.call_history_id\r\n    AND agent_polls.originating_cdr_id = rg.cdr_id\r\n    AND agent_polls.destination_dn_type = 'extension'\r\n    AND agent_polls.creation_method = 'route_to'\r\n    AND agent_polls.creation_forward_reason = 'polling'\r\n  WHERE $__timeFilter(rg.cdr_started_at)\r\n    AND ('${ring_group:value}' = 'All' OR rg.destination_dn_number = '${ring_group:value}')\r\n    AND rg.destination_dn_type IN ('ring_group_ring_all', 'ring_group_hunt')\r\n  GROUP BY agent_polls.destination_dn_number, agent_polls.destination_dn_name, rg.destination_dn_number -- Added rg.destination_dn_number to GROUP BY\r\n)\r\nSELECT\r\n  rg.row_order_no,\r\n  CONCAT(CASE WHEN '${ring_group:value}' != 'All' THEN CONCAT(rg.rg_dn, ' ') ELSE '' END, rg.rg_name, ' [totals]') AS extension,\r\n  COALESCE(rg.rg_received_count, 0) AS calls_received,\r\n  COALESCE(rg.rg_received_count, 0) - COALESCE(rg.rg_answered_count, 0) AS calls_unanswered,\r\n  COALESCE(rg.rg_answered_count, 0) AS calls_answered,\r\n  CAST(NULL AS UNSIGNED INTEGER) AS polls_received,\r\n  CAST(NULL AS UNSIGNED INTEGER) AS polls_missed\r\nFROM rg_totals AS rg\r\nUNION ALL\r\nSELECT\r\n  u.row_order_no,\r\n  CONCAT(u.agent_dn, ' ', u.agent_name) AS extension,\r\n  CAST(NULL AS UNSIGNED INTEGER) AS calls_received,\r\n  CAST(NULL AS UNSIGNED INTEGER) AS calls_unanswered,\r\n  COALESCE(u.agent_answered_polls_count, 0) AS calls_answered,\r\n  COALESCE(u.agent_received_polls_count, 0) AS polls_received,\r\n  COALESCE(u.agent_received_polls_count, 0) - COALESCE(u.agent_answered_polls_count, 0) AS polls_missed\r\nFROM rg_users_stat AS u\r\nORDER BY row_order_no, extension;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Rufgruppen-Statistik",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "mysql",
+        "uid": "${DS_MYSQL}"
+      },
+      "description": "Time series Graph",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "num_calls"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "received calls"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 20
+      },
+      "id": 17,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        },
+        "xField": "time_bucket",
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 200
+      },
+      "pluginVersion": "12.2.0-16677249643",
+      "targets": [
+        {
+          "dataset": "panagianbo",
+          "datasource": {
+            "type": "mysql",
+            "uid": "${DS_MYSQL}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n    STR_TO_DATE(DATE_FORMAT(rg.cdr_started_at, '%Y-%m-%d %H:00:00'), '%Y-%m-%d %H:%i:%s') AS time,\r\n    COUNT(DISTINCT rg.cdr_id) AS num_calls\r\nFROM public_cdroutput AS rg\r\nWHERE $__timeFilter(rg.cdr_started_at)\r\nAND ('${ring_group:value}' = 'All' OR rg.destination_dn_number = '${ring_group:value}')\r\nAND rg.destination_dn_type IN ('ring_group_ring_all', 'ring_group_hunt')\r\nGROUP BY 1\r\nORDER BY 1\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Eingegangene Anrufe (Verlauf)",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "mysql",
+        "uid": "${DS_MYSQL}"
+      },
+      "description": "This shows the number of answered calls per extension in the ring group.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "agent_received_calls_count"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "received calls"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "agent_received_polls_count"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "received polls"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#B877D9",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "agent_answered_polls_count"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "answered calls"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "agent"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Ring group user"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 20
+      },
+      "id": 3,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "12.2.0-16677249643",
+      "targets": [
+        {
+          "dataset": "panagianbo",
+          "datasource": {
+            "type": "mysql",
+            "uid": "${DS_MYSQL}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n  CONCAT(agent_polls.destination_dn_number, ' ', COALESCE(agent_polls.destination_dn_name, 'Unknown')) AS agent,\r\n  COUNT(DISTINCT agent_polls.main_call_history_id) AS agent_received_calls_count,\r\n  COUNT(agent_polls.cdr_id) AS agent_received_polls_count,\r\n  COUNT(DISTINCT CASE WHEN rg.termination_reason IN ('continued_in', 'redirected') AND rg.termination_reason_details = 'polling' AND agent_polls.cdr_answered_at IS NOT NULL THEN rg.cdr_id END) AS agent_answered_polls_count\r\nFROM public_cdroutput AS rg\r\nINNER JOIN public_cdroutput AS agent_polls ON\r\n  agent_polls.call_history_id = rg.call_history_id\r\n  AND agent_polls.originating_cdr_id = rg.cdr_id\r\n  AND agent_polls.destination_dn_type = 'extension'\r\n  AND agent_polls.creation_method = 'route_to'\r\n  AND agent_polls.creation_forward_reason = 'polling'\r\nWHERE $__timeFilter(rg.cdr_started_at)\r\n  AND ('${ring_group:value}' = 'All' OR rg.destination_dn_number = '${ring_group:value}')\r\n  AND rg.destination_dn_type IN ('ring_group_ring_all', 'ring_group_hunt')\r\nGROUP BY agent\r\nORDER BY agent\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Anrufstatistik nach Rufgruppenmitgliedern",
+      "type": "barchart"
+    }
+  ],
+  "refresh": "30m",
+  "schemaVersion": 41,
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "allValue": "All",
+        "allowCustomValue": false,
+        "current": {},
+        "datasource": {
+          "type": "mysql",
+          "uid": "${DS_MYSQL}"
+        },
+        "definition": "WITH rg AS (\n  SELECT\n    rg.destination_dn_number AS dn_number,\n    COALESCE(rg.destination_dn_name, 'Unknown') AS name,\n    ROW_NUMBER() OVER (PARTITION BY rg.destination_dn_number ORDER BY rg.cdr_started_at DESC) AS row_num\n  FROM public_cdroutput AS rg\n  WHERE rg.destination_dn_type IN ('ring_group_ring_all', 'ring_group_hunt')\n    AND rg.destination_dn_number IS NOT NULL\n    AND rg.cdr_started_at >= NOW() - INTERVAL 365 DAY\n)\nSELECT\n  CONCAT(rg.dn_number, ' ', rg.name) AS __text,\n  rg.dn_number AS __value\nFROM rg\nWHERE rg.row_num = 1\nORDER BY __value;",
+        "description": "Ring group",
+        "includeAll": true,
+        "label": "Ring group",
+        "name": "ring_group",
+        "options": [],
+        "query": "WITH rg AS (\n  SELECT\n    rg.destination_dn_number AS dn_number,\n    COALESCE(rg.destination_dn_name, 'Unknown') AS name,\n    ROW_NUMBER() OVER (PARTITION BY rg.destination_dn_number ORDER BY rg.cdr_started_at DESC) AS row_num\n  FROM public_cdroutput AS rg\n  WHERE rg.destination_dn_type IN ('ring_group_ring_all', 'ring_group_hunt')\n    AND rg.destination_dn_number IS NOT NULL\n    AND rg.cdr_started_at >= NOW() - INTERVAL 365 DAY\n)\nSELECT\n  CONCAT(rg.dn_number, ' ', rg.name) AS __text,\n  rg.dn_number AS __value\nFROM rg\nWHERE rg.row_num = 1\nORDER BY __value;",
+        "refresh": 1,
+        "regex": "",
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "02. Rufgruppen (MySQL)",
+  "uid": "kbcx85p",
+  "version": 45,
+  "weekStart": ""
+}

@@ -1,0 +1,133 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Brand colors */
+  --color-primary: #f08017;
+  --color-primary-hover: #d97015;
+  --color-primary-light: var(--primary-light);
+  --color-navy: #001524;
+  --color-navy-light: #334450;
+  --color-teal: #097479;
+
+  /* 3CX Status colors */
+  --color-call-connected: #22c55e;
+  --color-call-ringing: #f59e0b;
+  --color-call-held: #3b82f6;
+  --color-call-dialing: #f08017;
+
+  /* Semantic surface colors */
+  --color-surface-glass: var(--surface-glass);
+  --color-surface-solid: var(--surface-solid);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-surface-muted: var(--surface-muted);
+
+  /* Semantic border colors */
+  --color-glass: var(--border-glass);
+  --color-border-default: var(--border-default);
+  --color-border-subtle: var(--border-subtle);
+
+  /* Semantic text colors */
+  --color-heading: var(--text-heading);
+  --color-body: var(--text-body);
+  --color-secondary: var(--text-secondary);
+  --color-muted: var(--text-muted);
+
+  /* Utility */
+  --color-input: var(--input-bg);
+  --color-skeleton: var(--skeleton);
+
+  --font-sans: "Inter", "Geist Sans", system-ui, -apple-system, sans-serif;
+
+  --animate-pulse-led: pulse-led 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-slide-up: slide-up 0.4s ease-out;
+  --animate-fade-in: fade-in 0.3s ease-out;
+
+  @keyframes pulse-led {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+}
+
+/* Light theme */
+:root {
+  --primary-light: #fef0e0;
+  --surface-glass: rgba(255, 255, 255, 0.7);
+  --surface-solid: #ffffff;
+  --surface-elevated: rgba(255, 255, 255, 0.5);
+  --surface-subtle: #f9fafb;
+  --surface-muted: #f3f4f6;
+  --border-glass: rgba(255, 255, 255, 0.4);
+  --border-default: #e5e7eb;
+  --border-subtle: #f3f4f6;
+  --text-heading: #001524;
+  --text-body: #374151;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+  --bg-from: #fef7f0;
+  --bg-to: #fde8d0;
+  --shadow-glass: 0 8px 32px rgba(0, 21, 36, 0.08);
+  --shadow-glass-hover: 0 12px 40px rgba(0, 21, 36, 0.12);
+  --hover-row: rgba(0, 0, 0, 0.02);
+  --input-bg: #ffffff;
+  --skeleton: #e5e7eb;
+  --scrollbar-thumb: #d1d5db;
+  --scrollbar-hover: #9ca3af;
+}
+
+/* Dark theme (Standard für 3CX Dashboard) */
+.dark {
+  --primary-light: rgba(240, 128, 23, 0.15);
+  --surface-glass: rgba(255, 255, 255, 0.05);
+  --surface-solid: #1a2332;
+  --surface-elevated: rgba(15, 23, 42, 0.8);
+  --surface-subtle: rgba(255, 255, 255, 0.03);
+  --surface-muted: rgba(255, 255, 255, 0.06);
+  --border-glass: rgba(255, 255, 255, 0.08);
+  --border-default: rgba(255, 255, 255, 0.12);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --text-heading: #f1f5f9;
+  --text-body: #cbd5e1;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --bg-from: #0a1628;
+  --bg-to: #0f1f35;
+  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --shadow-glass-hover: 0 12px 40px rgba(0, 0, 0, 0.4);
+  --hover-row: rgba(255, 255, 255, 0.03);
+  --input-bg: rgba(255, 255, 255, 0.05);
+  --skeleton: rgba(255, 255, 255, 0.08);
+  --scrollbar-thumb: #334155;
+  --scrollbar-hover: #475569;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: linear-gradient(135deg, var(--bg-from) 0%, var(--bg-to) 100%);
+  min-height: 100vh;
+}
+
+/* Native form elements verwenden das dunkle Farbschema → kein weißes Dropdown */
+select, input, textarea {
+  color-scheme: dark;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }

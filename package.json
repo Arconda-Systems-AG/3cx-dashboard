@@ -1,0 +1,16 @@
+{
+  "name": "3cx-dashboard",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "dev:dashboard": "turbo dev --filter=dashboard",
+    "build:dashboard": "turbo build --filter=dashboard"
+  },
+  "devDependencies": {
+    "turbo": "^2.4.0",
+    "typescript": "^5.7.0"
+  },
+  "packageManager": "pnpm@9.15.0"
+}

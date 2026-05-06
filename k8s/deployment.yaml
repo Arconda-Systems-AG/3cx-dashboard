@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: 3cx-dashboard
+  namespace: 3cx-dashboard
+  labels:
+    app: 3cx-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: 3cx-dashboard
+  template:
+    metadata:
+      labels:
+        app: 3cx-dashboard
+    spec:
+      containers:
+        - name: 3cx-dashboard
+          image: ghcr.io/arconda-systems-ag/3cx-dashboard:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3031
+              name: http
+          envFrom:
+            - secretRef:
+                name: threecx-credentials
+          env:
+            - name: SETTINGS_PATH
+              value: /app/data/settings.json
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "3031"
+            - name: HOSTNAME
+              value: "0.0.0.0"
+          volumeMounts:
+            - name: settings-storage
+              mountPath: /app/data
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 100m
+            limits:
+              memory: 1Gi
+              cpu: 1000m
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3031
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3031
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+      initContainers:
+        - name: fix-permissions
+          image: busybox:1.36
+          command: ["sh", "-c", "chown -R 1001:1001 /app/data"]
+          volumeMounts:
+            - name: settings-storage
+              mountPath: /app/data
+      volumes:
+        - name: settings-storage
+          persistentVolumeClaim:
+            claimName: 3cx-dashboard-settings
+      imagePullSecrets:
+        - name: ghcr-pull-secret

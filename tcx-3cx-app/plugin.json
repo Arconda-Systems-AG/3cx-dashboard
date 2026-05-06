@@ -1,0 +1,56 @@
+{
+    "$schema": "https://raw.githubusercontent.com/grafana/grafana/main/docs/sources/developers/plugins/plugin.schema.json",
+    "type": "app",
+    "name": "3CX",
+    "id": "tcx-3cx-app",
+    "info": {
+        "keywords": [
+            "app",
+            "3cx",
+            "tcx",
+            "dashboards",
+            "cdr",
+            "call",
+            "monitor",
+            "phone"
+        ],
+        "description": "Seamless monitoring and analytics for your 3CX phone system",
+        "author": {
+            "name": "3CX",
+            "url": "https://www.3cx.com"
+        },
+        "logos": {
+            "small": "img/logo.png",
+            "large": "img/logo.png"
+        },
+        "screenshots": [
+            {
+                "name": "Dashboard",
+                "path": "img/dashboard.png"
+            }
+        ],
+        "version": "1.0.4",
+        "updated": "2025-11-27"
+    },
+    "includes": [
+        {
+            "type": "page",
+            "name": "3CX",
+            "path": "/a/tcx-3cx-app",
+            "addToNav": true,
+            "defaultNav": true
+        },
+        {
+            "type": "page",
+            "name": "Configuration",
+            "path": "/a/tcx-3cx-app/configuration",
+            "role": "Admin",
+            "addToNav": true
+        }
+    ],
+    "dependencies": {
+        "grafanaDependency": ">=12.2.2",
+        "plugins": []
+    },
+    "buildMode": "production"
+}

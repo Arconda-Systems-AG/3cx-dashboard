@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+.next/
+dist/
+out/
+
+# Environment files (CREDENTIALS – NIEMALS committen)
+.env
+.env.local
+.env*.local
+
+# Misc
+.DS_Store
+*.pem
+.turbo/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# K8s secrets
+k8s/secret.yaml
+logs/

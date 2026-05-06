@@ -1,0 +1,2462 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_GRAFANA-POSTGRESQL-DATASOURCE",
+      "label": "grafana-postgresql-datasource",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "grafana-postgresql-datasource",
+      "pluginName": "PostgreSQL"
+    }
+  ],
+  "__elements": {},
+  "__requires": [
+    {
+      "type": "panel",
+      "id": "barchart",
+      "name": "Bar chart",
+      "version": ""
+    },
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "12.2.0-16677249643"
+    },
+    {
+      "type": "datasource",
+      "id": "grafana-postgresql-datasource",
+      "name": "PostgreSQL",
+      "version": "12.2.0-16677249643"
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "text",
+      "name": "Text",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "# Anrufqualitäts-Überwachung",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.2.0-16677249643",
+      "type": "text",
+      "title": ""
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
+      },
+      "description": "Durchschnittlicher Jitter-Wert der Anrufe im Zeitraum",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "locale"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 0,
+        "y": 2
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.2.0-16677249643",
+      "targets": [
+        {
+          "dataset": "cdr",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n  CASE\r\n    WHEN avg(q.a_rx_jitter) IS NULL AND avg(q.b_rx_jitter) IS NULL AND avg(q.a_tx_jitter) IS NULL AND avg(q.b_tx_jitter) IS NULL\r\n      THEN NULL\r\n    ELSE coalesce(avg(q.a_rx_jitter), 0) + coalesce(avg(q.b_rx_jitter), 0) + coalesce(avg(q.a_tx_jitter), 0) + coalesce(avg(q.b_tx_jitter), 0)\r\n  END\r\n  /\r\n  CASE\r\n    WHEN coalesce(avg(q.a_rx_jitter), 0) = 0 AND coalesce(avg(q.b_rx_jitter), 0) = 0 AND coalesce(avg(q.a_tx_jitter), 0) = 0 AND coalesce(avg(q.b_tx_jitter), 0) = 0 THEN 1\r\n    ELSE\r\n      CASE\r\n        WHEN avg(q.a_rx_jitter) >= 0 THEN 1 ELSE 0\r\n      END +\r\n      CASE\r\n        WHEN avg(q.b_rx_jitter) >= 0 THEN 1 ELSE 0\r\n      END +\r\n      CASE\r\n        WHEN avg(q.a_tx_jitter) >= 0 THEN 1 ELSE 0\r\n      END +\r\n      CASE\r\n        WHEN avg(q.b_tx_jitter) >= 0 THEN 1 ELSE 0\r\n      END\r\n  END\r\n  AS avg_jitter\r\nFROM public.cl_quality AS q\r\nWHERE $__timeFilter(q.time_stamp)\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Ø Jitter",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "avg_jitter": "Ø Jitter",
+              "total_calls": "Eingegangene Anrufe"
+            }
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
+      },
+      "description": "Durchschnittlicher Paketverlust der Anrufe im Zeitraum",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "locale"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 3,
+        "y": 2
+      },
+      "id": 4,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.2.0-16677249643",
+      "targets": [
+        {
+          "dataset": "cdr",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n  CASE\r\n    WHEN avg(q.a_rx_loss) IS NULL AND avg(q.b_rx_loss) IS NULL AND avg(q.a_tx_loss) IS NULL AND avg(q.b_tx_loss) IS NULL\r\n      THEN NULL\r\n    ELSE coalesce(avg(q.a_rx_loss), 0) + coalesce(avg(q.b_rx_loss), 0) + coalesce(avg(q.a_tx_loss), 0) + coalesce(avg(q.b_tx_loss), 0)\r\n  END\r\n  /\r\n  CASE\r\n    WHEN coalesce(avg(q.a_rx_loss), 0) = 0 AND coalesce(avg(q.b_rx_loss), 0) = 0 AND coalesce(avg(q.a_tx_loss), 0) = 0 AND coalesce(avg(q.b_tx_loss), 0) = 0 THEN 1\r\n    ELSE\r\n      CASE\r\n        WHEN avg(q.a_rx_loss) >= 0 THEN 1 ELSE 0\r\n      END +\r\n      CASE\r\n        WHEN avg(q.b_rx_loss) >= 0 THEN 1 ELSE 0\r\n      END +\r\n      CASE\r\n        WHEN avg(q.a_tx_loss) >= 0 THEN 1 ELSE 0\r\n      END +\r\n      CASE\r\n        WHEN avg(q.b_tx_loss) >= 0 THEN 1 ELSE 0\r\n      END\r\n  END\r\n  AS avg_loss\r\nFROM public.cl_quality AS q\r\nWHERE $__timeFilter(q.time_stamp)\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Ø Paketverlust %",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "avg_jitter": "Ø Jitter",
+              "avg_loss": "Ø Paketverlust %",
+              "total_calls": "Eingegangene Anrufe"
+            }
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
+      },
+      "description": "Durchschnittliche Roundtrip-Latenz der Anrufe",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "locale"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 6,
+        "y": 2
+      },
+      "id": 5,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.2.0-16677249643",
+      "targets": [
+        {
+          "dataset": "cdr",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n  CASE\r\n    WHEN avg(q.a_rtt) IS NULL AND avg(q.b_rtt) IS NULL\r\n      THEN NULL\r\n    ELSE coalesce(avg(q.a_rtt), 0) + coalesce(avg(q.b_rtt), 0)\r\n  END\r\n  /\r\n  CASE\r\n    WHEN coalesce(avg(q.a_rtt), 0) = 0 AND coalesce(avg(q.b_rtt), 0) = 0 THEN 1\r\n    ELSE\r\n      CASE\r\n        WHEN avg(q.a_rtt) >= 0 THEN 1 ELSE 0\r\n      END +\r\n      CASE\r\n        WHEN avg(q.b_rtt) >= 0 THEN 1 ELSE 0\r\n      END\r\n  END\r\n  AS avg_rtt\r\nFROM public.cl_quality AS q\r\nWHERE $__timeFilter(q.time_stamp)\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Ø Roundtrip-Zeit (ms)",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "avg_jitter": "Ø Jitter",
+              "avg_loss": "Ø Paketverlust %",
+              "avg_rtt": "Ø Roundtrip-Zeit (ms)",
+              "total_calls": "Eingegangene Anrufe"
+            }
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 15,
+        "x": 9,
+        "y": 2
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.2.0-16677249643",
+      "targets": [
+        {
+          "dataset": "cdr",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n  --TIMESTAMP_TRUNC(q.time_stamp, MINUTE) AS time_bucket,\r\n  date_trunc('minute', q.time_stamp) AS time_bucket,\r\n  avg(LEAST(q.a_mos_to_pbx, q.b_mos_to_pbx, q.a_mos_from_pbx, q.b_mos_from_pbx)) AS mos_score\r\nFROM public.cl_quality AS q\r\nWHERE $__timeFilter(q.time_stamp)\r\nGROUP BY time_bucket\r\nORDER BY time_bucket\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Qualitätswert (Verlauf)",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "calls": "Anrufe",
+              "mos_score": "Wert",
+              "started_at": "Begonnen am",
+              "time_bucket": "Zeit"
+            }
+          }
+        }
+      ],
+      "type": "timeseries",
+      "description": "Zeitlicher Verlauf des MOS-Qualitätswerts"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 9,
+        "x": 0,
+        "y": 6
+      },
+      "id": 6,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "12.2.0-16677249643",
+      "targets": [
+        {
+          "dataset": "cdr",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH ab_stat AS (\r\n  SELECT\r\n    q.a_codec AS codec,\r\n    COUNT(*) AS row_count\r\n  FROM public.cl_quality AS q\r\n  WHERE $__timeFilter(q.time_stamp)\r\n  GROUP BY q.a_codec\r\n  UNION ALL\r\n  SELECT\r\n    q.b_codec AS codec,\r\n    COUNT(*) AS row_count\r\n  FROM public.cl_quality AS q\r\n  WHERE $__timeFilter(q.time_stamp)\r\n  GROUP BY q.b_codec\r\n)\r\nSELECT\r\n  s.codec,\r\n  sum(s.row_count) AS row_count\r\nFROM ab_stat AS s\r\nGROUP BY s.codec\r\nORDER BY row_count\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Codec-Verteilung",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "calls": "Anrufe",
+              "codec": "Codec",
+              "extension": "Durchwahl",
+              "row_count": "Anrufteilstrecken"
+            }
+          }
+        }
+      ],
+      "type": "barchart",
+      "description": "Übersicht der verwendeten Audio-Codecs"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 15,
+        "x": 9,
+        "y": 10
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.2.0-16677249643",
+      "targets": [
+        {
+          "dataset": "cdr",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n  date_trunc('minute', q.time_stamp) AS time_bucket,\r\n  avg(\r\n    CASE\r\n      WHEN q.a_rx_loss IS NULL AND q.b_rx_loss IS NULL AND q.a_tx_loss IS NULL AND q.b_tx_loss IS NULL\r\n        THEN 0\r\n      ELSE coalesce(q.a_rx_loss, 0) + coalesce(q.b_rx_loss, 0) + coalesce(q.a_tx_loss, 0) + coalesce(q.b_tx_loss, 0)\r\n    END\r\n    /\r\n    CASE\r\n      WHEN coalesce(q.a_rx_loss, 0) = 0 AND coalesce(q.b_rx_loss, 0) = 0 AND coalesce(q.a_tx_loss, 0) = 0 AND coalesce(q.b_tx_loss, 0) = 0 THEN 1\r\n      ELSE\r\n        CASE\r\n          WHEN q.a_rx_loss >= 0 THEN 1 ELSE 0\r\n        END +\r\n        CASE\r\n          WHEN q.b_rx_loss >= 0 THEN 1 ELSE 0\r\n        END +\r\n        CASE\r\n          WHEN q.a_tx_loss >= 0 THEN 1 ELSE 0\r\n        END +\r\n        CASE\r\n          WHEN q.b_tx_loss >= 0 THEN 1 ELSE 0\r\n        END\r\n    END\r\n  ) AS avg_loss\r\nFROM public.cl_quality AS q\r\nWHERE $__timeFilter(q.time_stamp)\r\nGROUP BY time_bucket\r\nORDER BY time_bucket\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Ø Paketverlust (Verlauf)",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "calls": "Anrufe",
+              "mos_score": "Wert",
+              "started_at": "Begonnen am",
+              "time_bucket": "Zeit"
+            }
+          }
+        }
+      ],
+      "type": "timeseries",
+      "description": "Zeitlicher Verlauf des durchschnittlichen Paketverlusts"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 9,
+        "x": 0,
+        "y": 12
+      },
+      "id": 9,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "12.2.0-16677249643",
+      "targets": [
+        {
+          "dataset": "cdr",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n  0 AS row_order,\r\n  'Unknown' AS mos_overall_score,\r\n  count(*) AS number_of_calls\r\nFROM public.cl_quality AS q\r\nWHERE $__timeFilter(q.time_stamp)\r\nAND (LEAST(q.a_mos_to_pbx, q.b_mos_to_pbx, q.a_mos_from_pbx, q.b_mos_from_pbx) IS NULL OR LEAST(q.a_mos_to_pbx, q.b_mos_to_pbx, q.a_mos_from_pbx, q.b_mos_from_pbx) < 0.1)\r\nUNION ALL\r\nSELECT\r\n  1 AS row_order,\r\n  'Poor' AS mos_overall_score,\r\n  count(*) AS number_of_calls\r\nFROM public.cl_quality AS q\r\nWHERE $__timeFilter(q.time_stamp)\r\nAND LEAST(q.a_mos_to_pbx, q.b_mos_to_pbx, q.a_mos_from_pbx, q.b_mos_from_pbx) >= 0.1 AND LEAST(q.a_mos_to_pbx, q.b_mos_to_pbx, q.a_mos_from_pbx, q.b_mos_from_pbx) < 3.1\r\nUNION ALL\r\nSELECT\r\n  2 AS row_order,\r\n  'Low' AS mos_overall_score,\r\n  count(*) AS number_of_calls\r\nFROM public.cl_quality AS q\r\nWHERE $__timeFilter(q.time_stamp)\r\nAND LEAST(q.a_mos_to_pbx, q.b_mos_to_pbx, q.a_mos_from_pbx, q.b_mos_from_pbx) >= 3.1 AND LEAST(q.a_mos_to_pbx, q.b_mos_to_pbx, q.a_mos_from_pbx, q.b_mos_from_pbx) < 3.5\r\nUNION ALL\r\nSELECT\r\n  3 AS row_order,\r\n  'Medium' AS mos_overall_score,\r\n  count(*) AS number_of_calls\r\nFROM public.cl_quality AS q\r\nWHERE $__timeFilter(q.time_stamp)\r\nAND LEAST(q.a_mos_to_pbx, q.b_mos_to_pbx, q.a_mos_from_pbx, q.b_mos_from_pbx) >= 3.5 AND LEAST(q.a_mos_to_pbx, q.b_mos_to_pbx, q.a_mos_from_pbx, q.b_mos_from_pbx) < 3.8\r\nUNION ALL\r\nSELECT\r\n  4 AS row_order,\r\n  'High' AS mos_overall_score,\r\n  count(*) AS number_of_calls\r\nFROM public.cl_quality AS q\r\nWHERE $__timeFilter(q.time_stamp)\r\nAND LEAST(q.a_mos_to_pbx, q.b_mos_to_pbx, q.a_mos_from_pbx, q.b_mos_from_pbx) >= 3.8 AND LEAST(q.a_mos_to_pbx, q.b_mos_to_pbx, q.a_mos_from_pbx, q.b_mos_from_pbx) < 4.2\r\nUNION ALL\r\nSELECT\r\n  5 AS row_order,\r\n  'Excellent' AS mos_overall_score,\r\n  count(*) AS number_of_calls\r\nFROM public.cl_quality AS q\r\nWHERE $__timeFilter(q.time_stamp)\r\nAND LEAST(q.a_mos_to_pbx, q.b_mos_to_pbx, q.a_mos_from_pbx, q.b_mos_from_pbx) >= 4.2\r\nORDER BY row_order\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Gesamtwert-Verteilung",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "row_order": true
+            },
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "calls": "Anrufe",
+              "extension": "Durchwahl",
+              "mos_overall_score": "Gesamtwert",
+              "number_of_calls": "Anzahl Anrufe",
+              "row_order": ""
+            }
+          }
+        }
+      ],
+      "type": "barchart",
+      "description": "Verteilung der Anrufe nach MOS-Gesamtwert"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false,
+            "wrapHeaderText": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "a_duration"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "b_duration"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Summary"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 321
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mode"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Overall Score"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Caller Duration"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Callee Duration"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 122
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Callee"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 185
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Callee to PBX Score"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 151
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Caller from PBX Score"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 166
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Callee from PBX Score"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 170
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Caller Address"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 123
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Callee Address"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Caller Packet Loss from PBX %"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 228
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Caller Jitter from PBX (ms)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Callee Packet Count from PBX"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 220
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Callee Packet Loss from PBX %"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 231
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Callee Jitter from PBX (ms)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 202
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Caller Location"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 119
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Callee Location"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 124
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Caller Packet Loss to PBX %"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 209
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Caller Jitter to PBX (ms)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 179
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Callee Packet Count to PBX"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 204
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Callee Packet Loss to PBX %"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 213
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Started at"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 157
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anruf-ID"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Durchwahl"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "DID"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Begonnen am"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Beendet am"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Angenommen am"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Startzeit"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückruf begonnen am"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Dauer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesprächsdauer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Klingeldauer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückruf Gesprächsdauer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Kosten"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Abrechnungskosten"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Abrechnungscode"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Abrechnungsrate"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Abrechnungsratename"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "% angenommen"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Externer Teilnehmer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 190
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Lokaler Teilnehmer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Teilnehmer (Quelle)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anrufer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Angerufener"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Eingehender Anrufer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Wer hat zurückgerufen?"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückrufstatus"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückruftyp"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückruftyp (final)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückrufverzögerung"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückrufreaktionszeit"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 170
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ø Rückrufreaktionszeit"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 170
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückruf in 24h"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Warteschlange"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Eingehend [angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Eingehend [nicht angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ausgehend [angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ausgehend [nicht angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamt [angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 140
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamt [nicht angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesprächszeit"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Dateiname"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Zusammenfassung"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 250
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Transkription"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 300
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Stimmungswert"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anrufteilstrecken"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anrufer-Adresse"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Angerufener-Adresse"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Modus"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamtwert"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamtzusammenfassung"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anzahl Anrufe"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamte Anrufe"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Eingehende Anrufe"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ausgehende Anrufe"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anrufe"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Speicher (MB)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Dienstname"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Dienst"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Verbindungen"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Verbindungen mit Kosten"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 170
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamtkosten"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Teilnehmer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ziel"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "id": 1,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": true,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "12.2.0-16677249643",
+      "targets": [
+        {
+          "dataset": "cdr",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n  q.time_stamp AS started_at,\r\n  CASE\r\n    WHEN q.summary = 0  -- 0 = Unknown\r\n      -- CQSummaryUnknown = Incomplete\r\n      THEN '⚠️ ' || 'Incomplete'\r\n    WHEN q.summary = 1  -- 1 = AllGood\r\n      -- CQSummaryAllGood = No problems detected\r\n      THEN '✅ ' || 'No problems detected'\r\n    WHEN q.summary = 2  -- 2 = NetworkToParty1 [NetworkToP1]\r\n      -- CQSummaryToP1 = Network problems from PBX to %s\r\n      THEN '⚠️ ' || FORMAT('Network problems from PBX to %s', coalesce(q.a_number, 'Unknown'))\r\n    WHEN q.summary = 3  -- 3 = NetworkFromParty1 [NetworkFromP1]\r\n      -- CQSummaryFromP1 = Network problems from %s to PBX\r\n      THEN '⚠️ ' || FORMAT('Network problems from %s to PBX', coalesce(q.a_number, 'Unknown'))\r\n    WHEN q.summary = 4  -- 4 = NetworkParty1AndPbx [NetworkP1andPbx]\r\n      -- CQSummaryP1andPbx = Network problems between PBX and %s\r\n      THEN '⚠️ ' || FORMAT('Network problems between PBX and %s', coalesce(q.a_number, 'Unknown'))\r\n    WHEN q.summary = 5  -- 5 = NetworkToParty2 [NetworkToP2]\r\n      -- CQSummaryToP1 = Network problems from PBX to %s\r\n      THEN '⚠️ ' || FORMAT('Network problems from PBX to %s', coalesce(q.b_number, 'Unknown'))\r\n    WHEN q.summary = 6  -- 6 = NetworkFromParty2 [NetworkFromP2]\r\n      -- CQSummaryFromP1 = Network problems from %s to PBX\r\n      THEN '⚠️ ' || FORMAT('Network problems from %s to PBX', coalesce(q.b_number, 'Unknown'))\r\n    WHEN q.summary = 7  -- 7 = NetworkParty2AndPbx [NetworkP2andPbx]\r\n      -- CQSummaryP1andPbx = Network problems between PBX and %s\r\n      THEN '⚠️ ' || FORMAT('Network problems between PBX and %s', coalesce(q.b_number, 'Unknown'))\r\n    WHEN q.summary = 8  -- 8 = ToPbx\r\n      -- CQSummaryToPbx = Network problems in direction to PBX from both %s and %s\r\n      THEN '⚠️ ' || FORMAT('Network problems in direction to PBX from both %s and %s', coalesce(q.a_number, 'Unknown'), coalesce(q.b_number, 'Unknown'))\r\n    WHEN q.summary = 9  -- 9 = FromPbx\r\n      -- CQSummaryFromPbx = Network problems in direction from PBX to both %s and %s\r\n      THEN '⚠️ ' || FORMAT('Network problems in direction from PBX to both %s and %s', coalesce(q.a_number, 'Unknown'), coalesce(q.b_number, 'Unknown'))\r\n    WHEN q.summary = 10  -- 10 = FromToPbX\r\n      -- CQSummaryFromToPbX = Network problems between PBX and both %s and %s\r\n      THEN '⚠️ ' || FORMAT('Network problems between PBX and both %s and %s', coalesce(q.a_number, 'Unknown'), coalesce(q.b_number, 'Unknown'))\r\n    ELSE '⚠️ ' || 'Generic Problems'\r\n  END AS summary_overal,\r\n  CASE\r\n    WHEN q.summary = 0  -- 0 = Unknown\r\n      THEN 'Direct (RTP stream bypass)'\r\n    WHEN q.transcoding\r\n      THEN 'Transcoding'\r\n    ELSE 'Proxy'\r\n  END AS mode,\r\n  CASE\r\n    WHEN LEAST(q.a_mos_to_pbx, q.b_mos_to_pbx, q.a_mos_from_pbx, q.b_mos_from_pbx) IS NULL OR LEAST(q.a_mos_to_pbx, q.b_mos_to_pbx, q.a_mos_from_pbx, q.b_mos_from_pbx) < 0.1\r\n      THEN 'Unknown'\r\n    WHEN LEAST(q.a_mos_to_pbx, q.b_mos_to_pbx, q.a_mos_from_pbx, q.b_mos_from_pbx) < 3.1\r\n      THEN 'Poor'\r\n    WHEN LEAST(q.a_mos_to_pbx, q.b_mos_to_pbx, q.a_mos_from_pbx, q.b_mos_from_pbx) < 3.5\r\n      THEN 'Low'\r\n    WHEN LEAST(q.a_mos_to_pbx, q.b_mos_to_pbx, q.a_mos_from_pbx, q.b_mos_from_pbx) < 3.8\r\n      THEN 'Medium'\r\n    WHEN LEAST(q.a_mos_to_pbx, q.b_mos_to_pbx, q.a_mos_from_pbx, q.b_mos_from_pbx) < 4.2\r\n      THEN 'High'\r\n    ELSE 'Excellent'\r\n  END AS mos_overall_score,\r\n  CASE\r\n    WHEN q.a_mos_to_pbx IS NULL OR q.a_mos_to_pbx < 0.1\r\n      THEN 'Unknown'\r\n    WHEN q.a_mos_to_pbx < 3.1\r\n      THEN 'Poor'\r\n    WHEN q.a_mos_to_pbx < 3.5\r\n      THEN 'Low'\r\n    WHEN q.a_mos_to_pbx < 3.8\r\n      THEN 'Medium'\r\n    WHEN q.a_mos_to_pbx < 4.2\r\n      THEN 'High'\r\n    ELSE 'Excellent'\r\n  END AS a_mos_to_pbx_score,\r\n  CASE\r\n    WHEN q.b_mos_to_pbx IS NULL OR q.b_mos_to_pbx < 0.1\r\n      THEN 'Unknown'\r\n    WHEN q.b_mos_to_pbx < 3.1\r\n      THEN 'Poor'\r\n    WHEN q.b_mos_to_pbx < 3.5\r\n      THEN 'Low'\r\n    WHEN q.b_mos_to_pbx < 3.8\r\n      THEN 'Medium'\r\n    WHEN q.b_mos_to_pbx < 4.2\r\n      THEN 'High'\r\n    ELSE 'Excellent'\r\n  END AS b_mos_to_pbx_score,\r\n  CASE\r\n    WHEN q.a_mos_from_pbx IS NULL OR q.a_mos_from_pbx < 0.1\r\n      THEN 'Unknown'\r\n    WHEN q.a_mos_from_pbx < 3.1\r\n      THEN 'Poor'\r\n    WHEN q.a_mos_from_pbx < 3.5\r\n      THEN 'Low'\r\n    WHEN q.a_mos_from_pbx < 3.8\r\n      THEN 'Medium'\r\n    WHEN q.a_mos_from_pbx < 4.2\r\n      THEN 'High'\r\n    ELSE 'Excellent'\r\n  END AS a_mos_from_pbx_score,\r\n  CASE\r\n    WHEN q.b_mos_from_pbx IS NULL OR q.b_mos_from_pbx < 0.1\r\n      THEN 'Unknown'\r\n    WHEN q.b_mos_from_pbx < 3.1\r\n      THEN 'Poor'\r\n    WHEN q.b_mos_from_pbx < 3.5\r\n      THEN 'Low'\r\n    WHEN q.b_mos_from_pbx < 3.8\r\n      THEN 'Medium'\r\n    WHEN q.b_mos_from_pbx < 4.2\r\n      THEN 'High'\r\n    ELSE 'Excellent'\r\n  END AS b_mos_from_pbx_score,\r\n  q.a_number || ' ' || coalesce(q.a_name, 'Unknown') AS a_participant,\r\n  q.a_duration,   -- in seconds\r\n  q.b_number || ' ' || coalesce(q.b_name, 'Unknown') AS b_participant,\r\n  q.b_duration,   -- in seconds\r\n  CASE\r\n    WHEN q.a_location IS NULL THEN ''\r\n    WHEN q.a_location = 0 THEN 'Local'\r\n    WHEN q.a_location = 1 THEN 'External'\r\n    WHEN q.a_location = 2 THEN 'Tunnel'\r\n    WHEN q.a_location = 3 THEN 'STUN'\r\n  END AS a_location_type,\r\n  CASE\r\n    WHEN q.b_location IS NULL THEN ''\r\n    WHEN q.b_location = 0 THEN 'Local'\r\n    WHEN q.b_location = 1 THEN 'External'\r\n    WHEN q.b_location = 2 THEN 'Tunnel'\r\n    WHEN q.b_location = 3 THEN 'STUN'\r\n  END AS b_location_type,\r\n  coalesce(q.a_tun_address::varchar, 'Unknown') AS a_address,\r\n  coalesce(q.b_tun_address::varchar, 'Unknown') AS b_address,\r\n  q.a_codec,\r\n  q.b_codec,\r\n  q.a_rtt,\r\n  q.b_rtt,\r\n  q.a_rx,\r\n  q.a_rx_loss,\r\n  q.a_rx_jitter,\r\n  q.b_rx,\r\n  q.b_rx_loss,\r\n  q.b_rx_jitter,\r\n  q.a_tx,\r\n  q.a_tx_loss,\r\n  q.a_tx_jitter,\r\n  q.b_tx,\r\n  q.b_tx_loss,\r\n  q.b_tx_jitter\r\nFROM public.cl_quality AS q\r\nWHERE $__timeFilter(q.time_stamp)\r\nORDER BY q.time_stamp DESC\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Anrufqualitätsbericht",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {
+              "a_address": 6,
+              "a_codec": 18,
+              "a_duration": 5,
+              "a_location_type": 7,
+              "a_mos_from_pbx_score": 14,
+              "a_mos_to_pbx_score": 12,
+              "a_participant": 4,
+              "a_rtt": 16,
+              "a_rx": 20,
+              "a_rx_jitter": 22,
+              "a_rx_loss": 21,
+              "a_tx": 26,
+              "a_tx_jitter": 28,
+              "a_tx_loss": 27,
+              "b_address": 10,
+              "b_codec": 19,
+              "b_duration": 9,
+              "b_location_type": 11,
+              "b_mos_from_pbx_score": 15,
+              "b_mos_to_pbx_score": 13,
+              "b_participant": 8,
+              "b_rtt": 17,
+              "b_rx": 23,
+              "b_rx_jitter": 25,
+              "b_rx_loss": 24,
+              "b_tx": 29,
+              "b_tx_jitter": 31,
+              "b_tx_loss": 30,
+              "mode": 2,
+              "mos_overall_score": 3,
+              "started_at": 0,
+              "summary_overal": 1
+            },
+            "renameByName": {
+              "a_address": "Anrufer-Adresse",
+              "a_codec": "Anrufer-Codec",
+              "a_duration": "Anrufer-Dauer",
+              "a_location_type": "Anrufer-Standort",
+              "a_mos_from_pbx_score": "Anrufer von PBX-Wert",
+              "a_mos_to_pbx_score": "Anrufer zu PBX-Wert",
+              "a_participant": "Anrufer",
+              "a_participant_id": "",
+              "a_rtt": "Anrufer RTT (ms)",
+              "a_rx": "Anrufer Pakete von PBX",
+              "a_rx_jitter": "Anrufer Jitter von PBX (ms)",
+              "a_rx_loss": "Anrufer Paketverlust von PBX %",
+              "a_tx": "Anrufer Pakete zu PBX",
+              "a_tx_jitter": "Anrufer Jitter zu PBX (ms)",
+              "a_tx_loss": "Anrufer Paketverlust zu PBX %",
+              "b_address": "Angerufener-Adresse",
+              "b_codec": "Angerufener-Codec",
+              "b_duration": "Angerufener-Dauer",
+              "b_location_type": "Angerufener-Standort",
+              "b_mos_from_pbx_score": "Angerufener von PBX-Wert",
+              "b_mos_to_pbx_score": "Angerufener zu PBX-Wert",
+              "b_participant": "Angerufener",
+              "b_rtt": "Angerufener RTT (ms)",
+              "b_rx": "Angerufener Pakete von PBX",
+              "b_rx_jitter": "Angerufener Jitter von PBX (ms)",
+              "b_rx_loss": "Angerufener Paketverlust von PBX %",
+              "b_tx": "Angerufener Pakete zu PBX",
+              "b_tx_jitter": "Angerufener Jitter zu PBX (ms)",
+              "b_tx_loss": "Angerufener Paketverlust zu PBX %",
+              "mode": "Modus",
+              "mos_overall_score": "Gesamtwert",
+              "overall_summary": "Gesamtzusammenfassung",
+              "started_at": "Begonnen am",
+              "summary": "",
+              "summary_overal": "Zusammenfassung",
+              "time_stamp": "Begonnen am"
+            }
+          }
+        }
+      ],
+      "type": "table",
+      "description": "Detaillierter Qualitätsbericht aller Anrufe mit Jitter, Paketverlust und Latenz"
+    }
+  ],
+  "schemaVersion": 41,
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "13. Anrufqualitäts-Überwachung (PostgreSQL)",
+  "uid": "e872b01a-056e-4132-b6f9-20135fa0822c",
+  "version": 11,
+  "weekStart": ""
+}

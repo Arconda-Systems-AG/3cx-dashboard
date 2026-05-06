@@ -1,0 +1,16 @@
+node_modules/
+.next/
+dist/
+.turbo/
+.git/
+.gitignore
+*.md
+.env
+.env.*
+!.env.example
+k8s/secret.yaml
+data/
+logs/
+*.log
+coverage/
+.DS_Store

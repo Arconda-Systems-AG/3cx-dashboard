@@ -1,0 +1,3931 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_GRAFANA-BIGQUERY-DATASOURCE",
+      "label": "grafana-bigquery-datasource",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "grafana-bigquery-datasource",
+      "pluginName": "Google BigQuery"
+    }
+  ],
+  "__elements": {},
+  "__requires": [
+    {
+      "type": "panel",
+      "id": "barchart",
+      "name": "Bar chart",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "bargauge",
+      "name": "Bar gauge",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "gauge",
+      "name": "Gauge",
+      "version": ""
+    },
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "12.4.0-19508498046"
+    },
+    {
+      "type": "datasource",
+      "id": "grafana-bigquery-datasource",
+      "name": "Google BigQuery",
+      "version": "3.0.2"
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "text",
+      "name": "Text",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Outbound Call Legs By Cost, (Participants & Extensions)\nPurpose: Detect highest cost calls and customers. \n",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 5,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "# 3CX – Ausgehende Anrufe nach Kosten",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.4.0-19508498046",
+      "type": "text",
+      "title": ""
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 2
+      },
+      "id": 16,
+      "panels": [],
+      "title": "Übersicht",
+      "type": "row",
+      "description": "Überblick über die hochwertigsten ausgehenden Anrufe"
+    },
+    {
+      "datasource": {
+        "type": "grafana-bigquery-datasource",
+        "uid": "${DS_GRAFANA-BIGQUERY-DATASOURCE}"
+      },
+      "description": "Anzahl der Verbindungen über und unter dem Kostenschwellwert",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "fieldMinMax": false,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "high_value_connections"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "no_value_connections"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 3
+      },
+      "id": 9,
+      "options": {
+        "displayMode": "gradient",
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "vertical",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "pluginVersion": "12.4.0-19508498046",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-bigquery-datasource",
+            "uid": "${DS_GRAFANA-BIGQUERY-DATASOURCE}"
+          },
+          "editorMode": "code",
+          "format": 1,
+          "location": "",
+          "project": "pbx-26350568",
+          "rawQuery": true,
+          "rawSql": "-- -----------------------------\r\n-- Outbound answered connections\r\n-- -----------------------------\r\nWITH outbound_connections AS (\r\n  -- -----------\r\n  -- Destination\r\n  -- -----------\r\n  SELECT\r\n    c.destination_participant_id AS participant_id,\r\n\t\tmin(c.cdr_started_at) AS started_at,\r\n\t\tTIMESTAMP_DIFF(max(c.cdr_ended_at), min(c.cdr_started_at), SECOND) AS duration,\r\n\t\tsum(coalesce(TIMESTAMP_DIFF(c.cdr_ended_at, c.cdr_answered_at, SECOND), 0)) AS talking_duration,\r\n    sum(round(coalesce(CAST(b.destination_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.destination_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)) AS bill_cost\r\n  FROM `3cx_call_data.public_cdroutput` AS c\r\n  LEFT JOIN `3cx_call_data.public_cdrbilling` AS b ON\r\n    b.cdr_id = c.cdr_id\r\n  WHERE\r\n\t$__timeFilter(c.cdr_started_at)\r\n  AND c.destination_entity_type = 'external_line'\r\n  AND c.destination_participant_is_incoming = FALSE\r\n  AND c.cdr_answered_at IS NOT NULL\r\n  GROUP BY c.destination_participant_id\r\n  UNION ALL\r\n  -- ------\r\n  -- Source\r\n  -- ------\r\n  SELECT\r\n    c.source_participant_id AS participant_id,\r\n\t\tmin(c.cdr_started_at) AS started_at,\r\n\t\tTIMESTAMP_DIFF(max(c.cdr_ended_at), min(c.cdr_started_at), SECOND) AS duration,\r\n\t\tsum(CASE WHEN c.destination_entity_type NOT IN ('group', 'ring_group_ring_all', 'ring_group_hunt', 'queue') THEN TIMESTAMP_DIFF(c.cdr_ended_at, c.cdr_answered_at, SECOND) ELSE 0 END) AS talking_duration,\r\n    sum(round(coalesce(CAST(b.source_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.source_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)) AS bill_cost\r\n  FROM `3cx_call_data.public_cdroutput` AS c\r\n  LEFT JOIN `3cx_call_data.public_cdrbilling` AS b ON\r\n    b.cdr_id = c.cdr_id\r\n  WHERE\r\n\t$__timeFilter(c.cdr_started_at)\r\n  AND c.source_entity_type = 'external_line'\r\n  AND c.source_participant_is_incoming = FALSE\r\n  AND c.cdr_answered_at IS NOT NULL\r\n  GROUP BY c.source_participant_id\r\n),\r\n-- Outbound statistics\r\noutbound_stat AS (\r\n\tSELECT\r\n    o.participant_id,\r\n\t\tsum(o.bill_cost) AS bill_cost\r\n\tFROM outbound_connections AS o\r\n\tGROUP BY o.participant_id\r\n)\r\nSELECT\r\n  'high value calls ratio' AS text,\r\n  count(*) AS total_connections,\r\n  count(CASE WHEN o.bill_cost >= CAST(NULLIF('${bill_cost_treshhold}', '') AS numeric) THEN 1 END) AS high_value_connections,\r\n  count(CASE WHEN o.bill_cost < CAST(NULLIF('${bill_cost_treshhold}', '') AS numeric) THEN 1 END) AS no_value_connections\r\nFROM outbound_stat AS o\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Angenommene Verbindungen",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "high_value_connections": "Über Schwellwert",
+              "no_value_connections": "Unter Schwellwert",
+              "total_connections": "Gesamt"
+            }
+          }
+        }
+      ],
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "grafana-bigquery-datasource",
+        "uid": "${DS_GRAFANA-BIGQUERY-DATASOURCE}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-YlRd"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 50
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 7,
+        "x": 8,
+        "y": 3
+      },
+      "id": 10,
+      "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "sizing": "auto"
+      },
+      "pluginVersion": "12.4.0-19508498046",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-bigquery-datasource",
+            "uid": "${DS_GRAFANA-BIGQUERY-DATASOURCE}"
+          },
+          "editorMode": "code",
+          "format": 1,
+          "location": "",
+          "project": "pbx-26350568",
+          "rawQuery": true,
+          "rawSql": "-- -----------------------------\r\n-- Outbound answered connections\r\n-- -----------------------------\r\nWITH outbound_connections AS (\r\n  -- -----------\r\n  -- Destination\r\n  -- -----------\r\n  SELECT\r\n    c.destination_participant_id AS participant_id,\r\n\t\tmin(c.cdr_started_at) AS started_at,\r\n\t\tTIMESTAMP_DIFF(max(c.cdr_ended_at), min(c.cdr_started_at), SECOND) AS duration,\r\n\t\tsum(coalesce(TIMESTAMP_DIFF(c.cdr_ended_at, c.cdr_answered_at, SECOND), 0)) AS talking_duration,\r\n    sum(round(coalesce(CAST(b.destination_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.destination_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)) AS bill_cost\r\n  FROM `3cx_call_data.public_cdroutput` AS c\r\n  LEFT JOIN `3cx_call_data.public_cdrbilling` AS b ON\r\n    b.cdr_id = c.cdr_id\r\n  WHERE\r\n\t$__timeFilter(c.cdr_started_at)\r\n  AND c.destination_entity_type = 'external_line'\r\n  AND c.destination_participant_is_incoming = FALSE\r\n  AND c.cdr_answered_at IS NOT NULL\r\n  GROUP BY c.destination_participant_id\r\n  UNION ALL\r\n  -- ------\r\n  -- Source\r\n  -- ------\r\n  SELECT\r\n    c.source_participant_id AS participant_id,\r\n\t\tmin(c.cdr_started_at) AS started_at,\r\n\t\tTIMESTAMP_DIFF(max(c.cdr_ended_at), min(c.cdr_started_at), SECOND) AS duration,\r\n\t\tsum(CASE WHEN c.destination_entity_type NOT IN ('group', 'ring_group_ring_all', 'ring_group_hunt', 'queue') THEN TIMESTAMP_DIFF(c.cdr_ended_at, c.cdr_answered_at, SECOND) ELSE 0 END) AS talking_duration,\r\n    sum(round(coalesce(CAST(b.source_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.source_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)) AS bill_cost\r\n  FROM `3cx_call_data.public_cdroutput` AS c\r\n  LEFT JOIN `3cx_call_data.public_cdrbilling` AS b ON\r\n    b.cdr_id = c.cdr_id\r\n  WHERE\r\n\t$__timeFilter(c.cdr_started_at)\r\n  AND c.source_entity_type = 'external_line'\r\n  AND c.source_participant_is_incoming = FALSE\r\n  AND c.cdr_answered_at IS NOT NULL\r\n  GROUP BY c.source_participant_id\r\n),\r\n-- Outbound statistics\r\noutbound_stat AS (\r\n\tSELECT\r\n    o.participant_id,\r\n\t\tsum(o.bill_cost) AS bill_cost\r\n\tFROM outbound_connections AS o\r\n\tGROUP BY o.participant_id\r\n)\r\nSELECT\r\n  -- High value connections\r\n  coalesce(count(CASE WHEN o.bill_cost >= CAST(NULLIF('${bill_cost_treshhold}', '') AS numeric) THEN 1 END), 0)\r\n  * 100.0\r\n  -- All connections\r\n  / CASE WHEN count(*) = 0 THEN 1 ELSE count(*) END\r\nFROM outbound_stat AS o\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "% über Schwellwert",
+      "type": "gauge",
+      "description": "Prozentualer Anteil der Verbindungen über dem Kostenschwellwert"
+    },
+    {
+      "datasource": {
+        "type": "grafana-bigquery-datasource",
+        "uid": "${DS_GRAFANA-BIGQUERY-DATASOURCE}"
+      },
+      "description": "of all Connections Over Threshold.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "red",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "locale"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 15,
+        "y": 3
+      },
+      "id": 13,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0-19508498046",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-bigquery-datasource",
+            "uid": "${DS_GRAFANA-BIGQUERY-DATASOURCE}"
+          },
+          "editorMode": "code",
+          "format": 1,
+          "location": "",
+          "project": "pbx-26350568",
+          "rawQuery": true,
+          "rawSql": "-- -----------------------------\r\n-- Outbound answered connections\r\n-- -----------------------------\r\nWITH outbound_connections AS (\r\n  -- -----------\r\n  -- Destination\r\n  -- -----------\r\n  SELECT\r\n    c.destination_participant_id AS participant_id,\r\n\t\tmin(c.cdr_started_at) AS started_at,\r\n\t\tTIMESTAMP_DIFF(max(c.cdr_ended_at), min(c.cdr_started_at), SECOND) AS duration,\r\n\t\tsum(coalesce(TIMESTAMP_DIFF(c.cdr_ended_at, c.cdr_answered_at, SECOND), 0)) AS talking_duration,\r\n    sum(round(coalesce(CAST(b.destination_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.destination_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)) AS bill_cost\r\n  FROM `3cx_call_data.public_cdroutput` AS c\r\n  LEFT JOIN `3cx_call_data.public_cdrbilling` AS b ON\r\n    b.cdr_id = c.cdr_id\r\n  WHERE\r\n\t$__timeFilter(c.cdr_started_at)\r\n  AND c.destination_entity_type = 'external_line'\r\n  AND c.destination_participant_is_incoming = FALSE\r\n  AND c.cdr_answered_at IS NOT NULL\r\n  GROUP BY c.destination_participant_id\r\n  UNION ALL\r\n  -- ------\r\n  -- Source\r\n  -- ------\r\n  SELECT\r\n    c.source_participant_id AS participant_id,\r\n\t\tmin(c.cdr_started_at) AS started_at,\r\n\t\tTIMESTAMP_DIFF(max(c.cdr_ended_at), min(c.cdr_started_at), SECOND) AS duration,\r\n\t\tsum(CASE WHEN c.destination_entity_type NOT IN ('group', 'ring_group_ring_all', 'ring_group_hunt', 'queue') THEN TIMESTAMP_DIFF(c.cdr_ended_at, c.cdr_answered_at, SECOND) ELSE 0 END) AS talking_duration,\r\n    sum(round(coalesce(CAST(b.source_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.source_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)) AS bill_cost\r\n  FROM `3cx_call_data.public_cdroutput` AS c\r\n  LEFT JOIN `3cx_call_data.public_cdrbilling` AS b ON\r\n    b.cdr_id = c.cdr_id\r\n  WHERE\r\n\t$__timeFilter(c.cdr_started_at)\r\n  AND c.source_entity_type = 'external_line'\r\n  AND c.source_participant_is_incoming = FALSE\r\n  AND c.cdr_answered_at IS NOT NULL\r\n  GROUP BY c.source_participant_id\r\n),\r\n-- Outbound statistics\r\noutbound_stat AS (\r\n\tSELECT\r\n    o.participant_id,\r\n\t\tsum(o.bill_cost) AS bill_cost,\r\n    sum(o.talking_duration) AS talking_duration\r\n\tFROM outbound_connections AS o\r\n\tGROUP BY o.participant_id\r\n)\r\nSELECT\r\n  round(avg(CASE WHEN o.bill_cost >= CAST(NULLIF('${bill_cost_treshhold}', '') AS numeric) THEN o.bill_cost END), 2) AS high_value_avg_bill_cost\r\nFROM outbound_stat AS o\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Ø Kosten",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "high_value_avg_bill_cost": "Ø Abrechnungskosten"
+            }
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-bigquery-datasource",
+        "uid": "${DS_GRAFANA-BIGQUERY-DATASOURCE}"
+      },
+      "description": "of all Connections Over Threshold.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "semi-dark-red",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "locale"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 19,
+        "y": 3
+      },
+      "id": 14,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0-19508498046",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-bigquery-datasource",
+            "uid": "${DS_GRAFANA-BIGQUERY-DATASOURCE}"
+          },
+          "editorMode": "code",
+          "format": 1,
+          "location": "",
+          "project": "pbx-26350568",
+          "rawQuery": true,
+          "rawSql": "-- -----------------------------\r\n-- Outbound answered connections\r\n-- -----------------------------\r\nWITH outbound_connections AS (\r\n  -- -----------\r\n  -- Destination\r\n  -- -----------\r\n  SELECT\r\n    c.destination_participant_id AS participant_id,\r\n\t\tmin(c.cdr_started_at) AS started_at,\r\n\t\tTIMESTAMP_DIFF(max(c.cdr_ended_at), min(c.cdr_started_at), SECOND) AS duration,\r\n\t\tsum(coalesce(TIMESTAMP_DIFF(c.cdr_ended_at, c.cdr_answered_at, SECOND), 0)) AS talking_duration,\r\n    sum(round(coalesce(CAST(b.destination_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.destination_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)) AS bill_cost\r\n  FROM `3cx_call_data.public_cdroutput` AS c\r\n  LEFT JOIN `3cx_call_data.public_cdrbilling` AS b ON\r\n    b.cdr_id = c.cdr_id\r\n  WHERE\r\n\t$__timeFilter(c.cdr_started_at)\r\n  AND c.destination_entity_type = 'external_line'\r\n  AND c.destination_participant_is_incoming = FALSE\r\n  AND c.cdr_answered_at IS NOT NULL\r\n  GROUP BY c.destination_participant_id\r\n  UNION ALL\r\n  -- ------\r\n  -- Source\r\n  -- ------\r\n  SELECT\r\n    c.source_participant_id AS participant_id,\r\n\t\tmin(c.cdr_started_at) AS started_at,\r\n\t\tTIMESTAMP_DIFF(max(c.cdr_ended_at), min(c.cdr_started_at), SECOND) AS duration,\r\n\t\tsum(CASE WHEN c.destination_entity_type NOT IN ('group', 'ring_group_ring_all', 'ring_group_hunt', 'queue') THEN TIMESTAMP_DIFF(c.cdr_ended_at, c.cdr_answered_at, SECOND) ELSE 0 END) AS talking_duration,\r\n    sum(round(coalesce(CAST(b.source_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.source_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)) AS bill_cost\r\n  FROM `3cx_call_data.public_cdroutput` AS c\r\n  LEFT JOIN `3cx_call_data.public_cdrbilling` AS b ON\r\n    b.cdr_id = c.cdr_id\r\n  WHERE\r\n\t$__timeFilter(c.cdr_started_at)\r\n  AND c.source_entity_type = 'external_line'\r\n  AND c.source_participant_is_incoming = FALSE\r\n  AND c.cdr_answered_at IS NOT NULL\r\n  GROUP BY c.source_participant_id\r\n),\r\n-- Outbound statistics\r\noutbound_stat AS (\r\n\tSELECT\r\n    o.participant_id,\r\n\t\tsum(o.bill_cost) AS bill_cost,\r\n    sum(o.talking_duration) AS talking_duration\r\n\tFROM outbound_connections AS o\r\n\tGROUP BY o.participant_id\r\n)\r\nSELECT\r\n  sum(CASE WHEN o.bill_cost >= CAST(NULLIF('${bill_cost_treshhold}', '') AS numeric) THEN o.bill_cost END) AS high_value_total_bill_cost\r\nFROM outbound_stat AS o\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Gesamtkosten",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "high_value_total_bill_cost": "Gesamte Abrechnungskosten"
+            }
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-bigquery-datasource",
+        "uid": "${DS_GRAFANA-BIGQUERY-DATASOURCE}"
+      },
+      "description": "for Over Threshold Connections.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "light-red",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 15,
+        "y": 7
+      },
+      "id": 11,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0-19508498046",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-bigquery-datasource",
+            "uid": "${DS_GRAFANA-BIGQUERY-DATASOURCE}"
+          },
+          "editorMode": "code",
+          "format": 1,
+          "location": "",
+          "project": "pbx-26350568",
+          "rawQuery": true,
+          "rawSql": "-- -----------------------------\r\n-- Outbound answered connections\r\n-- -----------------------------\r\nWITH outbound_connections AS (\r\n  -- -----------\r\n  -- Destination\r\n  -- -----------\r\n  SELECT\r\n    c.destination_participant_id AS participant_id,\r\n\t\tmin(c.cdr_started_at) AS started_at,\r\n\t\tTIMESTAMP_DIFF(max(c.cdr_ended_at), min(c.cdr_started_at), SECOND) AS duration,\r\n\t\tsum(coalesce(TIMESTAMP_DIFF(c.cdr_ended_at, c.cdr_answered_at, SECOND), 0)) AS talking_duration,\r\n    sum(round(coalesce(CAST(b.destination_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.destination_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)) AS bill_cost\r\n  FROM `3cx_call_data.public_cdroutput` AS c\r\n  LEFT JOIN `3cx_call_data.public_cdrbilling` AS b ON\r\n    b.cdr_id = c.cdr_id\r\n  WHERE\r\n\t$__timeFilter(c.cdr_started_at)\r\n  AND c.destination_entity_type = 'external_line'\r\n  AND c.destination_participant_is_incoming = FALSE\r\n  AND c.cdr_answered_at IS NOT NULL\r\n  GROUP BY c.destination_participant_id\r\n  UNION ALL\r\n  -- ------\r\n  -- Source\r\n  -- ------\r\n  SELECT\r\n    c.source_participant_id AS participant_id,\r\n\t\tmin(c.cdr_started_at) AS started_at,\r\n\t\tTIMESTAMP_DIFF(max(c.cdr_ended_at), min(c.cdr_started_at), SECOND) AS duration,\r\n\t\tsum(CASE WHEN c.destination_entity_type NOT IN ('group', 'ring_group_ring_all', 'ring_group_hunt', 'queue') THEN TIMESTAMP_DIFF(c.cdr_ended_at, c.cdr_answered_at, SECOND) ELSE 0 END) AS talking_duration,\r\n    sum(round(coalesce(CAST(b.source_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.source_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)) AS bill_cost\r\n  FROM `3cx_call_data.public_cdroutput` AS c\r\n  LEFT JOIN `3cx_call_data.public_cdrbilling` AS b ON\r\n    b.cdr_id = c.cdr_id\r\n  WHERE\r\n\t$__timeFilter(c.cdr_started_at)\r\n  AND c.source_entity_type = 'external_line'\r\n  AND c.source_participant_is_incoming = FALSE\r\n  AND c.cdr_answered_at IS NOT NULL\r\n  GROUP BY c.source_participant_id\r\n),\r\n-- Outbound statistics\r\noutbound_stat AS (\r\n\tSELECT\r\n    o.participant_id,\r\n\t\tsum(o.bill_cost) AS bill_cost,\r\n    sum(o.talking_duration) AS talking_duration\r\n\tFROM outbound_connections AS o\r\n\tGROUP BY o.participant_id\r\n)\r\nSELECT\r\n  avg(CASE WHEN o.bill_cost >= CAST(NULLIF('${bill_cost_treshhold}', '') AS numeric) THEN o.talking_duration END) AS high_value_avg_duration\r\nFROM outbound_stat AS o\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Ø Gesprächszeit",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "high_value_avg_duration": "Ø Gesprächsdauer"
+            }
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-bigquery-datasource",
+        "uid": "${DS_GRAFANA-BIGQUERY-DATASOURCE}"
+      },
+      "description": "of All Connections Over Threshold",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "light-red",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 19,
+        "y": 7
+      },
+      "id": 12,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0-19508498046",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-bigquery-datasource",
+            "uid": "${DS_GRAFANA-BIGQUERY-DATASOURCE}"
+          },
+          "editorMode": "code",
+          "format": 1,
+          "location": "",
+          "project": "pbx-26350568",
+          "rawQuery": true,
+          "rawSql": "-- -----------------------------\r\n-- Outbound answered connections\r\n-- -----------------------------\r\nWITH outbound_connections AS (\r\n  -- -----------\r\n  -- Destination\r\n  -- -----------\r\n  SELECT\r\n    c.destination_participant_id AS participant_id,\r\n\t\tmin(c.cdr_started_at) AS started_at,\r\n\t\tTIMESTAMP_DIFF(max(c.cdr_ended_at), min(c.cdr_started_at), SECOND) AS duration,\r\n\t\tsum(coalesce(TIMESTAMP_DIFF(c.cdr_ended_at, c.cdr_answered_at, SECOND), 0)) AS talking_duration,\r\n    sum(round(coalesce(CAST(b.destination_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.destination_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)) AS bill_cost\r\n  FROM `3cx_call_data.public_cdroutput` AS c\r\n  LEFT JOIN `3cx_call_data.public_cdrbilling` AS b ON\r\n    b.cdr_id = c.cdr_id\r\n  WHERE\r\n\t$__timeFilter(c.cdr_started_at)\r\n  AND c.destination_entity_type = 'external_line'\r\n  AND c.destination_participant_is_incoming = FALSE\r\n  AND c.cdr_answered_at IS NOT NULL\r\n  GROUP BY c.destination_participant_id\r\n  UNION ALL\r\n  -- ------\r\n  -- Source\r\n  -- ------\r\n  SELECT\r\n    c.source_participant_id AS participant_id,\r\n\t\tmin(c.cdr_started_at) AS started_at,\r\n\t\tTIMESTAMP_DIFF(max(c.cdr_ended_at), min(c.cdr_started_at), SECOND) AS duration,\r\n\t\tsum(CASE WHEN c.destination_entity_type NOT IN ('group', 'ring_group_ring_all', 'ring_group_hunt', 'queue') THEN TIMESTAMP_DIFF(c.cdr_ended_at, c.cdr_answered_at, SECOND) ELSE 0 END) AS talking_duration,\r\n    sum(round(coalesce(CAST(b.source_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.source_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)) AS bill_cost\r\n  FROM `3cx_call_data.public_cdroutput` AS c\r\n  LEFT JOIN `3cx_call_data.public_cdrbilling` AS b ON\r\n    b.cdr_id = c.cdr_id\r\n  WHERE\r\n\t$__timeFilter(c.cdr_started_at)\r\n  AND c.source_entity_type = 'external_line'\r\n  AND c.source_participant_is_incoming = FALSE\r\n  AND c.cdr_answered_at IS NOT NULL\r\n  GROUP BY c.source_participant_id\r\n),\r\n-- Outbound statistics\r\noutbound_stat AS (\r\n\tSELECT\r\n    o.participant_id,\r\n\t\tsum(o.bill_cost) AS bill_cost,\r\n    sum(o.talking_duration) AS talking_duration\r\n\tFROM outbound_connections AS o\r\n\tGROUP BY o.participant_id\r\n)\r\nSELECT\r\n  sum(CASE WHEN o.bill_cost >= CAST(NULLIF('${bill_cost_treshhold}', '') AS numeric) THEN o.talking_duration END) AS high_value_total_duration\r\nFROM outbound_stat AS o\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Gesamte Gesprächszeit",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "high_value_total_duration": "Gesamte Gesprächsdauer"
+            }
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-bigquery-datasource",
+        "uid": "${DS_GRAFANA-BIGQUERY-DATASOURCE}"
+      },
+      "description": "of all Connections Over Threshold.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-BlYlRd"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 11
+      },
+      "id": 3,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "12.4.0-19508498046",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-bigquery-datasource",
+            "uid": "${DS_GRAFANA-BIGQUERY-DATASOURCE}"
+          },
+          "editorMode": "code",
+          "format": 1,
+          "location": "",
+          "project": "pbx-26350568",
+          "rawQuery": true,
+          "rawSql": "-- -----------------------------\r\n-- Outbound answered connections\r\n-- -----------------------------\r\nWITH outbound_connections AS (\r\n  -- -----------\r\n  -- Destination\r\n  -- -----------\r\n  SELECT\r\n    c.destination_participant_id AS participant_id,\r\n\t\tmin(c.cdr_started_at) AS started_at,\r\n\t\tTIMESTAMP_DIFF(max(c.cdr_ended_at), min(c.cdr_started_at), SECOND) AS duration,\r\n\t\tsum(coalesce(TIMESTAMP_DIFF(c.cdr_ended_at, c.cdr_answered_at, SECOND), 0)) AS talking_duration,\r\n    sum(round(coalesce(CAST(b.destination_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.destination_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)) AS bill_cost\r\n  FROM `3cx_call_data.public_cdroutput` AS c\r\n  LEFT JOIN `3cx_call_data.public_cdrbilling` AS b ON\r\n    b.cdr_id = c.cdr_id\r\n  WHERE\r\n\t$__timeFilter(c.cdr_started_at)\r\n  AND c.destination_entity_type = 'external_line'\r\n  AND c.destination_participant_is_incoming = FALSE\r\n  AND c.cdr_answered_at IS NOT NULL\r\n  GROUP BY c.destination_participant_id\r\n  UNION ALL\r\n  -- ------\r\n  -- Source\r\n  -- ------\r\n  SELECT\r\n    c.source_participant_id AS participant_id,\r\n\t\tmin(c.cdr_started_at) AS started_at,\r\n\t\tTIMESTAMP_DIFF(max(c.cdr_ended_at), min(c.cdr_started_at), SECOND) AS duration,\r\n\t\tsum(CASE WHEN c.destination_entity_type NOT IN ('group', 'ring_group_ring_all', 'ring_group_hunt', 'queue') THEN TIMESTAMP_DIFF(c.cdr_ended_at, c.cdr_answered_at, SECOND) ELSE 0 END) AS talking_duration,\r\n    sum(round(coalesce(CAST(b.source_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.source_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)) AS bill_cost\r\n  FROM `3cx_call_data.public_cdroutput` AS c\r\n  LEFT JOIN `3cx_call_data.public_cdrbilling` AS b ON\r\n    b.cdr_id = c.cdr_id\r\n  WHERE\r\n\t$__timeFilter(c.cdr_started_at)\r\n  AND c.source_entity_type = 'external_line'\r\n  AND c.source_participant_is_incoming = FALSE\r\n  AND c.cdr_answered_at IS NOT NULL\r\n  GROUP BY c.source_participant_id\r\n),\r\n-- Outbound statistics\r\noutbound_stat AS (\r\n\tSELECT\r\n    o.participant_id,\r\n    sum(o.duration) AS duration,\r\n\t\tsum(o.bill_cost) AS bill_cost\r\n\tFROM outbound_connections AS o\r\n\tGROUP BY o.participant_id\r\n  HAVING sum(o.bill_cost) >= CAST(NULLIF('${bill_cost_treshhold}', '') AS numeric)\r\n)\r\nSELECT\r\n  0 AS row_order,\r\n  '< 5 min' AS duration_type,\r\n  count(CASE WHEN o.duration < 300 THEN 1 END) AS connections\r\nFROM outbound_stat AS o\r\nUNION ALL\r\nSELECT\r\n  1 AS row_order,\r\n  '5-10 min' AS duration_type,\r\n  count(CASE WHEN o.duration BETWEEN 300 AND 599 THEN 1 END) AS connections\r\nFROM outbound_stat AS o\r\nUNION ALL\r\nSELECT\r\n  2 AS row_order,\r\n  '10-15 min' AS duration_type,\r\n  count(CASE WHEN o.duration BETWEEN 600 AND 899 THEN 1 END) AS connections\r\nFROM outbound_stat AS o\r\nUNION ALL\r\nSELECT\r\n  3 AS row_order,\r\n  '15-20 min' AS duration_type,\r\n  count(CASE WHEN o.duration BETWEEN 900 AND 1199 THEN 1 END) AS connections\r\nFROM outbound_stat AS o\r\nUNION ALL\r\nSELECT\r\n  4 AS row_order,\r\n  '20+ min' AS duration_type,\r\n  count(CASE WHEN o.duration >= 1200 THEN 1 END) AS connections\r\nFROM outbound_stat AS o\r\nORDER BY row_order\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Gesprächszeit-Verteilung",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "duration_type",
+                "connections"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "connections": "Verbindungen",
+              "duration_type": "Dauer"
+            }
+          }
+        }
+      ],
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "grafana-bigquery-datasource",
+        "uid": "${DS_GRAFANA-BIGQUERY-DATASOURCE}"
+      },
+      "description": "of all Connections Over Threshold.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "red",
+            "mode": "continuous-BlYlRd"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 11
+      },
+      "id": 8,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "12.4.0-19508498046",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-bigquery-datasource",
+            "uid": "${DS_GRAFANA-BIGQUERY-DATASOURCE}"
+          },
+          "editorMode": "code",
+          "format": 1,
+          "location": "",
+          "project": "pbx-26350568",
+          "rawQuery": true,
+          "rawSql": "-- -----------------------------\r\n-- Outbound answered connections\r\n-- -----------------------------\r\nWITH outbound_connections AS (\r\n  -- -----------\r\n  -- Destination\r\n  -- -----------\r\n  SELECT\r\n    c.destination_participant_id AS participant_id,\r\n\t\tmin(c.cdr_started_at) AS started_at,\r\n\t\tTIMESTAMP_DIFF(max(c.cdr_ended_at), min(c.cdr_started_at), SECOND) AS duration,\r\n\t\tsum(coalesce(TIMESTAMP_DIFF(c.cdr_ended_at, c.cdr_answered_at, SECOND), 0)) AS talking_duration,\r\n    sum(round(coalesce(CAST(b.destination_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.destination_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)) AS bill_cost\r\n  FROM `3cx_call_data.public_cdroutput` AS c\r\n  LEFT JOIN `3cx_call_data.public_cdrbilling` AS b ON\r\n    b.cdr_id = c.cdr_id\r\n  WHERE\r\n\t$__timeFilter(c.cdr_started_at)\r\n  AND c.destination_entity_type = 'external_line'\r\n  AND c.destination_participant_is_incoming = FALSE\r\n  AND c.cdr_answered_at IS NOT NULL\r\n  GROUP BY c.destination_participant_id\r\n  UNION ALL\r\n  -- ------\r\n  -- Source\r\n  -- ------\r\n  SELECT\r\n    c.source_participant_id AS participant_id,\r\n\t\tmin(c.cdr_started_at) AS started_at,\r\n\t\tTIMESTAMP_DIFF(max(c.cdr_ended_at), min(c.cdr_started_at), SECOND) AS duration,\r\n\t\tsum(CASE WHEN c.destination_entity_type NOT IN ('group', 'ring_group_ring_all', 'ring_group_hunt', 'queue') THEN TIMESTAMP_DIFF(c.cdr_ended_at, c.cdr_answered_at, SECOND) ELSE 0 END) AS talking_duration,\r\n    sum(round(coalesce(CAST(b.source_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.source_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)) AS bill_cost\r\n  FROM `3cx_call_data.public_cdroutput` AS c\r\n  LEFT JOIN `3cx_call_data.public_cdrbilling` AS b ON\r\n    b.cdr_id = c.cdr_id\r\n  WHERE\r\n\t$__timeFilter(c.cdr_started_at)\r\n  AND c.source_entity_type = 'external_line'\r\n  AND c.source_participant_is_incoming = FALSE\r\n  AND c.cdr_answered_at IS NOT NULL\r\n  GROUP BY c.source_participant_id\r\n),\r\n-- Outbound statistics\r\noutbound_stat AS (\r\n\tSELECT\r\n    o.participant_id,\r\n    sum(o.duration) AS duration,\r\n\t\tsum(o.bill_cost) AS bill_cost\r\n\tFROM outbound_connections AS o\r\n\tGROUP BY o.participant_id\r\n  HAVING sum(o.bill_cost) >= CAST(NULLIF('${bill_cost_treshhold}', '') AS numeric)\r\n)\r\nSELECT\r\n  0 AS row_order,\r\n  CASE\r\n    WHEN CAST(${bill_cost_treshhold} AS numeric) = 0\r\n      THEN '0.00 - 1.00'\r\n    ELSE FORMAT('%.2f', CAST(${bill_cost_treshhold} AS numeric)) || ' - ' || FORMAT('%.2f', CAST(${bill_cost_treshhold} AS numeric) * 2)\r\n  END AS cost_type,\r\n  CASE\r\n    WHEN CAST(${bill_cost_treshhold} AS numeric) = 0\r\n      THEN count(CASE WHEN o.bill_cost <= 1.00 THEN 1 END)\r\n    ELSE count(CASE WHEN o.bill_cost >= ${bill_cost_treshhold} AND o.bill_cost <= ${bill_cost_treshhold} * 2 THEN 1 END)\r\n  END AS connections\r\nFROM outbound_stat AS o\r\nUNION ALL\r\nSELECT\r\n  1 AS row_order,\r\n  CASE\r\n    WHEN CAST(${bill_cost_treshhold} AS numeric) = 0\r\n      THEN '1.00 - 5.00'\r\n    ELSE FORMAT('%.2f', CAST(${bill_cost_treshhold} AS numeric) * 2) || ' - ' || FORMAT('%.2f', CAST(${bill_cost_treshhold} AS numeric) * 3)\r\n  END AS cost_type,\r\n  CASE\r\n    WHEN CAST(${bill_cost_treshhold} AS numeric) = 0\r\n      THEN count(CASE WHEN o.bill_cost > 1.00 AND o.bill_cost <= 5.00 THEN 1 END)\r\n    ELSE count(CASE WHEN o.bill_cost > ${bill_cost_treshhold} * 2 AND o.bill_cost <= ${bill_cost_treshhold} * 3 THEN 1 END)\r\n  END AS connections\r\nFROM outbound_stat AS o\r\nUNION ALL\r\nSELECT\r\n  2 AS row_order,\r\n  CASE\r\n    WHEN CAST(${bill_cost_treshhold} AS numeric) = 0\r\n      THEN '5.00 - 10.00'\r\n    ELSE FORMAT('%.2f', CAST(${bill_cost_treshhold} AS numeric) * 3) || ' - ' || FORMAT('%.2f', CAST(${bill_cost_treshhold} AS numeric) * 4)\r\n  END AS cost_type,\r\n  CASE\r\n    WHEN CAST(${bill_cost_treshhold} AS numeric) = 0\r\n      THEN count(CASE WHEN o.bill_cost > 5.00 AND o.bill_cost <= 10.00 THEN 1 END)\r\n    ELSE count(CASE WHEN o.bill_cost > ${bill_cost_treshhold} * 3 AND o.bill_cost <= ${bill_cost_treshhold} * 4 THEN 1 END)\r\n  END AS connections\r\nFROM outbound_stat AS o\r\nUNION ALL\r\nSELECT\r\n  3 AS row_order,\r\n  CASE\r\n    WHEN CAST(${bill_cost_treshhold} AS numeric) = 0\r\n      THEN '10.00 +'\r\n    ELSE FORMAT('%.2f', CAST(${bill_cost_treshhold} AS numeric) * 4) || ' +'\r\n  END AS cost_type,\r\n  CASE\r\n    WHEN CAST(${bill_cost_treshhold} AS numeric) = 0\r\n      THEN count(CASE WHEN o.bill_cost > 10.00 THEN 1 END)\r\n    ELSE count(CASE WHEN o.bill_cost > ${bill_cost_treshhold} * 4 THEN 1 END)\r\n  END AS connections\r\nFROM outbound_stat AS o\r\nORDER BY row_order\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Kosten-Verteilung",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "cost_type",
+                "connections"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "connections": "Verbindungen",
+              "cost_type": "Kosten"
+            }
+          }
+        }
+      ],
+      "type": "barchart"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 19
+      },
+      "id": 15,
+      "panels": [],
+      "title": "Details",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-bigquery-datasource",
+        "uid": "${DS_GRAFANA-BIGQUERY-DATASOURCE}"
+      },
+      "description": "of all Connections Over Threshold.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-YlRd"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 13,
+        "x": 0,
+        "y": 20
+      },
+      "id": 2,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "text": {},
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": -15,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "12.4.0-19508498046",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-bigquery-datasource",
+            "uid": "${DS_GRAFANA-BIGQUERY-DATASOURCE}"
+          },
+          "editorMode": "code",
+          "format": 1,
+          "location": "",
+          "project": "pbx-26350568",
+          "rawQuery": true,
+          "rawSql": "-- -----------------------------\r\n-- Outbound answered connections\r\n-- -----------------------------\r\nWITH outbound_connections AS (\r\n  -- -----------\r\n  -- Destination\r\n  -- -----------\r\n  SELECT\r\n    c.destination_participant_id AS participant_id,\r\n    max(c.destination_participant_phone_number || ' ' || coalesce(c.destination_dn_name, 'Unknown')) AS consumer,\r\n\t\tmin(c.cdr_started_at) AS started_at,\r\n\t\tTIMESTAMP_DIFF(max(c.cdr_ended_at), min(c.cdr_started_at), SECOND) AS duration,\r\n\t\tsum(coalesce(TIMESTAMP_DIFF(c.cdr_ended_at, c.cdr_answered_at, SECOND), 0)) AS talking_duration,\r\n    sum(round(coalesce(CAST(b.destination_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.destination_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)) AS bill_cost\r\n  FROM `3cx_call_data.public_cdroutput` AS c\r\n  LEFT JOIN `3cx_call_data.public_cdrbilling` AS b ON\r\n    b.cdr_id = c.cdr_id\r\n  WHERE $__timeFilter(c.cdr_started_at)\r\n  AND c.destination_entity_type = 'external_line'\r\n  AND c.destination_participant_is_incoming = FALSE\r\n  AND c.cdr_answered_at IS NOT NULL\r\n  GROUP BY c.destination_participant_id\r\n  UNION ALL\r\n  -- ------\r\n  -- Source\r\n  -- ------\r\n  SELECT\r\n    c.source_participant_id AS participant_id,\r\n    max(c.source_participant_phone_number || ' ' || coalesce(c.source_dn_name, 'Unknown')) AS consumer,\r\n\t\tmin(c.cdr_started_at) AS started_at,\r\n\t\tTIMESTAMP_DIFF(max(c.cdr_ended_at), min(c.cdr_started_at), SECOND) AS duration,\r\n\t\tsum(CASE WHEN c.destination_entity_type NOT IN ('group', 'ring_group_ring_all', 'ring_group_hunt', 'queue') THEN TIMESTAMP_DIFF(c.cdr_ended_at, c.cdr_answered_at, SECOND) ELSE 0 END) AS talking_duration,\r\n    sum(round(coalesce(CAST(b.source_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.source_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)) AS bill_cost\r\n  FROM `3cx_call_data.public_cdroutput` AS c\r\n  LEFT JOIN `3cx_call_data.public_cdrbilling` AS b ON\r\n    b.cdr_id = c.cdr_id\r\n  WHERE\r\n\t$__timeFilter(c.cdr_started_at)\r\n  AND c.source_entity_type = 'external_line'\r\n  AND c.source_participant_is_incoming = FALSE\r\n  AND c.cdr_answered_at IS NOT NULL\r\n  GROUP BY c.source_participant_id\r\n),\r\n-- Outbound statistics\r\noutbound_stat AS (\r\n\tSELECT\r\n    o.participant_id,\r\n    max(o.consumer) AS consumer,\r\n\tsum(o.bill_cost) AS bill_cost\r\n\tFROM outbound_connections AS o\r\n\tGROUP BY o.participant_id\r\n  HAVING sum(o.bill_cost) >= CAST(NULLIF('${bill_cost_treshhold}', '') AS numeric)\r\n)\r\nSELECT\r\n  o.consumer,\r\n  count(1) AS high_value_connections\r\nFROM outbound_stat AS o\r\nGROUP BY o.consumer\r\nORDER BY high_value_connections DESC\r\nLIMIT 10\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Top Ziel-Teilnehmer",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "consumer": "Verbraucher",
+              "high_value_connections": "Verbindungen mit Kosten"
+            }
+          }
+        }
+      ],
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "grafana-bigquery-datasource",
+        "uid": "${DS_GRAFANA-BIGQUERY-DATASOURCE}"
+      },
+      "description": "of all Connections Over Threshold.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "footer": {
+              "reducers": [
+                "sum"
+              ]
+            },
+            "inspect": false,
+            "wrapHeaderText": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "bill_cost"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "locale"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "talking_duration"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anruf-ID"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Durchwahl"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "DID"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Begonnen am"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Beendet am"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Angenommen am"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Startzeit"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückruf begonnen am"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Dauer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesprächsdauer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Klingeldauer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückruf Gesprächsdauer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Kosten"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Abrechnungskosten"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Abrechnungscode"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Abrechnungsrate"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Abrechnungsratename"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "% angenommen"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Externer Teilnehmer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 190
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Lokaler Teilnehmer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Teilnehmer (Quelle)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anrufer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Angerufener"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Eingehender Anrufer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Wer hat zurückgerufen?"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückrufstatus"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückruftyp"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückruftyp (final)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückrufverzögerung"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückrufreaktionszeit"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 170
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ø Rückrufreaktionszeit"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 170
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückruf in 24h"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Warteschlange"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Eingehend [angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Eingehend [nicht angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ausgehend [angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ausgehend [nicht angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamt [angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 140
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamt [nicht angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesprächszeit"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Dateiname"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Zusammenfassung"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 250
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Transkription"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 300
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Stimmungswert"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anrufteilstrecken"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anrufer-Adresse"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Angerufener-Adresse"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Modus"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamtwert"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamtzusammenfassung"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anzahl Anrufe"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamte Anrufe"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Eingehende Anrufe"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ausgehende Anrufe"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anrufe"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Speicher (MB)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Dienstname"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Dienst"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Verbindungen"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Verbindungen mit Kosten"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 170
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamtkosten"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Teilnehmer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ziel"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 11,
+        "x": 13,
+        "y": 20
+      },
+      "id": 4,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Bill cost"
+          }
+        ]
+      },
+      "pluginVersion": "12.4.0-19508498046",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-bigquery-datasource",
+            "uid": "${DS_GRAFANA-BIGQUERY-DATASOURCE}"
+          },
+          "editorMode": "code",
+          "format": 1,
+          "location": "",
+          "project": "pbx-26350568",
+          "rawQuery": true,
+          "rawSql": "-- -----------------------------\r\n-- Outbound answered connections\r\n-- -----------------------------\r\nWITH outbound_connections AS (\r\n  -- -----------\r\n  -- Destination\r\n  -- -----------\r\n  SELECT\r\n    c.destination_participant_id AS participant_id,\r\n    max(c.destination_participant_phone_number || ' ' || coalesce(c.destination_dn_name, 'Unknown')) AS consumer,\r\n\t\tmin(c.cdr_started_at) AS started_at,\r\n\t\tTIMESTAMP_DIFF(max(c.cdr_ended_at), min(c.cdr_started_at), SECOND) AS duration,\r\n\t\tsum(coalesce(TIMESTAMP_DIFF(c.cdr_ended_at, c.cdr_answered_at, SECOND), 0)) AS talking_duration,\r\n    sum(round(coalesce(CAST(b.destination_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.destination_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)) AS bill_cost\r\n  FROM `3cx_call_data.public_cdroutput` AS c\r\n  LEFT JOIN `3cx_call_data.public_cdrbilling` AS b ON\r\n    b.cdr_id = c.cdr_id\r\n  WHERE\r\n\t$__timeFilter(c.cdr_started_at)\r\n  AND c.destination_entity_type = 'external_line'\r\n  AND c.destination_participant_is_incoming = FALSE\r\n  AND c.cdr_answered_at IS NOT NULL\r\n  GROUP BY c.destination_participant_id\r\n  UNION ALL\r\n  -- ------\r\n  -- Source\r\n  -- ------\r\n  SELECT\r\n    c.source_participant_id AS participant_id,\r\n    max(c.source_participant_phone_number || ' ' || coalesce(c.source_dn_name, 'Unknown')) AS consumer,\r\n\t\tmin(c.cdr_started_at) AS started_at,\r\n\t\tTIMESTAMP_DIFF(max(c.cdr_ended_at), min(c.cdr_started_at), SECOND) AS duration,\r\n\t\tsum(CASE WHEN c.destination_entity_type NOT IN ('group', 'ring_group_ring_all', 'ring_group_hunt', 'queue') THEN TIMESTAMP_DIFF(c.cdr_ended_at, c.cdr_answered_at, SECOND) ELSE 0 END) AS talking_duration,\r\n    sum(round(coalesce(CAST(b.source_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.source_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)) AS bill_cost\r\n  FROM `3cx_call_data.public_cdroutput` AS c\r\n  LEFT JOIN `3cx_call_data.public_cdrbilling` AS b ON\r\n    b.cdr_id = c.cdr_id\r\n  WHERE\r\n\t$__timeFilter(c.cdr_started_at)\r\n  AND c.source_entity_type = 'external_line'\r\n  AND c.source_participant_is_incoming = FALSE\r\n  AND c.cdr_answered_at IS NOT NULL\r\n  GROUP BY c.source_participant_id\r\n),\r\n-- Outbound statistics\r\noutbound_stat AS (\r\n\tSELECT\r\n    o.participant_id,\r\n    max(o.consumer) AS consumer,\r\n\t\tsum(o.talking_duration) AS talking_duration,\r\n\t\tsum(o.bill_cost) AS bill_cost\r\n\tFROM outbound_connections AS o\r\n\tGROUP BY o.participant_id\r\n  HAVING sum(o.bill_cost) >= CAST(NULLIF('${bill_cost_treshhold}', '') AS numeric)\r\n)\r\nSELECT\r\n  o.consumer,\r\n  count(*) AS connections,\r\n  sum(o.talking_duration) AS talking_duration,\r\n  sum(o.bill_cost) AS bill_cost\r\nFROM outbound_stat AS o\r\nGROUP BY o.consumer\r\nORDER BY sum(o.bill_cost) DESC\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Top Ziel-Teilnehmer",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "bill_cost": "Gesamtkosten",
+              "connections": "Über Schwellwert",
+              "consumer": "Teilnehmer",
+              "talking_duration": "Gesprächszeit"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 31
+      },
+      "id": 17,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.4.0-19508498046",
+      "type": "text",
+      "title": ""
+    },
+    {
+      "datasource": {
+        "type": "grafana-bigquery-datasource",
+        "uid": "${DS_GRAFANA-BIGQUERY-DATASOURCE}"
+      },
+      "description": "Durchwahlen mit den meisten Anrufen über dem Kostenschwellwert",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 11,
+        "x": 0,
+        "y": 32
+      },
+      "id": 7,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": -15,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "12.4.0-19508498046",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-bigquery-datasource",
+            "uid": "${DS_GRAFANA-BIGQUERY-DATASOURCE}"
+          },
+          "editorMode": "code",
+          "format": 1,
+          "location": "",
+          "project": "pbx-26350568",
+          "rawQuery": true,
+          "rawSql": "-- -----------------------------\r\n-- Outbound answered connections\r\n-- -----------------------------\r\nWITH outbound_connections AS (\r\n  -- -----------\r\n  -- Destination\r\n  -- -----------\r\n  SELECT\r\n    c.destination_participant_id AS participant_id,\r\n\t\tmin(c.cdr_started_at) AS started_at,\r\n\t\tTIMESTAMP_DIFF(max(c.cdr_ended_at), min(c.cdr_started_at), SECOND) AS duration,\r\n\t\tsum(coalesce(TIMESTAMP_DIFF(c.cdr_ended_at, c.cdr_answered_at, SECOND), 0)) AS talking_duration,\r\n    sum(round(coalesce(CAST(b.destination_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.destination_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)) AS bill_cost\r\n  FROM `3cx_call_data.public_cdroutput` AS c\r\n  LEFT JOIN `3cx_call_data.public_cdrbilling` AS b ON\r\n    b.cdr_id = c.cdr_id\r\n  WHERE\r\n\t$__timeFilter(c.cdr_started_at)\r\n  AND c.destination_entity_type = 'external_line'\r\n  AND c.destination_participant_is_incoming = FALSE\r\n  AND c.cdr_answered_at IS NOT NULL\r\n  GROUP BY c.destination_participant_id\r\n  UNION ALL\r\n  -- ------\r\n  -- Source\r\n  -- ------\r\n  SELECT\r\n    c.source_participant_id AS participant_id,\r\n\t\tmin(c.cdr_started_at) AS started_at,\r\n\t\tTIMESTAMP_DIFF(max(c.cdr_ended_at), min(c.cdr_started_at), SECOND) AS duration,\r\n\t\tsum(CASE WHEN c.destination_entity_type NOT IN ('group', 'ring_group_ring_all', 'ring_group_hunt', 'queue') THEN TIMESTAMP_DIFF(c.cdr_ended_at, c.cdr_answered_at, SECOND) ELSE 0 END) AS talking_duration,\r\n    sum(round(coalesce(CAST(b.source_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.source_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)) AS bill_cost\r\n  FROM `3cx_call_data.public_cdroutput` AS c\r\n  LEFT JOIN `3cx_call_data.public_cdrbilling` AS b ON\r\n    b.cdr_id = c.cdr_id\r\n  WHERE\r\n\t$__timeFilter(c.cdr_started_at)\r\n  AND c.source_entity_type = 'external_line'\r\n  AND c.source_participant_is_incoming = FALSE\r\n  AND c.cdr_answered_at IS NOT NULL\r\n  GROUP BY c.source_participant_id\r\n),\r\n-- Outbound statistics\r\noutbound_stat AS (\r\n\tSELECT\r\n    o.participant_id,\r\n    sum(o.bill_cost) AS bill_cost\r\n\tFROM outbound_connections AS o\r\n\tGROUP BY o.participant_id\r\n  HAVING sum(o.bill_cost) >= CAST(NULLIF('${bill_cost_treshhold}', '') AS numeric)\r\n)\r\nSELECT\r\n\tCASE\r\n\t\tWHEN c.source_entity_type = 'extension'\r\n      THEN c.source_dn_number || ' ' || coalesce(c.source_dn_name, 'Unknown')\r\n\t\tELSE\r\n      c.destination_dn_number || ' ' || coalesce(c.destination_dn_name, 'Unknown')\r\n\tEND AS extension,\r\n\tsum(\r\n    round(coalesce(CAST(b.destination_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.destination_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)\r\n\t\t+\r\n    round(coalesce(CAST(b.source_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.source_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)\r\n\t) AS bill_cost,\r\n\tCOUNT(1) AS high_value_connections\r\nFROM `3cx_call_data.public_cdroutput` AS c\r\nLEFT JOIN outbound_stat AS os ON\r\n  os.participant_id = c.source_participant_id\r\nLEFT JOIN outbound_stat AS od ON\r\n  od.participant_id = c.destination_participant_id\r\nINNER JOIN `3cx_call_data.public_cdrbilling` AS b ON\r\n  b.cdr_id = c.cdr_id\r\nWHERE\r\n$__timeFilter(c.cdr_started_at)\r\nAND\r\n  (\r\n    c.destination_entity_type = 'external_line' AND c.destination_participant_is_incoming = FALSE AND c.source_entity_type = 'extension'\r\n    OR\r\n    c.source_entity_type = 'external_line' AND c.source_participant_is_incoming = FALSE AND c.destination_entity_type = 'extension'\r\n  )\r\nAND c.cdr_answered_at IS NOT NULL\r\nAND (os.participant_id IS NOT NULL OR od.participant_id IS NOT NULL)\r\nGROUP BY\r\n\tCASE\r\n\t\tWHEN c.source_entity_type = 'extension'\r\n      THEN c.source_dn_number || ' ' || coalesce(c.source_dn_name, 'Unknown')\r\n\t\tELSE\r\n      c.destination_dn_number || ' ' || coalesce(c.destination_dn_name, 'Unknown')\r\n\tEND\r\nORDER BY bill_cost DESC\r\nLIMIT 10\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Top Durchwahlen über Kostenschwellwert",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "bill_cost": true
+            },
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "extension": "Durchwahl",
+              "high_value_connections": "Verbindungen zu Teilnehmern mit Kosten"
+            }
+          }
+        }
+      ],
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "grafana-bigquery-datasource",
+        "uid": "${DS_GRAFANA-BIGQUERY-DATASOURCE}"
+      },
+      "description": "of all Connections Over Threshold.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false,
+            "wrapHeaderText": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Extension"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 255
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Answered at"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 172
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "main_call_history_id"
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom.viz",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "include",
+                "names": [
+                  "Source Talking Duration",
+                  "Destination Talking Duration",
+                  "Source Bill Cost",
+                  "Destination Bill Cost"
+                ]
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.footer.reducers",
+                "value": [
+                  "sum"
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Started at"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 162
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ended at"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 161
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source Talking Duration"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 182
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source Talking Duration"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Destination Talking Duration"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "custom.width",
+                "value": 206
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source Bill Cost"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "locale"
+              },
+              {
+                "id": "custom.width",
+                "value": 124
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Destination Bill Cost"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "locale"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source Bill Rate"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "locale"
+              },
+              {
+                "id": "custom.width",
+                "value": 124
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Destination Bill Rate"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "locale"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source Bill Code"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Destination Bill Code"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 159
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source Bill Rate Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 167
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Destination Bill Rate Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 197
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anruf-ID"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Durchwahl"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "DID"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Begonnen am"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Beendet am"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Angenommen am"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Startzeit"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückruf begonnen am"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Dauer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesprächsdauer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Klingeldauer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückruf Gesprächsdauer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Kosten"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Abrechnungskosten"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Abrechnungscode"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Abrechnungsrate"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Abrechnungsratename"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "% angenommen"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Externer Teilnehmer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 190
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Lokaler Teilnehmer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Teilnehmer (Quelle)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anrufer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Angerufener"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Eingehender Anrufer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Wer hat zurückgerufen?"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückrufstatus"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückruftyp"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückruftyp (final)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückrufverzögerung"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückrufreaktionszeit"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 170
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ø Rückrufreaktionszeit"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 170
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückruf in 24h"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Warteschlange"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Eingehend [angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Eingehend [nicht angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ausgehend [angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ausgehend [nicht angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamt [angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 140
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamt [nicht angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesprächszeit"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Dateiname"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Zusammenfassung"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 250
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Transkription"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 300
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Stimmungswert"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anrufteilstrecken"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anrufer-Adresse"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Angerufener-Adresse"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Modus"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamtwert"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamtzusammenfassung"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anzahl Anrufe"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamte Anrufe"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Eingehende Anrufe"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ausgehende Anrufe"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anrufe"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Speicher (MB)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Dienstname"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Dienst"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Verbindungen"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Verbindungen mit Kosten"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 170
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamtkosten"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Teilnehmer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ziel"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 13,
+        "x": 11,
+        "y": 32
+      },
+      "id": 6,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Bill cost"
+          }
+        ]
+      },
+      "pluginVersion": "12.4.0-19508498046",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-bigquery-datasource",
+            "uid": "${DS_GRAFANA-BIGQUERY-DATASOURCE}"
+          },
+          "editorMode": "code",
+          "format": 1,
+          "location": "",
+          "project": "pbx-26350568",
+          "rawQuery": true,
+          "rawSql": "-- -----------------------------\r\n-- Outbound answered connections\r\n-- -----------------------------\r\nWITH outbound_connections AS (\r\n  -- -----------\r\n  -- Destination\r\n  -- -----------\r\n  SELECT\r\n    c.destination_participant_id AS participant_id,\r\n\t\tmin(c.cdr_started_at) AS started_at,\r\n\t\tTIMESTAMP_DIFF(max(c.cdr_ended_at), min(c.cdr_started_at), SECOND) AS duration,\r\n\t\tsum(coalesce(TIMESTAMP_DIFF(c.cdr_ended_at, c.cdr_answered_at, SECOND), 0)) AS talking_duration,\r\n    sum(round(coalesce(CAST(b.destination_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.destination_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)) AS bill_cost\r\n  FROM `3cx_call_data.public_cdroutput` AS c\r\n  LEFT JOIN `3cx_call_data.public_cdrbilling` AS b ON\r\n    b.cdr_id = c.cdr_id\r\n  WHERE\r\n  $__timeFilter(c.cdr_started_at)\r\n  AND c.destination_entity_type = 'external_line'\r\n  AND c.destination_participant_is_incoming = FALSE\r\n  AND c.cdr_answered_at IS NOT NULL\r\n  GROUP BY c.destination_participant_id\r\n  UNION ALL\r\n  -- ------\r\n  -- Source\r\n  -- ------\r\n  SELECT\r\n    c.source_participant_id AS participant_id,\r\n\t\tmin(c.cdr_started_at) AS started_at,\r\n\t\tTIMESTAMP_DIFF(max(c.cdr_ended_at), min(c.cdr_started_at), SECOND) AS duration,\r\n\t\tsum(CASE WHEN c.destination_entity_type NOT IN ('group', 'ring_group_ring_all', 'ring_group_hunt', 'queue') THEN TIMESTAMP_DIFF(c.cdr_ended_at, c.cdr_answered_at, SECOND) ELSE 0 END) AS talking_duration,\r\n    sum(round(coalesce(CAST(b.source_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.source_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)) AS bill_cost\r\n  FROM `3cx_call_data.public_cdroutput` AS c\r\n  LEFT JOIN `3cx_call_data.public_cdrbilling` AS b ON\r\n    b.cdr_id = c.cdr_id\r\n  WHERE\r\n  $__timeFilter(c.cdr_started_at)\r\n  AND c.source_entity_type = 'external_line'\r\n  AND c.source_participant_is_incoming = FALSE\r\n  AND c.cdr_answered_at IS NOT NULL\r\n  GROUP BY c.source_participant_id\r\n),\r\n-- Outbound statistics\r\noutbound_stat AS (\r\n\tSELECT\r\n    o.participant_id\r\n\tFROM outbound_connections AS o\r\n\tGROUP BY o.participant_id\r\n  HAVING sum(o.bill_cost) >= CAST(NULLIF('${bill_cost_treshhold}', '') AS numeric)\r\n)\r\nSELECT\r\n  c.main_call_history_id,\r\n  c.cdr_started_at AS started_at,\r\n  c.cdr_answered_at AS answered_at,\r\n  c.cdr_ended_at AS ended_at,\r\n  CASE\r\n    WHEN c.source_entity_type = 'external_line'\r\n      THEN c.source_participant_phone_number || ' ' || coalesce(c.source_dn_name, 'Unknown')\r\n    ELSE c.source_dn_number || ' ' || coalesce(c.source_dn_name, 'Unknown')\r\n  END AS source_participant,\r\n  CASE\r\n    WHEN c.destination_entity_type = 'external_line'\r\n      THEN c.destination_participant_phone_number || ' ' || coalesce(c.destination_dn_name, 'Unknown')\r\n    ELSE c.destination_dn_number || ' ' || coalesce(c.destination_dn_name, 'Unknown')\r\n  END AS destination_participant,\r\n  CASE\r\n  \tWHEN os.participant_id IS NOT NULL AND c.destination_entity_type NOT IN ('group', 'ring_group_ring_all', 'ring_group_hunt', 'queue')\r\n      THEN coalesce(TIMESTAMP_DIFF(c.cdr_ended_at, c.cdr_answered_at, SECOND), 0)\r\n  \tELSE 0\r\n  END AS source_talking_duration,\r\n  CASE\r\n  \tWHEN od.participant_id IS NOT NULL\r\n  \t  THEN coalesce(TIMESTAMP_DIFF(c.cdr_ended_at, c.cdr_answered_at, SECOND), 0)\r\n  \tELSE 0\r\n  END AS destination_talking_duration,\r\n  CASE\r\n    WHEN os.participant_id IS NOT NULL\r\n      THEN coalesce(b.source_bill_code, 'Unknown')\r\n    ELSE ''\r\n  END AS source_bill_code,\r\n  CASE\r\n    WHEN od.participant_id IS NOT NULL\r\n      THEN coalesce(b.destination_bill_code, 'Unknown')\r\n    ELSE ''\r\n  END AS destination_bill_code,\r\n  CASE\r\n    WHEN os.participant_id IS NOT NULL\r\n      THEN coalesce(b.source_bill_rate_name, 'Unknown')\r\n    ELSE ''\r\n  END AS source_bill_rate_name,\r\n  CASE\r\n    WHEN od.participant_id IS NOT NULL\r\n      THEN coalesce(b.destination_bill_rate_name, 'Unknown')\r\n    ELSE ''\r\n  END AS destination_bill_rate_name,\r\n  CASE\r\n    WHEN os.participant_id IS NOT NULL\r\n      THEN coalesce(CAST(b.source_bill_rate AS numeric), 0.00)  -- Changed 'Unknown' to 0.00\r\n    ELSE 0.00\r\n  END AS source_bill_rate,\r\n  CASE\r\n    WHEN od.participant_id IS NOT NULL\r\n      THEN coalesce(CAST(b.destination_bill_rate AS numeric), 0.00)\t-- Changed 'Unknown' to 0.00\r\n    ELSE 0.00\r\n  END AS destination_bill_rate,\r\n  CASE\r\n    WHEN os.participant_id IS NOT NULL\r\n  \t  THEN round(coalesce(CAST(b.source_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.source_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)\r\n  \tELSE 0.00\r\n  END AS source_bill_cost,\r\n  CASE\r\n    WHEN od.participant_id IS NOT NULL\r\n  \t  THEN round(coalesce(CAST(b.destination_bill_rate AS numeric), 0.00) * coalesce(TIMESTAMP_DIFF(TIMESTAMP '1970-01-01 00:00:00 UTC' + CAST(b.destination_bill_duration AS interval), TIMESTAMP '1970-01-01 00:00:00 UTC', microsecond) / 60000000, 0.00), 2)\r\n  \tELSE 0.00\r\n  END AS destination_bill_cost\r\nFROM `3cx_call_data.public_cdroutput` AS c\r\nLEFT JOIN outbound_stat AS os ON\r\n  os.participant_id = c.source_participant_id\r\nLEFT JOIN outbound_stat AS od ON\r\n  od.participant_id = c.destination_participant_id\r\nLEFT JOIN `3cx_call_data.public_cdrbilling` AS b ON\r\n  b.cdr_id = c.cdr_id\r\nWHERE\r\n$__timeFilter(c.cdr_started_at)\r\nAND\r\n  (\r\n    c.destination_entity_type = 'external_line' AND c.destination_participant_is_incoming = FALSE\r\n    OR\r\n    c.source_entity_type = 'external_line' AND c.source_participant_is_incoming = FALSE\r\n  )\r\nAND c.cdr_answered_at IS NOT NULL\r\nAND (os.participant_id IS NOT NULL OR od.participant_id IS NOT NULL)\r\nORDER BY answered_at DESC\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Teuerste Anrufe",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "answered_at": true,
+              "destination_bill_code": true,
+              "destination_bill_rate_name": true,
+              "source_bill_code": true,
+              "source_bill_rate_name": true,
+              "started_at": false
+            },
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "answered_at": "Angenommen am",
+              "bill_code": "Abrechnungscode",
+              "bill_cost": "Kosten",
+              "bill_rate": "Abrechnungsrate",
+              "bill_rate_name": "Abrechnungsratename",
+              "consumer": "Ziel",
+              "destination_bill_code": "Ziel-Abrechnungscode",
+              "destination_bill_cost": "Ziel-Abrechnungskosten",
+              "destination_bill_rate": "Ziel-Abrechnungsrate",
+              "destination_bill_rate_name": "Ziel-Abrechnungsratename",
+              "destination_participant": "Ziel",
+              "destination_talking_duration": "Ziel-Gesprächszeit",
+              "ended_at": "Beendet am",
+              "extension": "Quelle",
+              "source_bill_code": "Ursprungs-Abrechnungscode",
+              "source_bill_cost": "Ursprung-Abrechnungskosten",
+              "source_bill_rate": "Ursprung-Abrechnungsrate",
+              "source_bill_rate_name": "Ursprung-Abrechnungsratename",
+              "source_participant": "Anrufer",
+              "source_talking_duration": "Anrufer-Gesprächszeit",
+              "started_at": "Begonnen am",
+              "talking_duration": "Gesprächsdauer"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    }
+  ],
+  "preload": false,
+  "refresh": "30m",
+  "schemaVersion": 42,
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "text": "0.00",
+          "value": "0.00"
+        },
+        "description": "Bill cost treshold",
+        "label": "Bill Cost per connection >=",
+        "name": "bill_cost_treshhold",
+        "options": [
+          {
+            "selected": true,
+            "text": "0.00",
+            "value": "0.00"
+          }
+        ],
+        "query": "0.00",
+        "type": "textbox"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-90d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "09. Hochwertige Anrufe & Kosten (BigQuery)",
+  "uid": "kb4slj6",
+  "version": 16,
+  "weekStart": ""
+}

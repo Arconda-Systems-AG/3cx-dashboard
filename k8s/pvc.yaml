@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: 3cx-dashboard-settings
+  namespace: 3cx-dashboard
+  labels:
+    app: 3cx-dashboard
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi

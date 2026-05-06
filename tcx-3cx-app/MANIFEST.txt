@@ -1,0 +1,97 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+{
+  "manifestVersion": "2.0.0",
+  "signatureType": "commercial",
+  "signedByOrg": "tcx",
+  "signedByOrgName": "3CX",
+  "plugin": "tcx-3cx-app",
+  "version": "1.0.4",
+  "time": 1764233239912,
+  "keyId": "7e4d0c6a708866e7",
+  "files": {
+    "165.js.map": "3823ea4170c541ab85c04c28a889cae9d6d7120076bb8d6dcf29bcddf53ae3b1",
+    "dashboards/mysql/03. Queues (MySQL).json": "5a8d9fdbcdd1eb57bdda53b844cad4a5d7ed00cfb451f763a87064631baa3933",
+    "dashboards/mysql/09. High Value Calls, Consumers and Extensions (MySQL).json": "4672fd6c42db64b98d2eafec4efc3d252ceb5616c4f9a6c9e54764a10067afc6",
+    "dashboards/mysql/01. Overview (MySQL).json": "f5701267c6e7aae5f1c1571e3e234d9cae0b80bc8bb67f188ee7b40e98c5d91b",
+    "dashboards/mysql/13. Call Quality Monitoring (MySQL).json": "7145761cddfba85b6d1bc3650ebe0e3e6036aca4020882245d7a44ae37bc0459",
+    "dashboards/mysql/10. Missed Calls & Redialed Callbacks (MySQL).json": "62cbde034f4611e83391897aa048cc27dd96eaa79ffc940bd226b053d61ee925",
+    "dashboards/mysql/02. Ring Groups (MySQL).json": "66e801a9bd003b270504410c7a36404c7c0a1400d63ca49fd43a4441d38fc90a",
+    "dashboards/mysql/04. Queue Missed Calls & Callback Efficiency (MySQL).json": "b937d8972a71bab4f85286b90247aac216a6d1e50e166b196a9faeffe1b664c8",
+    "dashboards/mysql/11. Call Recordings Explorer (MySQL).json": "269199603ddfc5953fe95774d63dc01e6c2106b0962f591e6c519e7b76a4b124",
+    "dashboards/mysql/14. Frequent Inbound Callers (MySQL).json": "b82148ea1732aac853f663a21b78ab3b35b2ca26ad41f359a1037be5380fc93c",
+    "dashboards/mysql/07. Outbound Calls (MySQL).json": "8650fae192887eda5b6939916eeff39a85fd1b548c86ff49eb37cc78522874f9",
+    "dashboards/mysql/12. Health and Performance (MySQL).json": "0a64fd96188fcc8b29229a1a464b6d1093dade00e8b48b84521ff18ad271986a",
+    "dashboards/mysql/05. Extension Statistics (MySQL).json": "18a2ab829f2829e8a59d77dbfe227f304050534feb512481a07719040349763e",
+    "dashboards/mysql/08. Inbound vs Outbound call traffic analysis (MySQL).json": "dd98c08952ea08d3ecb7a7d8a0afab226996d4607b6e80bd342a7232a094a57e",
+    "dashboards/mysql/06. Inbound Calls (MySQL).json": "94723e7a7258fe34569f22f1166d0f43ecf4a6d16260ca2cfe09fbe69f6b4c14",
+    "dashboards/postrge/11. Call Recordings Explorer (PostgreSQL).json": "f2b3663e39e7eb0fd97d1993ad70b64ba5bc863a17a5a8a702e07b83d46b44a1",
+    "dashboards/postrge/07. Outbound Calls (PostgreSQL).json": "9e6d065fd20313e8a8fd6c5df73eb3e7b0c7c273d9cd2fbbbf1723904601c7eb",
+    "dashboards/postrge/08. Inbound vs Outbound call traffic analysis (PostgreSQL).json": "2ac28705e0bd883e6dbe477cc070a6a5d6d9812ef8130b2d4e99fb272a5139b4",
+    "dashboards/postrge/13. Call Quality Monitoring (PostgreSQL).json": "8bc5ee59fa1e04956e5d3fc7af325ab811b8587f171b03397a68c51fdeb60d02",
+    "dashboards/postrge/04. Queue Missed Calls & Callback Efficiency (PostgreSQL).json": "7046a7d849d07f8ea2c9fbdb581689181a4acda21381c2bd771983c32b800f0a",
+    "dashboards/postrge/09. High Value Calls, Consumers and Extensions (PostgreSQL).json": "e932a5f564edb80b43e3059d38ca34fe29f519b073d5f7439f4d2ffa4b671924",
+    "dashboards/postrge/12. Health and Performance (PostgreSQL).json": "1da7f85f2dc8221024882b7fda87547cb05147037230c58b92ab6b1de423fa46",
+    "dashboards/postrge/02. Ring Groups (PostgreSQL).json": "2a5016b779a7e69e21907b8148fb415ab895a63eaf5887d402df37bbb1d5dd74",
+    "dashboards/postrge/01. Overview (PostgreSQL).json": "aacc637bb1415eb359c84775cbe5559f385adc60ace169b4fd31562feb8ec7a8",
+    "dashboards/postrge/14. Frequent Inbound Callers (PostgreSQL).json": "837b62f515b37791b6cf967ec97c25742a66d6e23202dd7ca072e7729f7220c8",
+    "dashboards/postrge/06. Inbound Calls (PostgreSQL).json": "9c86e3239e5fa6e69efb3eed3f0686e28e1419b9b21c453c54e990c2af7a86da",
+    "dashboards/postrge/03. Queues (PostgreSQL).json": "891add3f82a196e2c7f29b796f406e1df57001326ff2cfa8bd95ed33da47864c",
+    "dashboards/postrge/10. Missed Calls & Redialed Callbacks (PostgreSQL).json": "0bc8e8728a473112ad222f30272bea3ebd6acd52010dda5611f830286300c7b5",
+    "dashboards/postrge/05. Extension Statistics (PostgreSQL).json": "a8b02627ba47b12d1ed180850871e9ee4be46bfae19bbbad2cfec8dc2ed47f23",
+    "dashboards/mssql/07. Outbound Calls (MSSQL).json": "5c7eb161863171aff915258d2bd56fb321e01999c23cadf3c061e30e1904fd0f",
+    "dashboards/mssql/03. Queues (MSSQL).json": "fb73544be91c26367cd8f7b41d9dd87251f5aa511306896e112064368695bac0",
+    "dashboards/mssql/14. Frequent Inbound Callers (MSSQL).json": "fff597dc1538301e7001b94b06eafff6adb98386ae6629e6186142c290e1b199",
+    "dashboards/mssql/11. Call Recordings Explorer (MSSQL).json": "ea371aa0038dc9c6191c0f89d629e07b87cce79ce25bf7c4f14f605da7b59aad",
+    "dashboards/mssql/12. Health and Performance (MSSQL).json": "48788468048c93ddf6b2033c7722a46dac24d59afb30e6144c6134c00ca27e2d",
+    "dashboards/mssql/05. Extension Statistics (MSSQL).json": "0d9dc95ee35cb177ce604b72ca438c9c3a9253f9f165205c42d82234340936ca",
+    "dashboards/mssql/02. Ring Groups (MSSQL).json": "ec6be157e26be27e9e65f15f93535c45104680ff049b64985241a587f81c6231",
+    "dashboards/mssql/09. High Value Calls, Consumers and Extensions (MSSQL).json": "01308b75541b8158d0f4e616c7c5ee4ac22cb664d2f1974b24989dec044abc66",
+    "dashboards/mssql/10. Missed Calls & Redialed Callbacks (MSSQL).json": "fddfeea2d6a71a0d095b8a862d218140d2cab4823da12596adabeb71996b88ed",
+    "dashboards/mssql/04. Queue Missed Calls & Callback Efficiency (MSSQL).json": "39fbc91a3523eb981df0755e63e791f1923d13a46d24c727d4e5278a2db1c904",
+    "dashboards/mssql/01. Overview (MSSQL).json": "200a4bc4ac464d09bdd68b4fae30caa5d49152861d7cf4e4c31d3192cf30889a",
+    "dashboards/mssql/06. Inbound Calls (MSSQL).json": "5b0d70a8a46a514576853f4859f886869438f003067df7e1679fe143c972a14f",
+    "dashboards/mssql/08. Inbound vs Outbound call traffic analysis (MSSQL).json": "fbd09fcc9ff791ee53979cde543bdf810b1c7d9ead613000cf817f5e9e32cb95",
+    "dashboards/mssql/13. Call Quality Monitoring (MSSQL).json": "83e1ed388099a7cd6bc9c46b8d9fe7df4dcf59bd6989052cd88f8e04e8682d1b",
+    "dashboards/big-query/13. Call Quality Monitoring (BigQuery).json": "138c3dfe405e2b3204b37246c7e7b5ed3d95860d5f666c4ed6da7ecc05a31deb",
+    "dashboards/big-query/10. Missed Calls & Redialed Callbacks (BigQuery).json": "015377de58625bee5701bbbae82df74bddc3e9fe56e48485de01e0e573f1f6df",
+    "dashboards/big-query/03. Queues (BigQuery).json": "254490aa5cbbfceed330f81b3ae22af42c3e6921473321139dba8d781806028d",
+    "dashboards/big-query/12. Health and Performance (BigQuery).json": "07c533d389888228e415e5929f3a6743790b0f4246765124309172df985b64a9",
+    "dashboards/big-query/02. Ring Groups (BigQuery).json": "efa40474fbd2e4c7f1cba4ff91935725265ba811c85d6a9938a3baac54834f0b",
+    "dashboards/big-query/08. Inbound vs Outbound call traffic analysis (BigQuery).json": "8532822ee87611b3769437719fa4d6d71e9bcdca95fe43fbb5821bf1803dca23",
+    "dashboards/big-query/11. Call Recordings Explorer (BigQuery).json": "7946a960990f652e4fcb92532ca6273dc31266894813279db69ce2b5d1c86b75",
+    "dashboards/big-query/01. Overview (BigQuery).json": "696f497c468f73b61efe6f8e4a12600406b2f937da7981b128eef05bf1883ff0",
+    "dashboards/big-query/06. Inbound Calls (BigQuery).json": "4eb5c51a8a866fc9b38a078a19b1c19da31c3f985d2a6371f5a4622750205478",
+    "dashboards/big-query/07. Outbound Calls (BigQuery).json": "87f341dfb25ce49d3a5e2941f81f2e279a486b32a7ff18592de8dc82b3f54c82",
+    "dashboards/big-query/09. High Value Calls, Consumers and Extensions (BigQuery).json": "330b94feb0791e3d6b594822f73f329a05fa88eeb0641270977ed974c808cce8",
+    "dashboards/big-query/05. Extension Statistics (BigQuery).json": "61fbdf82480c6a864f68b4f9142b727ca4f5d11f4ff08489d0c281647203c742",
+    "dashboards/big-query/04. Queue Missed Calls & Callback Efficiency (BigQuery).json": "b48a1ccef21b8c34cf41e162cc2b0de3eecc7263918c571368fa5dbdbbd98ff5",
+    "dashboards/big-query/14. Frequent Inbound Callers (BigQuery).json": "4b9b03b19e78224a2da4de6149204be510f3487641328f3ee4c17d86517173ae",
+    "LICENSE": "882656d61d5b1b29dd90758b519ae60c513d1c62cd596591ce67607da584a1b2",
+    "plugin.json": "09418ac314c972f7c8c2b5771e6c273fbfd83824db059ac5d51891e0dc1b42aa",
+    "737.js": "ae8744af82c6293f6f7e50331a794f9797e1a332ee6bdafe87c87e53730d4d41",
+    "847.js": "068af437074584313253f6bfe9b2c6869a846601434db81a2792a61353194b4e",
+    "737.js.map": "c8fafcf47a07b5a38ac861d5ebb8d63faa101b3f57b3d1193adfccb5f104b86a",
+    "165.js": "8a80a9350db3a98d437620e2a09ab9b41db42997c23bcb23bc35e43598db12d6",
+    "i18n/locales/ru.json": "b5469b88c707fe8ec5481a544b75d82cf30c2ee8102042d14432bdaf05602ada",
+    "i18n/locales/en.json": "7214c4010ee02fe4ce21d3763405dc582d9732d645b227938191cb5c0cc4e3fd",
+    "module.js": "7d9a15c9d50a7447eaaad3503a0075deb747cc9c85727dd7d4398cbc2c2fa22d",
+    "847.js.map": "b95953da2d8612739fc3ef94ae8c36cafdbe06e6dc8715567aba1a5a83009f95",
+    "module.js.map": "04c357dea909bcdc3ebd136e4191b1b7e759f92ee0095377afa2985254d343bb",
+    "README.md": "c4f82ba3febc4aea7cd07adc39b97670a111b0ef3c055af6a646d3b4e163f8de",
+    "img/logo.png": "59d3a9d8dfa65b87cbc20875097652a038e51533e50e716043a0de6ee075e728",
+    "img/dashboard.png": "bdfb4bafe611d8c1c6b252825cd3d3daa444db04a0af96bc1e36661464a35409",
+    "CHANGELOG.md": "07e69a3beba55f8579c9092a0d204179c4d6a96afe20a659054c946a7f671702"
+  }
+}
+-----BEGIN PGP SIGNATURE-----
+
+wsA/BAETCgBtBYJpKBAYCRB+TQxqcIhm50UUAAAAAAAcACBzYWx0QG5vdGF0
+aW9ucy5vcGVucGdwanMub3JndIt4mn2R6Q4Jra1y/WX/FoK91wc7GwFULhPh
+h+GQB9AWIQTzOyW2kQdOhGNlcPN+TQxqcIhm5wAA06oCCQHFv9NBou9TvMlG
+LjIyEGiXHfEW0sqwF9uVK2Vam2ceTagDGDRbGPWDnF7ihBSBYxjfEcsBLobb
+thbc2RGLzsvBDgIJAVdra40l7+IUAoDUjAM+gkz8Ta8p1xhehwkDEBWHgJlJ
+b+hThut3X7EvDN0QoqzsiRernXJIwpylTBpwc/zyz7w2
+=K7Fi
+-----END PGP SIGNATURE-----

@@ -1,0 +1,2300 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_MSSQL",
+      "label": "mssql",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "mssql",
+      "pluginName": "Microsoft SQL Server"
+    }
+  ],
+  "__elements": {},
+  "__requires": [
+    {
+      "type": "panel",
+      "id": "barchart",
+      "name": "Bar chart",
+      "version": ""
+    },
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "12.4.0-19508498046"
+    },
+    {
+      "type": "datasource",
+      "id": "mssql",
+      "name": "Microsoft SQL Server",
+      "version": "12.4.0-19508498046"
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "text",
+      "name": "Text",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "# Ausgehende Anrufe",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.4.0-19508498046",
+      "type": "text",
+      "title": ""
+    },
+    {
+      "datasource": {
+        "type": "mssql",
+        "uid": "${DS_MSSQL}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 0,
+        "y": 2
+      },
+      "id": 4,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^Calls received$/",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0-19508498046",
+      "targets": [
+        {
+          "dataset": "cdr_db",
+          "datasource": {
+            "type": "mssql",
+            "uid": "${DS_MSSQL}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "-----------------------\r\n-- Outbound connections\r\n-----------------------\r\nWITH outbound_connections AS (\r\n\t--------------\r\n\t-- Destination\r\n\t--------------\r\n\tSELECT\r\n\t\tc.destination_participant_id AS participant_id,\r\n\t\t--\r\n\t\tCASE\r\n\t\t\tWHEN c.source_entity_type = 'external_line'\r\n\t\t\t\tTHEN c.source_participant_phone_number + ' ' + coalesce(c.source_dn_name, 'Unknown')\r\n\t\t\tELSE c.source_dn_number + ' ' + coalesce(c.source_dn_name, 'Unknown')\r\n\t\tEND AS source_participant,\r\n\t\t--\r\n\t\tCASE\r\n\t\t\tWHEN c.destination_entity_type = 'external_line'\r\n\t\t\t\tTHEN c.destination_participant_phone_number + ' ' + coalesce(c.destination_dn_name, 'Unknown')\r\n\t\t\tELSE c.destination_dn_number + ' ' + coalesce(c.destination_dn_name, 'Unknown')\r\n\t\tEND AS destination_participant,\r\n\t\t--\r\n    c.cdr_started_at AS started_at,\r\n\t\tc.cdr_answered_at AS answered_at,\r\n\t\tc.cdr_ended_at AS ended_at,\r\n\t\tDATEDIFF(SECOND, c.cdr_started_at, c.cdr_ended_at) AS duration,\r\n\t\tDATEDIFF(SECOND, c.cdr_started_at, coalesce(c.cdr_answered_at, c.cdr_ended_at)) AS ringing_duration,\r\n\t\tCASE WHEN c.destination_entity_type NOT IN ('group', 'ring_group_ring_all', 'ring_group_hunt', 'queue') THEN DATEDIFF(SECOND, c.cdr_answered_at, c.cdr_ended_at) ELSE 0 END AS talking_duration\r\n\tFROM public_cdroutput AS c\r\n\t-- LEFT JOIN public_cdrbilling AS b ON\r\n\t-- \tb.cdr_id = c.cdr_id\r\n\tLEFT JOIN public_cdroutput AS c_orig ON\r\n\t\tc_orig.cdr_id = c.originating_cdr_id\r\n\tWHERE $__timeFilter(c.cdr_started_at)\r\n\tAND \r\n\t(\r\n\t\t(c.destination_entity_type = 'outbound_rule' AND c.destination_participant_is_incoming = 0 AND c.termination_reason NOT IN ('cancelled', 'continued_in', 'rejected', 'src_participant_terminated', 'dst_participant_terminated'))\r\n\t\tOR\r\n\t\t(c.destination_entity_type = 'external_line' AND c.destination_participant_is_incoming = 0)\r\n\t)\r\n\tAND NOT (c.creation_forward_reason = 'polling' AND c.cdr_answered_at IS NULL AND c_orig.destination_entity_type IN ('group', 'ring_group_ring_all', 'ring_group_hunt', 'queue'))\t\t-- Exclude polling\r\n\t--AND c.cdr_answered_at IS NOT NULL\r\n\tUNION ALL\r\n\t--------------\r\n\t-- Source\r\n\t--------------\r\n\tSELECT\r\n\t\tc.source_participant_id AS participant_id,\r\n\t\t--\r\n\t\tCASE\r\n\t\t\tWHEN c.destination_entity_type = 'external_line'\r\n\t\t\t\tTHEN c.destination_participant_phone_number + ' ' + coalesce(c.destination_dn_name, 'Unknown')\r\n\t\t\tELSE c.destination_dn_number + ' ' + coalesce(c.destination_dn_name, 'Unknown')\r\n\t\tEND AS source_participant,\r\n\t\t--\r\n\t\tCASE\r\n\t\t\tWHEN c.source_entity_type = 'external_line'\r\n\t\t\t\tTHEN c.source_participant_phone_number + ' ' + coalesce(c.source_dn_name, 'Unknown')\r\n\t\t\tELSE c.source_dn_number + ' ' + coalesce(c.source_dn_name, 'Unknown')\r\n\t\tEND AS destination_participant,\r\n\t\t--\r\n    c.cdr_started_at AS started_at,\r\n\t\tc.cdr_answered_at AS answered_at,\r\n\t\tc.cdr_ended_at AS ended_at,\r\n\t\tDATEDIFF(SECOND, c.cdr_started_at, c.cdr_ended_at) AS duration,\r\n\t\tDATEDIFF(SECOND, c.cdr_started_at, coalesce(c.cdr_answered_at, c.cdr_ended_at)) AS ringing_duration,\r\n\t\tcoalesce(DATEDIFF(SECOND, c.cdr_answered_at, c.cdr_ended_at), 0) AS talking_duration\r\n\tFROM public_cdroutput AS c\r\n\t-- LEFT JOIN public_cdrbilling AS b ON\r\n\t-- \tb.cdr_id = c.cdr_id\r\n\tWHERE $__timeFilter(c.cdr_started_at)\r\n\tAND c.source_entity_type = 'external_line'\r\n\tAND c.source_participant_is_incoming = 0\r\n\t--AND c.cdr_answered_at IS NOT NULL\r\n)\r\nSELECT\r\n\tCOUNT(DISTINCT c.participant_id) AS calls_received,\r\n\tCOUNT(DISTINCT CASE WHEN c.talking_duration > 0 THEN c.participant_id END) AS calls_answered,\r\n\tCOUNT(DISTINCT CASE WHEN c.talking_duration > 0 THEN c.participant_id END) * 100.0 / \r\n\t\tCASE WHEN COUNT(DISTINCT c.participant_id) = 0 THEN 1 ELSE COUNT(DISTINCT c.participant_id) END AS calls_answered_percent,\r\n\tCOUNT(DISTINCT c.participant_id) - COUNT(DISTINCT CASE WHEN c.talking_duration > 0 THEN c.participant_id END) AS calls_unanswered,\r\n\tSUM(c.talking_duration) AS talking_duration,\r\n\tSUM(c.talking_duration) / CASE WHEN COUNT(DISTINCT c.participant_id) = 0 THEN 1 ELSE COUNT(DISTINCT c.participant_id) END AS avg_talking_duration,\r\n\tSUM(c.duration) / CASE WHEN COUNT(DISTINCT c.participant_id) = 0 THEN 1 ELSE COUNT(DISTINCT c.participant_id) END AS avg_duration,\r\n\tSUM(c.duration) AS duration\r\nFROM outbound_connections AS c\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Getätigte Anrufe",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "calls_answered": "",
+              "calls_received": "Eingegangene Anrufe"
+            }
+          }
+        }
+      ],
+      "type": "stat",
+      "description": "Gesamtzahl der getätigten ausgehenden Anrufe"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Dashboard --"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 3,
+        "y": 2
+      },
+      "id": 5,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^Calls answered$/",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0-19508498046",
+      "targets": [
+        {
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Dashboard --"
+          },
+          "panelId": 4,
+          "refId": "A"
+        }
+      ],
+      "title": "Angenommene Anrufe",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "calls_answered": "Angenommene Anrufe",
+              "calls_received": ""
+            }
+          }
+        }
+      ],
+      "type": "stat",
+      "description": "Anzahl der Anrufe, die erfolgreich angenommen wurden"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Dashboard --"
+      },
+      "description": "Prozentualer Anteil der Anrufe, die erfolgreich angenommen wurden",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 6,
+        "y": 2
+      },
+      "id": 6,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^% answered$/",
+          "values": false
+        },
+        "showPercentChange": false,
+        "text": {
+          "percentSize": 1
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0-19508498046",
+      "targets": [
+        {
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Dashboard --"
+          },
+          "panelId": 4,
+          "refId": "A"
+        }
+      ],
+      "title": "% Angenommene Anrufe",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "calls_answered": "",
+              "calls_answered_percent": "% angenommen"
+            }
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Dashboard --"
+      },
+      "description": "Anzahl der Anrufe, die nicht angenommen wurden",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "red",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 9,
+        "y": 2
+      },
+      "id": 7,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^Calls not answered$/",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0-19508498046",
+      "targets": [
+        {
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Dashboard --"
+          },
+          "panelId": 4,
+          "refId": "A"
+        }
+      ],
+      "title": "Nicht angenommene Anrufe",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "calls_unanswered": "Nicht angenommene Anrufe"
+            }
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Dashboard --"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 12,
+        "y": 2
+      },
+      "id": 8,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^Average talking duration$/",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0-19508498046",
+      "targets": [
+        {
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Dashboard --"
+          },
+          "panelId": 4,
+          "refId": "A"
+        }
+      ],
+      "title": "Ø Gesprächsdauer",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "avg_talking_duration": "Ø Gesprächsdauer",
+              "talking_duration": ""
+            }
+          }
+        }
+      ],
+      "type": "stat",
+      "description": "Durchschnittliche Gesprächszeit pro angenommenem Anruf"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Dashboard --"
+      },
+      "description": "Summe aller Gesprächszeiten im gewählten Zeitraum",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 15,
+        "y": 2
+      },
+      "id": 9,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^Talking duration$/",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0-19508498046",
+      "targets": [
+        {
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Dashboard --"
+          },
+          "panelId": 4,
+          "refId": "A"
+        }
+      ],
+      "title": "Gesamte Gesprächsdauer",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "calls_unanswered": "",
+              "talking_duration": "Gesprächsdauer"
+            }
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Dashboard --"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 18,
+        "y": 2
+      },
+      "id": 10,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^Average call duration$/",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0-19508498046",
+      "targets": [
+        {
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Dashboard --"
+          },
+          "panelId": 4,
+          "refId": "A"
+        }
+      ],
+      "title": "Ø Anrufdauer",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "avg_duration": "Ø Anrufdauer",
+              "avg_talking_duration": ""
+            }
+          }
+        }
+      ],
+      "type": "stat",
+      "description": "Durchschnittliche Gesamtdauer aller Anrufe inkl. Klingelzeit"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Dashboard --"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 21,
+        "y": 2
+      },
+      "id": 11,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^Total call duration$/",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0-19508498046",
+      "targets": [
+        {
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Dashboard --"
+          },
+          "panelId": 4,
+          "refId": "A"
+        }
+      ],
+      "title": "Total Call Duration",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "avg_duration": "",
+              "avg_talking_duration": "",
+              "duration": "Total call duration"
+            }
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "mssql",
+        "uid": "${DS_MSSQL}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
+      "id": 12,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.4.0-19508498046",
+      "targets": [
+        {
+          "dataset": "cdr_db",
+          "datasource": {
+            "type": "mssql",
+            "uid": "${DS_MSSQL}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "-----------------------\r\n-- Outbound connections\r\n-----------------------\r\nWITH outbound_connections AS (\r\n\t--------------\r\n\t-- Destination\r\n\t--------------\r\n\tSELECT\r\n\t\tc.destination_participant_id AS participant_id,\r\n\t\tmin(c.cdr_started_at) AS started_at\r\n\tFROM public_cdroutput AS c\r\n\tLEFT JOIN public_cdroutput AS c_orig ON\r\n\t\tc_orig.cdr_id = c.originating_cdr_id\r\n\tWHERE $__timeFilter(c.cdr_started_at)\r\n\tAND \r\n\t(\r\n\t\t(c.destination_entity_type = 'outbound_rule' AND c.destination_participant_is_incoming = 0 AND c.termination_reason NOT IN ('cancelled', 'continued_in', 'rejected', 'src_participant_terminated', 'dst_participant_terminated'))\r\n\t\tOR\r\n\t\t(c.destination_entity_type = 'external_line' AND c.destination_participant_is_incoming = 0)\r\n\t)\r\n\tAND NOT (c.creation_forward_reason = 'polling' AND c.cdr_answered_at IS NULL AND c_orig.destination_entity_type IN ('group', 'ring_group_ring_all', 'ring_group_hunt', 'queue'))\t\t-- Exclude polling\r\n\t--AND c.cdr_answered_at IS NOT NULL\r\n\tGROUP BY c.destination_participant_id\r\n\tUNION ALL\r\n\t---------\r\n\t-- Source\r\n\t---------\r\n\tSELECT\r\n\t\tc.source_participant_id AS participant_id,\r\n\t\tmin(c.cdr_started_at) AS started_at\r\n\tFROM public_cdroutput AS c\r\n\t-- LEFT JOIN public_cdrbilling AS b ON\r\n\t-- \tb.cdr_id = c.cdr_id\r\n\tWHERE $__timeFilter(c.cdr_started_at)\r\n\tAND c.source_entity_type = 'external_line'\r\n\tAND c.source_participant_is_incoming = 0\r\n\t--AND c.cdr_answered_at IS NOT NULL\r\n\tGROUP BY c.source_participant_id\r\n)\r\nSELECT\r\n\tDATEADD(HOUR, DATEDIFF(HOUR, 0, i.started_at), 0) AS time_bucket,\r\n\tCOUNT(DISTINCT i.participant_id) AS calls\r\nFROM outbound_connections AS i\r\nGROUP BY DATEADD(HOUR, DATEDIFF(HOUR, 0, i.started_at), 0)\r\nORDER BY time_bucket\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Ausgehende Anrufe (Verlauf)",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "calls": "Anrufe",
+              "time_bucket": "Zeit"
+            }
+          }
+        }
+      ],
+      "type": "timeseries",
+      "description": "Zeitlicher Verlauf der ausgehenden Anrufe"
+    },
+    {
+      "datasource": {
+        "type": "mssql",
+        "uid": "${DS_MSSQL}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "id": 13,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "12.4.0-19508498046",
+      "targets": [
+        {
+          "dataset": "cdr_db",
+          "datasource": {
+            "type": "mssql",
+            "uid": "${DS_MSSQL}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "-----------------------\r\n-- Outbound connections\r\n-----------------------\r\nWITH outbound_connections AS (\r\n\t--------------\r\n\t-- Destination\r\n\t--------------\r\n\tSELECT\r\n    c.destination_participant_id AS extension_participant_id,\r\n\t\tmax(CASE\r\n\t\t\tWHEN c.source_entity_type = 'external_line'\r\n\t\t\t\tTHEN c.source_participant_phone_number + ' ' + coalesce(c.source_dn_name, 'Unknown')\r\n\t\t\tELSE c.source_dn_number + ' ' + coalesce(c.source_dn_name, 'Unknown')\r\n\t\tEND) AS extension\r\n\tFROM public_cdroutput AS c\r\n\tLEFT JOIN public_cdroutput AS c_orig ON\r\n\t\tc_orig.cdr_id = c.originating_cdr_id\r\n\tWHERE $__timeFilter(c.cdr_started_at)\r\n\tAND \r\n\t(\r\n\t\t(c.destination_entity_type = 'outbound_rule' AND c.destination_participant_is_incoming = 0 AND c.termination_reason NOT IN ('cancelled', 'continued_in', 'rejected', 'src_participant_terminated', 'dst_participant_terminated'))\r\n\t\tOR\r\n\t\t(c.destination_entity_type = 'external_line' AND c.destination_participant_is_incoming = 0)\r\n\t)\r\n\tAND NOT (c.creation_forward_reason = 'polling' AND c.cdr_answered_at IS NULL AND c_orig.destination_entity_type IN ('group', 'ring_group_ring_all', 'ring_group_hunt', 'queue'))\t\t-- Exclude polling\r\n\t--AND c.cdr_answered_at IS NOT NULL\r\n  GROUP BY c.destination_participant_id\r\n\tUNION ALL\r\n\t---------\r\n\t-- Source\r\n\t---------\r\n\tSELECT\r\n    c.source_participant_id AS extension_participant_id,\r\n\t\tmax(CASE\r\n\t\t\tWHEN c.destination_entity_type = 'external_line'\r\n\t\t\t\tTHEN c.destination_participant_phone_number + ' ' + coalesce(c.destination_dn_name, 'Unknown')\r\n\t\t\tELSE c.destination_dn_number + ' ' + coalesce(c.destination_dn_name, 'Unknown')\r\n\t\tEND) AS extension\r\n\tFROM public_cdroutput AS c\r\n\tWHERE $__timeFilter(c.cdr_started_at)\r\n\tAND c.source_entity_type = 'external_line'\r\n\tAND c.source_participant_is_incoming = 0\r\n\t--AND c.cdr_answered_at IS NOT NULL\r\n\tGROUP BY c.source_participant_id\r\n)\r\nSELECT\r\n\tTOP 10\r\n\to.extension,\r\n\tcount(DISTINCT o.extension_participant_id) AS calls\r\nFROM outbound_connections AS o\r\nGROUP BY o.extension\r\nORDER BY calls DESC\r\n;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Top anrufende Durchwahlen",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "calls": "Anrufe",
+              "extension": "Durchwahl"
+            }
+          }
+        }
+      ],
+      "type": "barchart",
+      "description": "Die Durchwahlen mit den meisten ausgehenden Anrufen"
+    },
+    {
+      "datasource": {
+        "type": "mssql",
+        "uid": "${DS_MSSQL}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false,
+            "wrapHeaderText": false,
+            "wrapText": false
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "#3b3b3b",
+                  "index": 0
+                },
+                "1": {
+                  "color": "transparent",
+                  "index": 1
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Call ID"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 320
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "duration"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "talking_duration"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "bill_cost"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "locale"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gen Call ID"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "applyToRow": true,
+                  "mode": "basic",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "custom.wrapText",
+                "value": false
+              },
+              {
+                "id": "custom.hideFrom.viz",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ringing_duration"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anruf-ID"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Durchwahl"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "DID"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Begonnen am"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Beendet am"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Angenommen am"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Startzeit"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückruf begonnen am"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 165
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Dauer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesprächsdauer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Klingeldauer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückruf Gesprächsdauer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Kosten"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Abrechnungskosten"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Abrechnungscode"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Abrechnungsrate"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Abrechnungsratename"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "% angenommen"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Externer Teilnehmer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 190
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Lokaler Teilnehmer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Teilnehmer (Quelle)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anrufer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Angerufener"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Eingehender Anrufer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Wer hat zurückgerufen?"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückrufstatus"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückruftyp"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückruftyp (final)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückrufverzögerung"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückrufreaktionszeit"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 170
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ø Rückrufreaktionszeit"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 170
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rückruf in 24h"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Warteschlange"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Eingehend [angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Eingehend [nicht angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ausgehend [angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ausgehend [nicht angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamt [angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 140
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamt [nicht angenommen]"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesprächszeit"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Dateiname"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Zusammenfassung"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 250
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Transkription"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 300
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Stimmungswert"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anrufteilstrecken"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anrufer-Adresse"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Angerufener-Adresse"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Modus"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamtwert"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamtzusammenfassung"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anzahl Anrufe"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamte Anrufe"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Eingehende Anrufe"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ausgehende Anrufe"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Anrufe"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Speicher (MB)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Dienstname"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Dienst"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Verbindungen"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Verbindungen mit Kosten"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 170
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gesamtkosten"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Teilnehmer"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ziel"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "id": 2,
+      "options": {
+        "cellHeight": "sm",
+        "enablePagination": true,
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Started at"
+          }
+        ]
+      },
+      "pluginVersion": "12.4.0-19508498046",
+      "targets": [
+        {
+          "dataset": "cdr_db",
+          "datasource": {
+            "type": "mssql",
+            "uid": "${DS_MSSQL}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "-----------------------\r\n-- Outbound connections\r\n-----------------------\r\nWITH outbound_connections AS (\r\n\t--------------\r\n\t-- Destination\r\n\t--------------\r\n\tSELECT\r\n\t\tc.main_call_history_id,\r\n\t\t--\r\n\t\tCASE\r\n\t\t\tWHEN c.source_entity_type = 'external_line'\r\n\t\t\t\tTHEN c.source_participant_phone_number + ' ' + coalesce(c.source_dn_name, 'Unknown')\r\n\t\t\tELSE c.source_dn_number + ' ' + coalesce(c.source_dn_name, 'Unknown')\r\n\t\tEND AS source_participant,\r\n\t\t--\r\n\t\tCASE\r\n\t\t\tWHEN c.destination_entity_type = 'external_line'\r\n\t\t\t\tTHEN c.destination_participant_phone_number + ' ' + coalesce(c.destination_dn_name, 'Unknown')\r\n\t\t\tELSE c.destination_dn_number + ' ' + coalesce(c.destination_dn_name, 'Unknown')\r\n\t\tEND AS destination_participant,\r\n\t\t--\r\n    c.cdr_started_at AS started_at,\r\n\t\tc.cdr_answered_at AS answered_at,\r\n\t\tc.cdr_ended_at AS ended_at,\r\n\t\tDATEDIFF(SECOND, c.cdr_started_at, c.cdr_ended_at) AS duration,\r\n\t\tDATEDIFF(SECOND, c.cdr_started_at, coalesce(c.cdr_answered_at, c.cdr_ended_at)) AS ringing_duration,\r\n\t\tCASE WHEN c.destination_entity_type NOT IN ('group', 'ring_group_ring_all', 'ring_group_hunt', 'queue') THEN DATEDIFF(SECOND, c.cdr_answered_at, c.cdr_ended_at) ELSE 0 END AS talking_duration,\r\n\t\tround(coalesce(CAST(b.destination_bill_rate AS numeric(38, 2)), 0.00) * coalesce(DATEDIFF(MICROSECOND, 0, CAST(b.destination_bill_duration AS TIME)) / 60000000.00, 0.00), 2) AS bill_cost\r\n\tFROM public_cdroutput AS c\r\n\tLEFT JOIN public_cdrbilling AS b ON\r\n\t\tb.cdr_id = c.cdr_id\r\n\tLEFT JOIN public_cdroutput AS c_orig ON\r\n\t\tc_orig.cdr_id = c.originating_cdr_id\r\n\tWHERE $__timeFilter(c.cdr_started_at)\r\n\tAND \r\n\t(\r\n\t\t(c.destination_entity_type = 'outbound_rule' AND c.destination_participant_is_incoming = 0 AND c.termination_reason NOT IN ('cancelled', 'continued_in', 'rejected', 'src_participant_terminated', 'dst_participant_terminated'))\r\n\t\tOR\r\n\t\t(c.destination_entity_type = 'external_line' AND c.destination_participant_is_incoming = 0)\r\n\t)\r\n\tAND NOT (c.creation_forward_reason = 'polling' AND c.cdr_answered_at IS NULL AND c_orig.destination_entity_type IN ('group', 'ring_group_ring_all', 'ring_group_hunt', 'queue'))\t\t-- Exclude polling\r\n\t--AND c.cdr_answered_at IS NOT NULL\r\n\tUNION ALL\r\n\t--------------\r\n\t-- Source\r\n\t--------------\r\n\tSELECT\r\n\t\tc.main_call_history_id,\r\n\t\t--\r\n\t\tCASE\r\n\t\t\tWHEN c.destination_entity_type = 'external_line'\r\n\t\t\t\tTHEN c.destination_participant_phone_number + ' ' + coalesce(c.destination_dn_name, 'Unknown')\r\n\t\t\tELSE c.destination_dn_number + ' ' + coalesce(c.destination_dn_name, 'Unknown')\r\n\t\tEND AS source_participant,\r\n\t\t--\r\n\t\tCASE\r\n\t\t\tWHEN c.source_entity_type = 'external_line'\r\n\t\t\t\tTHEN c.source_participant_phone_number + ' ' + coalesce(c.source_dn_name, 'Unknown')\r\n\t\t\tELSE c.source_dn_number + ' ' + coalesce(c.source_dn_name, 'Unknown')\r\n\t\tEND AS destination_participant,\r\n\t\t--\r\n    c.cdr_started_at AS started_at,\r\n\t\tc.cdr_answered_at AS answered_at,\r\n\t\tc.cdr_ended_at AS ended_at,\r\n\t\tDATEDIFF(SECOND, c.cdr_started_at, c.cdr_ended_at) AS duration,\r\n\t\tDATEDIFF(SECOND, c.cdr_started_at, coalesce(c.cdr_answered_at, c.cdr_ended_at)) AS ringing_duration,\r\n\t\tcoalesce(DATEDIFF(SECOND, c.cdr_answered_at, c.cdr_ended_at), 0) AS talking_duration,\r\n\t\tround(coalesce(CAST(b.source_bill_rate AS numeric(38, 2)), 0.00) * coalesce(DATEDIFF(MICROSECOND, 0, CAST(b.source_bill_duration AS TIME)) / 60000000.00, 0.00), 2) AS bill_cost\r\n\tFROM public_cdroutput AS c\r\n\tLEFT JOIN public_cdrbilling AS b ON\r\n\t\tb.cdr_id = c.cdr_id\r\n\tWHERE $__timeFilter(c.cdr_started_at)\r\n\tAND c.source_entity_type = 'external_line'\r\n\tAND c.source_participant_is_incoming = 0\r\n\t--AND c.cdr_answered_at IS NOT NULL\r\n),\r\nstat AS (\r\n\tSELECT\r\n\t\tROW_NUMBER() OVER(ORDER BY c.started_at DESC) AS id1,\r\n\t\tCASE WHEN (ROW_NUMBER() OVER(PARTITION BY c.main_call_history_id ORDER BY c.started_at DESC) - 1) > 0 THEN 1 ELSE 0 END AS id2,\r\n\t\t*\r\n\tFROM outbound_connections AS c\r\n)\r\nSELECT\r\n\t(c.id1 - SUM(c.id2) OVER(ORDER BY c.started_at DESC)) % 2 AS gen_call_id,\r\n\t-- c.main_call_history_id,\r\n\tc.source_participant,\r\n\tc.destination_participant,\r\n\tc.started_at,\r\n\tc.answered_at,\r\n\tc.ended_at,\r\n\tc.duration,\r\n\tc.ringing_duration,\r\n\tc.talking_duration,\r\n\tc.bill_cost\r\nFROM stat AS c\r\nORDER BY c.started_at DESC;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Ausgehende Anrufe",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "answered_at": "Angenommen am",
+              "bill_cost": "Kosten",
+              "cdr_answered_at": "Angenommen am",
+              "cdr_ended_at": "Beendet am",
+              "destination_participant": "Externer Teilnehmer",
+              "did": "DID",
+              "duration": "Dauer",
+              "ended_at": "Beendet am",
+              "gen_call_id": "Anruf-ID",
+              "main_call_history_id": "Anruf-ID",
+              "ringing_duration": "Klingeldauer",
+              "source_participant": "Durchwahl",
+              "started_at": "Begonnen am",
+              "talking_duration": "Gesprächsdauer"
+            }
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "Gen Call ID",
+                "Call ID",
+                "External participant",
+                "Extension",
+                "Started at",
+                "Answered at",
+                "Ended at",
+                "Ringing duration",
+                "Talking duration",
+                "Bill cost",
+                "DID"
+              ]
+            }
+          }
+        }
+      ],
+      "type": "table",
+      "description": "Detaillierte Liste aller ausgehenden Anrufe im Zeitraum"
+    }
+  ],
+  "preload": false,
+  "refresh": "30m",
+  "schemaVersion": 42,
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "07. Ausgehende Anrufe (MSSQL)",
+  "uid": "kbz5gmg",
+  "version": 13,
+  "weekStart": ""
+}
