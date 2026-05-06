@@ -34,7 +34,12 @@ export async function GET() {
 
     // Number → { queueStatus, profileName, isRegistered }
     const extMap = new Map(
-      extData.value.map((e) => [e.Number, { queueStatus: e.QueueStatus, profileName: e.CurrentProfileName, isRegistered: e.IsRegistered ?? false }])
+      extData.value.map((e) => [e.Number, {
+        queueStatus: e.QueueStatus,
+        profileName: e.CurrentProfileName,
+        isRegistered: e.IsRegistered ?? false,
+        currentProfile: e.CurrentProfileName ?? "Available",
+      }])
     );
 
     // Alle aktiven Gesprächs-DNs (Caller + Callee)
@@ -51,6 +56,7 @@ export async function GET() {
           ...agent,
           QueueStatus: (loggedIn ? "LoggedIn" : "LoggedOut") as "LoggedIn" | "LoggedOut",
           IsRegistered: ext?.isRegistered ?? false,
+          CurrentProfile: ext?.currentProfile ?? "Available",
           HasActiveCall: activeDns.has(agent.Number),
         };
       });

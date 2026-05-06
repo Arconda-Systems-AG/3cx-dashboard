@@ -135,6 +135,7 @@ export default function QueuesPage() {
                         const isRegistered = agent.IsRegistered ?? true;
                         const hasCall = agent.HasActiveCall;
                         const isOffline = isLoggedIn && !isRegistered;
+                        const profile = agent.CurrentProfile ?? "Available";
 
                         const dotColor = hasCall
                           ? "bg-amber-400 animate-pulse"
@@ -166,19 +167,32 @@ export default function QueuesPage() {
                           ? "bg-red-500/10 hover:bg-red-500/20"
                           : "hover:bg-surface-muted";
 
+                        const profileBadge: Record<string, { label: string; cls: string }> = {
+                          "DND": { label: "DND", cls: "bg-red-500/20 text-red-400" },
+                          "Away": { label: "Abwesend", cls: "bg-orange-500/20 text-orange-400" },
+                          "Lunch": { label: "Mittagspause", cls: "bg-yellow-500/20 text-yellow-400" },
+                          "Business Trip": { label: "Dienstreise", cls: "bg-purple-500/20 text-purple-400" },
+                        };
+                        const badge = profile !== "Available" ? (profileBadge[profile] ?? { label: profile, cls: "bg-gray-500/20 text-gray-400" }) : null;
+
                         return (
                           <div
                             key={agent.Id ?? agent.Number}
                             className={`flex items-center justify-between rounded-lg px-2 py-1 transition-colors ${rowBg}`}
-                            title={`${agent.Name} — ${statusLabel}`}
+                            title={`${agent.Name} — ${statusLabel}${badge ? ` (${badge.label})` : ""}`}
                           >
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
                               <span className={`h-2 w-2 rounded-full flex-shrink-0 ${dotColor}`} />
-                              <span className="text-xs text-body">
+                              <span className="text-xs text-body truncate">
                                 {agent.Name} ({agent.Number})
                               </span>
+                              {badge && (
+                                <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${badge.cls}`}>
+                                  {badge.label}
+                                </span>
+                              )}
                             </div>
-                            <span className={`text-xs font-medium ${statusColor}`}>
+                            <span className={`text-xs font-medium shrink-0 ml-1 ${statusColor}`}>
                               {statusLabel}
                             </span>
                           </div>

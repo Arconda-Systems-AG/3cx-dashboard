@@ -102,6 +102,7 @@ export interface QueueAgent {
   // Vom Server angereichert via Extensions:
   QueueStatus?: "LoggedIn" | "LoggedOut";
   IsRegistered?: boolean;     // Telefon/Gerät registriert (online)
+  CurrentProfile?: string;    // Profil: "Available", "DND", "Away", "Lunch", "Business Trip"
   // Vom Server angereichert via ActiveCalls:
   HasActiveCall?: boolean;    // Agent ist gerade im Gespräch
 }
@@ -180,6 +181,34 @@ export interface ThreeCXSystem {
   callControlClientSecret?: string;
 }
 
+// ─────────────────────────────────────────────
+// Stats / SLA Types
+// ─────────────────────────────────────────────
+
+export interface TodayStats {
+  total_incoming: number;     // Amtsgespräche → Queue heute
+  answered: number;           // davon angenommen
+  abandoned: number;          // davon abgebrochen (Kunde hat aufgelegt)
+  not_in_20s: number;         // Wartezeit > 20s (angenommen ODER abgebrochen)
+  abwurf1_reached: number;    // Calls die Abwurf-Queue 1 erreichten
+  abwurf2_reached: number;    // Calls die Abwurf-Queue 2 erreichten
+}
+
+export interface SlaViolation {
+  callId: number;
+  caller: string;
+  callee: string;
+  waitingSince: string;       // ISO timestamp (LastChangeStatus)
+  waitingSeconds: number;     // Sekunden seit Eintritt in aktuellen Status
+}
+
+export interface HourlyBucket {
+  hour: string;               // ISO timestamp (volle Stunde)
+  total: number;
+  answered: number;
+  abandoned: number;
+}
+
 // App Settings (gespeichert auf PVC)
 export interface AppSettings {
   // Telefonanlagen
@@ -203,6 +232,13 @@ export interface AppSettings {
   // Kunden-Branding (konfigurierbar in Einstellungen)
   customerName?: string;       // Anzeigename im Header (z.B. "HansaNord")
   customerLogoUrl?: string;    // Base64-Data-URL oder https-URL des Logos
+  // E-Mail-Report (SMTP wie SA-API)
+  smtpHost?: string;
+  smtpPort?: number;
+  smtpUser?: string;
+  smtpPassword?: string;       // Klartext in settings.json, bei GET als "••••••••" zurück
+  smtpFrom?: string;           // Absender-E-Mail
+  reportRecipients?: string;   // Komma-getrennte Empfänger-E-Mails
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {

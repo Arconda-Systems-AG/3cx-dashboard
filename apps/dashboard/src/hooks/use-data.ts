@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR, { mutate } from "swr";
-import type { ODataList, Extension, ActiveCall, Queue, PhoneDevice, EventLogEntry, AppSettings, ThreeCXSystem } from "@3cx-dash/types";
+import type { ODataList, Extension, ActiveCall, Queue, PhoneDevice, EventLogEntry, AppSettings, ThreeCXSystem, TodayStats, SlaViolation, HourlyBucket } from "@3cx-dash/types";
 import { DEFAULT_SETTINGS } from "@3cx-dash/types";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -81,6 +81,28 @@ export async function updateSettings(settings: Partial<AppSettings>) {
   if (!res.ok) throw new Error("Einstellungen konnten nicht gespeichert werden");
   await mutate("/api/settings");
   return res.json();
+}
+
+// Tages-Statistiken (CDR, minütlich aktualisiert)
+export function useToday() {
+  return useSWR<TodayStats>("/api/stats/today", fetcher, { refreshInterval: 60_000 });
+}
+
+// Real-time SLA-Violations (Ringing > 20s, 5s Polling)
+export function useSlaLive() {
+  return useSWR<{ violations: SlaViolation[] }>("/api/stats/sla-live", fetcher, { refreshInterval: 5_000 });
+}
+
+// Stündliches Anrufaufkommen für Chart
+export function useHourly(from?: string, to?: string) {
+  const params = new URLSearchParams();
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
+  return useSWR<{ buckets: HourlyBucket[] }>(
+    `/api/stats/hourly?${params.toString()}`,
+    fetcher,
+    { refreshInterval: 120_000 }
+  );
 }
 
 // Nicht angenommene Anrufe in den letzten 60 Minuten (DB-Query)

@@ -5,7 +5,7 @@ import { GlassCard, LedIndicator } from "@3cx-dash/ui";
 import { useSettings, updateSettings, useSystems } from "@/hooks/use-data";
 import { useHealth } from "@/hooks/use-data";
 import {
-  Save, Plus, Trash2, CheckCircle, Wifi, Edit2, X, ChevronDown, ChevronUp, Database, Upload, ImageOff,
+  Save, Plus, Trash2, CheckCircle, Wifi, Edit2, X, ChevronDown, ChevronUp, Database, Upload, ImageOff, Mail, Send,
 } from "lucide-react";
 import type { AppSettings, ThreeCXSystem, AuthMethod } from "@3cx-dash/types";
 
@@ -564,6 +564,175 @@ function BrandingSection({ settings, onUpdate }: { settings: AppSettings | undef
   );
 }
 
+// ─── Email Report Section ─────────────────────────────────────
+const PW_PLACEHOLDER = "••••••••";
+
+function EmailReportSection({ settings }: { settings: AppSettings | undefined }) {
+  const [form, setForm] = useState({
+    smtpHost: settings?.smtpHost ?? "",
+    smtpPort: settings?.smtpPort ?? 587,
+    smtpUser: settings?.smtpUser ?? "",
+    smtpPassword: settings?.smtpPassword ?? "",
+    smtpFrom: settings?.smtpFrom ?? "",
+    reportRecipients: settings?.reportRecipients ?? "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [sending, setSending] = useState<"test" | "daily" | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (settings) {
+      setForm({
+        smtpHost: settings.smtpHost ?? "",
+        smtpPort: settings.smtpPort ?? 587,
+        smtpUser: settings.smtpUser ?? "",
+        smtpPassword: settings.smtpPassword ?? "",
+        smtpFrom: settings.smtpFrom ?? "",
+        reportRecipients: settings.reportRecipients ?? "",
+      });
+    }
+  }, [settings]);
+
+  function set(key: keyof typeof form, val: string | number) {
+    setForm((f) => ({ ...f, [key]: val }));
+    setMessage(null);
+  }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setMessage(null);
+    try {
+      const payload: Record<string, unknown> = { ...form };
+      if (payload.smtpPassword === PW_PLACEHOLDER) delete payload.smtpPassword;
+      await updateSettings(payload as Partial<AppSettings>);
+      setMessage("SMTP-Einstellungen gespeichert");
+    } catch (err) {
+      setMessage(`Fehler: ${err}`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleSend(type: "test" | "daily") {
+    setSending(type);
+    setMessage(null);
+    try {
+      const url = type === "test" ? "/api/reports/test" : "/api/reports/daily";
+      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Unbekannter Fehler");
+      setMessage(type === "test" ? "Test-E-Mail gesendet ✓" : "Tagesbericht gesendet ✓");
+    } catch (err) {
+      setMessage(`Fehler: ${err}`);
+    } finally {
+      setSending(null);
+    }
+  }
+
+  return (
+    <GlassCard className="p-5">
+      <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-heading">
+        <Mail className="h-4 w-4 text-primary" />
+        E-Mail-Report (Tagesbericht)
+      </h2>
+      <form onSubmit={handleSave} className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-secondary">SMTP Host</label>
+            <input
+              type="text" placeholder="mail.firma.de"
+              value={form.smtpHost}
+              onChange={(e) => set("smtpHost", e.target.value)}
+              className="w-full rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-secondary">SMTP Port</label>
+            <input
+              type="number" min={1} max={65535}
+              value={form.smtpPort}
+              onChange={(e) => set("smtpPort", Number(e.target.value))}
+              className="w-full rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-secondary">Benutzername (optional)</label>
+            <input
+              type="text" autoComplete="off"
+              value={form.smtpUser}
+              onChange={(e) => set("smtpUser", e.target.value)}
+              className="w-full rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-secondary">Passwort</label>
+            <input
+              type="password" autoComplete="new-password"
+              value={form.smtpPassword}
+              onFocus={(e) => { if (e.target.value === PW_PLACEHOLDER) set("smtpPassword", ""); }}
+              onChange={(e) => set("smtpPassword", e.target.value)}
+              className="w-full rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-secondary">Absender-E-Mail</label>
+            <input
+              type="email" placeholder="dashboard@firma.de"
+              value={form.smtpFrom}
+              onChange={(e) => set("smtpFrom", e.target.value)}
+              className="w-full rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-secondary">
+              Empfänger (kommagetrennt)
+            </label>
+            <input
+              type="text" placeholder="leiter@firma.de, chef@firma.de"
+              value={form.reportRecipients}
+              onChange={(e) => set("reportRecipients", e.target.value)}
+              className="w-full rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </div>
+        </div>
+
+        {message && (
+          <p className={`text-sm ${message.startsWith("Fehler") ? "text-red-400" : "text-emerald-400"}`}>
+            {message}
+          </p>
+        )}
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="submit" disabled={saving}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50 hover:bg-primary-hover"
+          >
+            <Save className="h-4 w-4" />
+            {saving ? "Speichert..." : "Speichern"}
+          </button>
+          <button
+            type="button" disabled={sending !== null}
+            onClick={() => handleSend("test")}
+            className="flex items-center gap-2 rounded-lg border border-glass px-4 py-2 text-sm font-medium text-secondary hover:text-heading disabled:opacity-50"
+          >
+            <Mail className="h-4 w-4" />
+            {sending === "test" ? "Sendet..." : "Test-E-Mail"}
+          </button>
+          <button
+            type="button" disabled={sending !== null}
+            onClick={() => handleSend("daily")}
+            className="flex items-center gap-2 rounded-lg border border-glass px-4 py-2 text-sm font-medium text-secondary hover:text-heading disabled:opacity-50"
+          >
+            <Send className="h-4 w-4" />
+            {sending === "daily" ? "Sendet..." : "Tagesbericht jetzt senden"}
+          </button>
+        </div>
+      </form>
+    </GlassCard>
+  );
+}
+
 // ─── Main Page ───────────────────────────────────────────────
 export default function SettingsPage() {
   const { data: settingsData, mutate: mutateSystems } = useSystems();
@@ -741,9 +910,6 @@ export default function SettingsPage() {
         </div>
       </GlassCard>
 
-      {/* ── Datenbankquelle ── */}
-      <DbConfigSection settings={settings} />
-
       {/* ── App-Einstellungen ── */}
       <GlassCard className="p-5">
         <h2 className="mb-4 text-sm font-semibold text-heading">App-Einstellungen</h2>
@@ -817,8 +983,8 @@ export default function SettingsPage() {
       {/* ── Kunden-Branding ── */}
       <BrandingSection settings={settings} onUpdate={() => mutateSettings()} />
 
-      {/* ── Datenbank ── */}
-      <DbConfigSection settings={settings} />
+      {/* ── E-Mail-Report ── */}
+      <EmailReportSection settings={settings} />
     </div>
   );
 }
