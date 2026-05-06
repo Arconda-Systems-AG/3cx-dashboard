@@ -10,6 +10,7 @@ import {
   useDepartments,
   useToday,
   useHourly,
+  useCustomerLogo,
 } from "@/hooks/use-data";
 import {
   Phone,
@@ -58,6 +59,7 @@ export default function DashboardPage() {
   const { data: extensionsData } = useExtensions();
   const { data: queuesData } = useQueues();
   const { data: deptData } = useDepartments();
+  const { data: logoData } = useCustomerLogo();
   const [selectedDeptId, setSelectedDeptId] = useState<string>("");
   const [expandedQueues, setExpandedQueues] = useState<Set<number>>(new Set());
 
@@ -127,8 +129,9 @@ export default function DashboardPage() {
       <div className="grid grid-cols-3 items-center gap-4">
         <h1 className="text-2xl font-bold text-heading">Übersicht</h1>
         <div className="flex justify-center">
-          <span className="text-lg font-black tracking-widest text-heading">ARCONDA</span>
-          <span className="text-lg font-black tracking-widest text-primary">.systems</span>
+          {logoData?.logoUrl ? (
+            <img src={logoData.logoUrl} alt="Kunden-Logo" className="h-8 max-w-[140px] object-contain" />
+          ) : null}
         </div>
         <div className="flex justify-end">
         <div className="relative">

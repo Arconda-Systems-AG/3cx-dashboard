@@ -128,6 +128,11 @@ export function useDepartments() {
   return useSWR<{ groups: DepartmentGroup[] }>("/api/groups", fetcher, { refreshInterval: 60_000 });
 }
 
+// Kunden-Logo aus Einstellungen
+export function useCustomerLogo() {
+  return useSWR<{ logoUrl: string | null }>("/api/settings/logo", fetcher, { revalidateOnFocus: false });
+}
+
 // Systems (Telefonanlagen)
 export function useSystems() {
   return useSWR<{ systems: (Omit<ThreeCXSystem, "clientSecret" | "webPassword"> & { hasSecret: boolean })[]; activeSystemId: string }>(

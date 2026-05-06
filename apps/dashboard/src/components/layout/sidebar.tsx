@@ -62,7 +62,6 @@ export function Sidebar() {
         ) : (
           <div className="text-center">
             <span className="text-lg font-black tracking-widest text-heading">ARCONDA</span>
-            <span className="text-lg font-black tracking-widest text-primary">.systems</span>
           </div>
         )}
 
