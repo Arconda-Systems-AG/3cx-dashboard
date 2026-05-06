@@ -22,6 +22,7 @@ import {
   PhoneMissed,
   CheckCircle2,
   Timer,
+  TrendingDown,
 } from "lucide-react";
 import {
   BarChart,
@@ -221,35 +222,79 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* ── Stunden-Chart (full width) ── */}
-      {chartData.length > 0 && (
-        <GlassCard className="p-5">
-          <h2 className="mb-4 text-sm font-semibold text-heading">Anrufaufkommen heute (stündlich)</h2>
-          <ResponsiveContainer width="100%" height={160}>
-            <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-              <XAxis
-                dataKey="hour"
-                tick={{ fontSize: 10, fill: "var(--color-muted, #64748b)" }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                tick={{ fontSize: 10, fill: "var(--color-muted, #64748b)" }}
-                tickLine={false}
-                axisLine={false}
-                allowDecimals={false}
-              />
-              <Tooltip
-                contentStyle={{ background: "#0f1f35", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", fontSize: "12px" }}
-                labelStyle={{ color: "#e2e8f0" }}
-                itemStyle={{ color: "#94a3b8" }}
-              />
-              <Bar dataKey="Eingehend" fill="#3b82f6" radius={[3, 3, 0, 0]} maxBarSize={28} />
-              <Bar dataKey="Angenommen" fill="#10b981" radius={[3, 3, 0, 0]} maxBarSize={28} />
-              <Bar dataKey="Abgebrochen" fill="#f97316" radius={[3, 3, 0, 0]} maxBarSize={28} />
-            </BarChart>
-          </ResponsiveContainer>
-        </GlassCard>
+      {/* ── Abwurf-Funnel + Stunden-Chart ── */}
+      {(today || chartData.length > 0) && (
+        <div className="grid gap-4 lg:grid-cols-5">
+          {/* Abwurf-Funnel */}
+          {today && (
+            <GlassCard className="p-5 lg:col-span-2">
+              <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-heading">
+                <TrendingDown className="h-4 w-4 text-primary" />
+                Abwurf-Funnel heute
+              </h2>
+              {(() => {
+                const direct = today.answered;
+                const ab1 = today.abwurf1_reached;
+                const ab2 = today.abwurf2_reached;
+                const total = today.total_incoming || 1;
+                const bars = [
+                  { label: "Direkt angenommen", value: direct, pct: Math.round((direct / total) * 100), color: "bg-emerald-500", textColor: "text-emerald-400" },
+                  { label: "Abwurf 1 erreicht", value: ab1, pct: Math.round((ab1 / total) * 100), color: "bg-amber-500", textColor: "text-amber-400" },
+                  { label: "Abwurf 2 erreicht", value: ab2, pct: Math.round((ab2 / total) * 100), color: "bg-red-500", textColor: "text-red-400" },
+                ];
+                return (
+                  <div className="space-y-4">
+                    {bars.map((b) => (
+                      <div key={b.label}>
+                        <div className="mb-1 flex items-center justify-between text-xs">
+                          <span className="text-muted">{b.label}</span>
+                          <span className={`font-semibold tabular-nums ${b.textColor}`}>{b.value} <span className="text-muted font-normal">({b.pct}%)</span></span>
+                        </div>
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-surface-muted">
+                          <div
+                            className={`h-full rounded-full transition-all duration-700 ${b.color}`}
+                            style={{ width: `${b.pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </GlassCard>
+          )}
+
+          {/* Stunden-Chart */}
+          {chartData.length > 0 && (
+            <GlassCard className="p-5 lg:col-span-3">
+              <h2 className="mb-4 text-sm font-semibold text-heading">Anrufaufkommen heute (stündlich)</h2>
+              <ResponsiveContainer width="100%" height={160}>
+                <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                  <XAxis
+                    dataKey="hour"
+                    tick={{ fontSize: 10, fill: "var(--color-muted, #64748b)" }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: "var(--color-muted, #64748b)" }}
+                    tickLine={false}
+                    axisLine={false}
+                    allowDecimals={false}
+                  />
+                  <Tooltip
+                    contentStyle={{ background: "#0f1f35", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", fontSize: "12px" }}
+                    labelStyle={{ color: "#e2e8f0" }}
+                    itemStyle={{ color: "#94a3b8" }}
+                  />
+                  <Bar dataKey="Eingehend" fill="#3b82f6" radius={[3, 3, 0, 0]} maxBarSize={28} />
+                  <Bar dataKey="Angenommen" fill="#10b981" radius={[3, 3, 0, 0]} maxBarSize={28} />
+                  <Bar dataKey="Abgebrochen" fill="#f97316" radius={[3, 3, 0, 0]} maxBarSize={28} />
+                </BarChart>
+              </ResponsiveContainer>
+            </GlassCard>
+          )}
+        </div>
       )}
 
       {/* ── Warteschlangen (kompakt) ── */}
