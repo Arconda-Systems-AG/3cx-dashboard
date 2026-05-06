@@ -124,8 +124,13 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="grid grid-cols-3 items-center gap-4">
         <h1 className="text-2xl font-bold text-heading">Übersicht</h1>
+        <div className="flex justify-center">
+          <span className="text-lg font-black tracking-widest text-heading">ARCONDA</span>
+          <span className="text-lg font-black tracking-widest text-primary">.systems</span>
+        </div>
+        <div className="flex justify-end">
         <div className="relative">
           <select
             value={selectedDeptId}
@@ -138,6 +143,7 @@ export default function DashboardPage() {
             ))}
           </select>
           <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+        </div>
         </div>
       </div>
 
