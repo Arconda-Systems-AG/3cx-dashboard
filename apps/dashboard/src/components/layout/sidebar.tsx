@@ -60,9 +60,7 @@ export function Sidebar() {
         {collapsed ? (
           <span className="text-xs font-black tracking-widest text-heading">A</span>
         ) : (
-          <div className="text-center">
-            <span className="text-lg font-black tracking-widest text-heading">ARCONDA</span>
-          </div>
+          <img src="/arconda-logo-white.png" alt="ARCONDA.systems" className="h-6 w-auto object-contain" />
         )}
 
         {!collapsed && (
