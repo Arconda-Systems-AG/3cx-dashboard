@@ -2550,11 +2550,11 @@ ORDER BY c.started_at DESC
   SELECT
     q.main_call_history_id,
     q.cdr_id,
-    q.cdr_answered_at,
-    q.cdr_ended_at,
     q.cdr_started_at,
+    q.cdr_ended_at,
     q.termination_reason,
-    q.continued_in_cdr_id
+    q.continued_in_cdr_id,
+    EXTRACT(EPOCH FROM (q.cdr_ended_at - q.cdr_started_at)) AS wait_seconds
   FROM public.cdroutput q
   WHERE q.destination_dn_type = 'queue'
     AND q.source_participant_is_incoming = true
@@ -2562,20 +2562,17 @@ ORDER BY c.started_at DESC
     AND q.cdr_started_at >= $1
     AND q.cdr_started_at <= $2
 ),
-abwurf1 AS (
+direct_answered AS (
   SELECT DISTINCT i.main_call_history_id
   FROM incoming i
   JOIN public.cdroutput q2 ON q2.cdr_id = i.continued_in_cdr_id
-    AND q2.destination_dn_type = 'queue'
+    AND q2.destination_dn_type = 'extension'
 )
 SELECT
-  COUNT(*)::int                                                               AS total_incoming,
-  COUNT(cdr_answered_at)::int                                                AS answered,
-  COUNT(*) FILTER (WHERE termination_reason = 'abandoned')::int             AS abandoned,
-  COUNT(*) FILTER (WHERE
-    EXTRACT(EPOCH FROM (COALESCE(cdr_answered_at, cdr_ended_at) - cdr_started_at)) > 20
-    OR main_call_history_id IN (SELECT main_call_history_id FROM abwurf1)
-  )::int                                                                     AS over_20s
+  COUNT(*)::int                                                                        AS total_incoming,
+  (SELECT COUNT(*)::int FROM direct_answered)                                          AS answered,
+  COUNT(*) FILTER (WHERE termination_reason = 'src_participant_terminated')::int      AS abandoned,
+  COUNT(*) FILTER (WHERE wait_seconds > 20)::int                                      AS over_20s
 FROM incoming;`,
     },
     {
@@ -2586,21 +2583,26 @@ FROM incoming;`,
   q.destination_dn_number                                                        AS queue_number,
   q.destination_dn_name                                                          AS queue_name,
   COUNT(*)::int                                                                   AS total,
-  COUNT(q.cdr_answered_at)::int                                                  AS answered,
-  COUNT(*) FILTER (WHERE wait_seconds > 20 OR has_abwurf)::int                 AS over_20s,
-  ROUND(100.0 * COUNT(*) FILTER (WHERE wait_seconds > 20 OR has_abwurf) / NULLIF(COUNT(*), 0), 1) AS over_20s_pct,
-  ROUND(AVG(wait_seconds)::numeric, 1)                                           AS avg_wait_seconds
+  COUNT(*) FILTER (WHERE q2_ext.cdr_id IS NOT NULL)::int                        AS answered,
+  COUNT(*) FILTER (WHERE q.termination_reason = 'src_participant_terminated')::int AS abandoned,
+  COUNT(*) FILTER (WHERE wait_seconds > 20)::int                                AS over_20s,
+  ROUND(100.0 * COUNT(*) FILTER (WHERE wait_seconds > 20) / NULLIF(COUNT(*), 0), 1) AS over_20s_pct,
+  ROUND(AVG(wait_seconds)::numeric, 1)                                          AS avg_wait_seconds
 FROM (
   SELECT
     c.destination_dn_number,
     c.destination_dn_name,
-    c.cdr_answered_at,
-    EXTRACT(EPOCH FROM (COALESCE(c.cdr_answered_at, c.cdr_ended_at) - c.cdr_started_at)) AS wait_seconds,
-    (q2.cdr_id IS NOT NULL) AS has_abwurf
+    c.termination_reason,
+    EXTRACT(EPOCH FROM (c.cdr_ended_at - c.cdr_started_at)) AS wait_seconds,
+    (q2.cdr_id IS NOT NULL) AS has_abwurf,
+    q2_ext.cdr_id AS q2_ext_cdr_id
   FROM public.cdroutput c
   LEFT JOIN public.cdroutput q2
     ON q2.cdr_id = c.continued_in_cdr_id
     AND q2.destination_dn_type = 'queue'
+  LEFT JOIN public.cdroutput q2_ext
+    ON q2_ext.cdr_id = c.continued_in_cdr_id
+    AND q2_ext.destination_dn_type = 'extension'
   WHERE c.destination_dn_type = 'queue'
     AND c.source_participant_is_incoming = true
     AND c.source_entity_type != 'queue'
@@ -2618,7 +2620,6 @@ ORDER BY total DESC;`,
   SELECT
     q.main_call_history_id,
     q.cdr_id,
-    q.cdr_answered_at,
     q.continued_in_cdr_id
   FROM public.cdroutput q
   WHERE q.destination_dn_type = 'queue'
@@ -2626,6 +2627,12 @@ ORDER BY total DESC;`,
     AND q.source_entity_type != 'queue'
     AND q.cdr_started_at >= $1
     AND q.cdr_started_at <= $2
+),
+direct_answered AS (
+  SELECT DISTINCT i.main_call_history_id
+  FROM incoming i
+  JOIN public.cdroutput q2 ON q2.cdr_id = i.continued_in_cdr_id
+    AND q2.destination_dn_type = 'extension'
 ),
 abwurf1 AS (
   SELECT DISTINCT i.main_call_history_id
@@ -2643,7 +2650,7 @@ abwurf2 AS (
 )
 SELECT
   'Direkt angenommen' AS kategorie,
-  (COUNT(i.cdr_answered_at) - (SELECT COUNT(*) FROM abwurf1))::int AS anzahl
+  (SELECT COUNT(*)::int FROM direct_answered) AS anzahl
 FROM incoming i
 UNION ALL
 SELECT 'Abwurf 1', (SELECT COUNT(*)::int FROM abwurf1)
@@ -2655,16 +2662,19 @@ SELECT 'Abwurf 2', (SELECT COUNT(*)::int FROM abwurf2);`,
       title: "Stündliches Anrufaufkommen",
       type: "barchart",
       sql: `SELECT
-  date_trunc('hour', cdr_started_at)                                    AS hour,
-  COUNT(*)::int                                                          AS total,
-  COUNT(cdr_answered_at)::int                                           AS answered,
-  COUNT(*) FILTER (WHERE termination_reason = 'abandoned')::int        AS abandoned
-FROM public.cdroutput
-WHERE destination_dn_type = 'queue'
-  AND source_participant_is_incoming = true
-  AND source_entity_type != 'queue'
-  AND cdr_started_at >= $1
-  AND cdr_started_at <= $2
+  date_trunc('hour', c.cdr_started_at)                                            AS hour,
+  COUNT(*)::int                                                                     AS total,
+  COUNT(q2_ext.cdr_id)::int                                                        AS answered,
+  COUNT(*) FILTER (WHERE c.termination_reason = 'src_participant_terminated')::int AS abandoned
+FROM public.cdroutput c
+LEFT JOIN public.cdroutput q2_ext
+  ON q2_ext.cdr_id = c.continued_in_cdr_id
+  AND q2_ext.destination_dn_type = 'extension'
+WHERE c.destination_dn_type = 'queue'
+  AND c.source_participant_is_incoming = true
+  AND c.source_entity_type != 'queue'
+  AND c.cdr_started_at >= $1
+  AND c.cdr_started_at <= $2
 GROUP BY 1
 ORDER BY 1;`,
     },

@@ -23,16 +23,19 @@ export async function GET(request: Request) {
   try {
     const sql = `
       SELECT
-        date_trunc('hour', cdr_started_at) AS hour,
+        date_trunc('hour', c.cdr_started_at) AS hour,
         COUNT(*)::int AS total,
-        COUNT(cdr_answered_at)::int AS answered,
-        COUNT(*) FILTER (WHERE termination_reason = 'abandoned')::int AS abandoned
-      FROM public.cdroutput
-      WHERE destination_dn_type = 'queue'
-        AND source_participant_is_incoming = true
-        AND source_entity_type != 'queue'
-        AND cdr_started_at >= $1
-        AND cdr_started_at < $2
+        COUNT(q2_ext.cdr_id)::int AS answered,
+        COUNT(*) FILTER (WHERE c.termination_reason = 'src_participant_terminated')::int AS abandoned
+      FROM public.cdroutput c
+      LEFT JOIN public.cdroutput q2_ext
+        ON q2_ext.cdr_id = c.continued_in_cdr_id
+        AND q2_ext.destination_dn_type = 'extension'
+      WHERE c.destination_dn_type = 'queue'
+        AND c.source_participant_is_incoming = true
+        AND c.source_entity_type != 'queue'
+        AND c.cdr_started_at >= $1
+        AND c.cdr_started_at < $2
       GROUP BY 1
       ORDER BY 1;
     `;
