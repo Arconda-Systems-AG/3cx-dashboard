@@ -25,7 +25,6 @@ export function TiltCard({
     transform: "perspective(800px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)",
     transition: "transform 0.4s ease, box-shadow 0.4s ease",
   });
-  const [shinePos, setShinePos] = useState({ x: 50, y: 50 });
   const [isHovered, setIsHovered] = useState(false);
 
   function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
@@ -43,11 +42,9 @@ export function TiltCard({
       transition: "transform 0.08s ease",
       boxShadow: `
         0 20px 60px rgba(0,0,0,0.4),
-        0 0 40px ${glowColor},
-        0 0 0 1px rgba(255,255,255,0.12) inset
+        0 0 40px ${glowColor}
       `,
     });
-    setShinePos({ x: x * 100, y: y * 100 });
   }
 
   function handleMouseLeave() {
@@ -72,22 +69,6 @@ export function TiltCard({
       style={{ ...externalStyle, ...cardStyle, transformStyle: "preserve-3d" }}
       className={`relative rounded-3xl border border-glass bg-surface-glass backdrop-blur-xl overflow-hidden ${className}`}
     >
-      {/* Specular Shine — wandert mit der Maus */}
-      <div
-        className="pointer-events-none absolute inset-0 rounded-3xl transition-opacity duration-300"
-        style={{
-          opacity: isHovered ? 1 : 0,
-          background: `radial-gradient(ellipse 60% 50% at ${shinePos.x}% ${shinePos.y}%, rgba(255,255,255,0.10) 0%, transparent 70%)`,
-        }}
-      />
-      {/* Edge-Shimmer — leuchtendes Top-Edge beim Hover */}
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-px transition-opacity duration-300"
-        style={{
-          opacity: isHovered ? 1 : 0,
-          background: `linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) ${shinePos.x}%, transparent 100%)`,
-        }}
-      />
       {/* Content liegt "oben" im 3D-Raum */}
       <div style={{ transform: "translateZ(20px)" }}>
         {children}
