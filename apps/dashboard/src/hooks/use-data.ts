@@ -84,8 +84,10 @@ export async function updateSettings(settings: Partial<AppSettings>) {
 }
 
 // Tages-Statistiken (CDR, minütlich aktualisiert)
-export function useToday() {
-  return useSWR<TodayStats>("/api/stats/today", fetcher, { refreshInterval: 60_000 });
+export function useToday(queues?: string[]) {
+  const params = new URLSearchParams();
+  if (queues && queues.length > 0) params.set("queues", queues.join(","));
+  return useSWR<TodayStats>(`/api/stats/today?${params.toString()}`, fetcher, { refreshInterval: 60_000 });
 }
 
 // Real-time SLA-Violations (Ringing > 20s, 5s Polling)
@@ -94,10 +96,11 @@ export function useSlaLive() {
 }
 
 // Stündliches Anrufaufkommen für Chart
-export function useHourly(from?: string, to?: string) {
+export function useHourly(from?: string, to?: string, queues?: string[]) {
   const params = new URLSearchParams();
   if (from) params.set("from", from);
   if (to) params.set("to", to);
+  if (queues && queues.length > 0) params.set("queues", queues.join(","));
   return useSWR<{ buckets: HourlyBucket[] }>(
     `/api/stats/hourly?${params.toString()}`,
     fetcher,

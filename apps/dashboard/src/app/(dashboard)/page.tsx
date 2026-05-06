@@ -58,18 +58,8 @@ export default function DashboardPage() {
   const { data: extensionsData } = useExtensions();
   const { data: queuesData } = useQueues();
   const { data: deptData } = useDepartments();
-  const { data: todayData } = useToday();
-  const { data: hourlyData } = useHourly();
   const [selectedDeptId, setSelectedDeptId] = useState<string>("");
   const [expandedQueues, setExpandedQueues] = useState<Set<number>>(new Set());
-
-  function toggleExpand(id: number) {
-    setExpandedQueues((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  }
 
   const activeCalls = callsData?.value ?? [];
   const extensions = extensionsData?.value ?? [];
@@ -79,8 +69,24 @@ export default function DashboardPage() {
   const selectedDept = selectedDeptId
     ? departments.find((d) => String(d.id) === selectedDeptId) ?? null
     : null;
-
   const memberNumbers = new Set<string>(selectedDept?.memberNumbers ?? []);
+
+  const filteredQueueNumbers = selectedDept
+    ? queues
+        .filter((q) => (q.Agents ?? []).some((a) => memberNumbers.has(a.Number)))
+        .map((q) => String(q.Number))
+    : [];
+
+  const { data: todayData } = useToday(filteredQueueNumbers.length > 0 ? filteredQueueNumbers : undefined);
+  const { data: hourlyData } = useHourly(undefined, undefined, filteredQueueNumbers.length > 0 ? filteredQueueNumbers : undefined);
+
+  function toggleExpand(id: number) {
+    setExpandedQueues((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
 
   const filteredCalls = selectedDept
     ? activeCalls.filter((c) => {

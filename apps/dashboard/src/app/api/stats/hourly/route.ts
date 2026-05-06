@@ -11,6 +11,9 @@ export async function GET(request: Request) {
   const from = searchParams.get("from") ? new Date(searchParams.get("from")!) : todayStart;
   const to = searchParams.get("to") ? new Date(searchParams.get("to")!) : now;
 
+  const queuesParam = searchParams.get("queues");
+  const queueFilter = queuesParam ? queuesParam.split(",").map((q) => q.trim()).filter(Boolean) : [];
+
   const pool = await createPool();
   if (!pool) {
     return NextResponse.json(
@@ -21,6 +24,11 @@ export async function GET(request: Request) {
 
   const client = await pool.connect();
   try {
+    const params: unknown[] = [from.toISOString(), to.toISOString()];
+    const queueWhere = queueFilter.length > 0
+      ? `AND c.destination_dn_number = ANY($${params.push(queueFilter)})`
+      : "";
+
     const sql = `
       SELECT
         date_trunc('hour', c.cdr_started_at) AS hour,
@@ -36,11 +44,12 @@ export async function GET(request: Request) {
         AND c.source_entity_type != 'queue'
         AND c.cdr_started_at >= $1
         AND c.cdr_started_at < $2
+        ${queueWhere}
       GROUP BY 1
       ORDER BY 1;
     `;
 
-    const res = await client.query(sql, [from.toISOString(), to.toISOString()]);
+    const res = await client.query(sql, params);
 
     const buckets: HourlyBucket[] = res.rows.map((r) => ({
       hour: r.hour instanceof Date ? r.hour.toISOString() : String(r.hour),

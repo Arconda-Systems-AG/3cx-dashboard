@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { createPool } from "@/lib/pg";
 import type { TodayStats } from "@3cx-dash/types";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const queuesParam = searchParams.get("queues");
+  const queueFilter = queuesParam ? queuesParam.split(",").map((q) => q.trim()).filter(Boolean) : [];
+
   const pool = await createPool();
   if (!pool) {
     return NextResponse.json(
@@ -16,6 +20,14 @@ export async function GET() {
     // Heute 00:00 bis jetzt (lokale Serverzeit in UTC)
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const params: unknown[] = [today.toISOString(), now.toISOString()];
+    const queueWhere = queueFilter.length > 0
+      ? `AND q.destination_dn_number = ANY($${params.push(queueFilter)})`
+      : "";
+    const queueWhereGlobal = queueFilter.length > 0
+      ? `AND destination_dn_number = ANY($3)`
+      : "";
 
     const sql = `
       WITH incoming_queue_calls AS (
@@ -33,6 +45,7 @@ export async function GET() {
           AND q.cdr_started_at >= $1
           AND q.cdr_started_at < $2
           AND q.source_entity_type != 'queue'
+          ${queueWhere}
       ),
       direct_answered AS (
         SELECT DISTINCT iqc.main_call_history_id
@@ -63,6 +76,7 @@ export async function GET() {
           AND source_participant_is_incoming = true
           AND cdr_started_at >= $1
           AND cdr_started_at < $2
+          ${queueWhereGlobal}
         ORDER BY secs DESC
         LIMIT 1
       )
@@ -79,7 +93,7 @@ export async function GET() {
       FROM incoming_queue_calls;
     `;
 
-    const res = await client.query(sql, [today.toISOString(), now.toISOString()]);
+    const res = await client.query(sql, params);
     const row = res.rows[0] ?? {};
 
     const stats: TodayStats = {
