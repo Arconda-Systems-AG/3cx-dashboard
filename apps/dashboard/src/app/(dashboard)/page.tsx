@@ -34,6 +34,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import { TiltCard } from "@/components/tilt-card";
 
 function parseDn(field: string): string {
   return (field ?? "").split(" ")[0];
@@ -158,16 +159,16 @@ export default function DashboardPage() {
       {/* ── Tages-KPIs ── */}
       {today && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <GlassCard className="relative overflow-hidden p-5">
+          <TiltCard glowColor="rgba(59,130,246,0.3)" className="p-5" style={{ animation: "var(--animate-float)" }}>
             <div className="absolute inset-x-0 top-0 h-[2px] bg-blue-500 opacity-70" />
             <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/10">
               <PhoneIncoming className="h-4 w-4 text-blue-400" />
             </div>
             <p className="text-3xl font-bold tabular-nums tracking-tight text-blue-400">{totalIncoming}</p>
             <p className="mt-1 text-xs font-medium text-muted">Eingehend heute</p>
-          </GlassCard>
+          </TiltCard>
 
-          <GlassCard className="relative overflow-hidden p-5">
+          <TiltCard glowColor={answerRate !== null && answerRate >= 80 ? "rgba(16,185,129,0.3)" : "rgba(245,158,11,0.3)"} className="p-5" style={{ animation: "var(--animate-float)", animationDelay: "1s" }}>
             <div className={`absolute inset-x-0 top-0 h-[2px] ${answerRate !== null && answerRate >= 80 ? "bg-emerald-500" : "bg-amber-500"} opacity-70`} />
             <div className={`mb-3 flex h-9 w-9 items-center justify-center rounded-lg ${answerRate !== null && answerRate >= 80 ? "bg-emerald-500/10" : "bg-amber-500/10"}`}>
               <CheckCircle2 className={`h-4 w-4 ${answerRate !== null && answerRate >= 80 ? "text-emerald-400" : "text-amber-400"}`} />
@@ -176,9 +177,9 @@ export default function DashboardPage() {
               {answerRate !== null ? `${answerRate}%` : "–"}
             </p>
             <p className="mt-1 text-xs font-medium text-muted">Angenommen</p>
-          </GlassCard>
+          </TiltCard>
 
-          <GlassCard className="relative overflow-hidden p-5">
+          <TiltCard glowColor={today.not_in_20s > 0 ? "rgba(239,68,68,0.35)" : "rgba(16,185,129,0.3)"} className="p-5" style={{ animation: "var(--animate-float)", animationDelay: "2s" }}>
             <div className={`absolute inset-x-0 top-0 h-[2px] ${today.not_in_20s > 0 ? "bg-red-500" : "bg-emerald-500"} opacity-70`} />
             <div className={`mb-3 flex h-9 w-9 items-center justify-center rounded-lg ${today.not_in_20s > 0 ? "bg-red-500/10" : "bg-emerald-500/10"}`}>
               <Clock className={`h-4 w-4 ${today.not_in_20s > 0 ? "text-red-400" : "text-emerald-400"}`} />
@@ -187,9 +188,9 @@ export default function DashboardPage() {
               {today.not_in_20s}
             </p>
             <p className="mt-1 text-xs font-medium text-muted">Nicht in 20 Sek.</p>
-          </GlassCard>
+          </TiltCard>
 
-          <GlassCard className="relative overflow-hidden p-5">
+          <TiltCard glowColor={today.abandoned > 0 ? "rgba(249,115,22,0.3)" : "rgba(16,185,129,0.3)"} className="p-5" style={{ animation: "var(--animate-float)", animationDelay: "3s" }}>
             <div className={`absolute inset-x-0 top-0 h-[2px] ${today.abandoned > 0 ? "bg-orange-500" : "bg-emerald-500"} opacity-70`} />
             <div className={`mb-3 flex h-9 w-9 items-center justify-center rounded-lg ${today.abandoned > 0 ? "bg-orange-500/10" : "bg-emerald-500/10"}`}>
               <PhoneMissed className={`h-4 w-4 ${today.abandoned > 0 ? "text-orange-400" : "text-emerald-400"}`} />
@@ -198,7 +199,7 @@ export default function DashboardPage() {
               {today.abandoned}
             </p>
             <p className="mt-1 text-xs font-medium text-muted">Abgebrochen</p>
-          </GlassCard>
+          </TiltCard>
         </div>
       )}
 
@@ -336,7 +337,7 @@ export default function DashboardPage() {
               };
 
               return (
-                <GlassCard key={queue.Id} hover className="p-4">
+                <TiltCard key={queue.Id} maxTilt={6} glowColor={hasActiveCalls ? "rgba(245,158,11,0.25)" : "rgba(240,128,23,0.15)"} className="p-4">
                   <div className="mb-3 flex items-start justify-between">
                     <div>
                       <h3 className="text-sm font-semibold text-heading">{queue.Name}</h3>
@@ -444,7 +445,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   )}
-                </GlassCard>
+                </TiltCard>
               );
             })}
           </div>

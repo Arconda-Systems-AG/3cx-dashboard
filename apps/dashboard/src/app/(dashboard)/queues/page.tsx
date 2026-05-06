@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { GlassCard, LedIndicator } from "@3cx-dash/ui";
+import { TiltCard } from "@/components/tilt-card";
 import { useQueues } from "@/hooks/use-data";
 import { ListOrdered, Users, Phone, Search, ChevronDown, ChevronUp } from "lucide-react";
 
@@ -68,7 +69,7 @@ export default function QueuesPage() {
             const hiddenCount = (queue.Agents?.length ?? 0) - 6;
 
             return (
-              <GlassCard key={queue.Id} hover className="p-5">
+              <TiltCard key={queue.Id} maxTilt={7} glowColor={hasActiveCalls ? "rgba(245,158,11,0.3)" : "rgba(240,128,23,0.18)"} className="p-5">
                 <div className="mb-4 flex items-start justify-between">
                   <div>
                     <h3 className="font-semibold text-heading">{queue.Name}</h3>
@@ -213,7 +214,7 @@ export default function QueuesPage() {
                     </div>
                   </div>
                 )}
-              </GlassCard>
+              </TiltCard>
             );
           })}
         </div>
