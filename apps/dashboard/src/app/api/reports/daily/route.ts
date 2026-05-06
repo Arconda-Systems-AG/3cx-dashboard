@@ -50,18 +50,23 @@ async function fetchTodayStats(): Promise<TodayStats | null> {
         SELECT
           q.main_call_history_id,
           q.cdr_id,
-          q.cdr_answered_at,
           q.cdr_started_at,
           q.cdr_ended_at,
           q.termination_reason,
           q.continued_in_cdr_id,
-          EXTRACT(EPOCH FROM (COALESCE(q.cdr_answered_at, q.cdr_ended_at) - q.cdr_started_at)) AS wait_seconds
+          EXTRACT(EPOCH FROM (q.cdr_ended_at - q.cdr_started_at)) AS wait_seconds
         FROM public.cdroutput q
         WHERE q.destination_dn_type = 'queue'
           AND q.source_participant_is_incoming = true
           AND q.cdr_started_at >= $1
           AND q.cdr_started_at < $2
           AND q.source_entity_type != 'queue'
+      ),
+      direct_answered AS (
+        SELECT DISTINCT iqc.main_call_history_id
+        FROM incoming_queue_calls iqc
+        JOIN public.cdroutput q2 ON q2.cdr_id = iqc.continued_in_cdr_id
+          AND q2.destination_dn_type = 'extension'
       ),
       abwurf1 AS (
         SELECT DISTINCT iqc.main_call_history_id
@@ -76,14 +81,28 @@ async function fetchTodayStats(): Promise<TodayStats | null> {
           AND q2.destination_dn_type = 'queue'
         JOIN public.cdroutput q3 ON q3.cdr_id = q2.continued_in_cdr_id
           AND q3.destination_dn_type = 'queue'
+      ),
+      max_wait AS (
+        SELECT destination_dn_name,
+          EXTRACT(EPOCH FROM (cdr_ended_at - cdr_started_at)) AS secs
+        FROM public.cdroutput
+        WHERE destination_dn_type = 'queue'
+          AND source_participant_is_incoming = true
+          AND cdr_started_at >= $1
+          AND cdr_started_at < $2
+        ORDER BY secs DESC
+        LIMIT 1
       )
       SELECT
-        COUNT(*)::int                                                        AS total_incoming,
-        COUNT(cdr_answered_at)::int                                          AS answered,
-        COUNT(*) FILTER (WHERE termination_reason = 'abandoned')::int       AS abandoned,
-        COUNT(*) FILTER (WHERE wait_seconds > 20)::int                      AS not_in_20s,
-        (SELECT COUNT(*)::int FROM abwurf1)                                 AS abwurf1_reached,
-        (SELECT COUNT(*)::int FROM abwurf2)                                 AS abwurf2_reached
+        COUNT(*)::int                                                                      AS total_incoming,
+        (SELECT COUNT(*)::int FROM direct_answered)                                        AS answered,
+        COUNT(*) FILTER (WHERE termination_reason = 'src_participant_terminated')::int    AS abandoned,
+        COUNT(*) FILTER (WHERE wait_seconds > 20)::int                                    AS not_in_20s,
+        ROUND(AVG(wait_seconds)::numeric, 0)::int                                         AS avg_wait_seconds,
+        (SELECT ROUND(secs::numeric, 0)::int FROM max_wait)                               AS max_wait_seconds,
+        (SELECT destination_dn_name FROM max_wait)                                        AS max_wait_queue,
+        (SELECT COUNT(*)::int FROM abwurf1)                                                AS abwurf1_reached,
+        (SELECT COUNT(*)::int FROM abwurf2)                                                AS abwurf2_reached
       FROM incoming_queue_calls;
     `;
 
@@ -94,6 +113,9 @@ async function fetchTodayStats(): Promise<TodayStats | null> {
       answered: Number(row.answered ?? 0),
       abandoned: Number(row.abandoned ?? 0),
       not_in_20s: Number(row.not_in_20s ?? 0),
+      avg_wait_seconds: Number(row.avg_wait_seconds ?? 0),
+      max_wait_seconds: Number(row.max_wait_seconds ?? 0),
+      max_wait_queue: String(row.max_wait_queue ?? ""),
       abwurf1_reached: Number(row.abwurf1_reached ?? 0),
       abwurf2_reached: Number(row.abwurf2_reached ?? 0),
     };
