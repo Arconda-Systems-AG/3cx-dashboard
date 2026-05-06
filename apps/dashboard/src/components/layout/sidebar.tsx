@@ -14,6 +14,7 @@ import {
   BarChart2,
   ChevronLeft,
   ChevronRight,
+  Phone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
