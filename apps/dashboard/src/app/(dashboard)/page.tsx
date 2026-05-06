@@ -130,7 +130,7 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold text-heading">Übersicht</h1>
         <div className="flex justify-center">
           {logoData?.logoUrl ? (
-            <img src={logoData.logoUrl} alt="Kunden-Logo" className="h-8 max-w-[140px] object-contain" />
+            <img src={logoData.logoUrl} alt="Kunden-Logo" className="h-16 w-auto object-contain" />
           ) : null}
         </div>
         <div className="flex justify-end">
