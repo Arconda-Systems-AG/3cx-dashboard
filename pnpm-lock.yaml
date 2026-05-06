@@ -17,10 +17,10 @@ importers:
 
   apps/dashboard:
     dependencies:
-      '@3cx/types':
+      '@3cx-dash/types':
         specifier: workspace:*
         version: link:../../packages/types
-      '@3cx/ui':
+      '@3cx-dash/ui':
         specifier: workspace:*
         version: link:../../packages/ui
       clsx:
@@ -93,7 +93,7 @@ importers:
 
   packages/ui:
     dependencies:
-      '@3cx/types':
+      '@3cx-dash/types':
         specifier: workspace:*
         version: link:../types
       lucide-react:
