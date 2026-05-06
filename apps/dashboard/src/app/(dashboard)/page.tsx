@@ -149,7 +149,7 @@ export default function DashboardPage() {
       {today && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
           {/* 1 — Eingehend */}
-          <TiltCard glowColor="rgba(59,130,246,0.3)" className="p-4" style={{ animation: "var(--animate-float)" }}>
+          <TiltCard glowColor="rgba(59,130,246,0.3)" className="p-4">
             <div className="absolute inset-x-0 top-0 h-[2px] bg-blue-500 opacity-70" />
             <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10">
               <PhoneIncoming className="h-3.5 w-3.5 text-blue-400" />
@@ -159,7 +159,7 @@ export default function DashboardPage() {
           </TiltCard>
 
           {/* 2 — Angenommen % */}
-          <TiltCard glowColor={answerRate !== null && answerRate >= 80 ? "rgba(16,185,129,0.3)" : "rgba(245,158,11,0.3)"} className="p-4" style={{ animation: "var(--animate-float)", animationDelay: "0.2s" }}>
+          <TiltCard glowColor={answerRate !== null && answerRate >= 80 ? "rgba(16,185,129,0.3)" : "rgba(245,158,11,0.3)"} className="p-4">
             <div className={`absolute inset-x-0 top-0 h-[2px] ${answerRate !== null && answerRate >= 80 ? "bg-emerald-500" : "bg-amber-500"} opacity-70`} />
             <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${answerRate !== null && answerRate >= 80 ? "bg-emerald-500/10" : "bg-amber-500/10"}`}>
               <CheckCircle2 className={`h-3.5 w-3.5 ${answerRate !== null && answerRate >= 80 ? "text-emerald-400" : "text-amber-400"}`} />
@@ -171,7 +171,7 @@ export default function DashboardPage() {
           </TiltCard>
 
           {/* 3 — Nicht in 20s */}
-          <TiltCard glowColor={today.not_in_20s > 0 ? "rgba(239,68,68,0.35)" : "rgba(16,185,129,0.3)"} className="p-4" style={{ animation: "var(--animate-float)", animationDelay: "0.4s" }}>
+          <TiltCard glowColor={today.not_in_20s > 0 ? "rgba(239,68,68,0.35)" : "rgba(16,185,129,0.3)"} className="p-4">
             <div className={`absolute inset-x-0 top-0 h-[2px] ${today.not_in_20s > 0 ? "bg-red-500" : "bg-emerald-500"} opacity-70`} />
             <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${today.not_in_20s > 0 ? "bg-red-500/10" : "bg-emerald-500/10"}`}>
               <Clock className={`h-3.5 w-3.5 ${today.not_in_20s > 0 ? "text-red-400" : "text-emerald-400"}`} />
@@ -183,7 +183,7 @@ export default function DashboardPage() {
           </TiltCard>
 
           {/* 4 — Abgebrochen */}
-          <TiltCard glowColor={today.abandoned > 0 ? "rgba(249,115,22,0.3)" : "rgba(16,185,129,0.3)"} className="p-4" style={{ animation: "var(--animate-float)", animationDelay: "0.6s" }}>
+          <TiltCard glowColor={today.abandoned > 0 ? "rgba(249,115,22,0.3)" : "rgba(16,185,129,0.3)"} className="p-4">
             <div className={`absolute inset-x-0 top-0 h-[2px] ${today.abandoned > 0 ? "bg-orange-500" : "bg-emerald-500"} opacity-70`} />
             <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${today.abandoned > 0 ? "bg-orange-500/10" : "bg-emerald-500/10"}`}>
               <PhoneMissed className={`h-3.5 w-3.5 ${today.abandoned > 0 ? "text-orange-400" : "text-emerald-400"}`} />
@@ -195,7 +195,7 @@ export default function DashboardPage() {
           </TiltCard>
 
           {/* 5 — Ø Wartezeit */}
-          <TiltCard glowColor="rgba(139,92,246,0.3)" className="p-4" style={{ animation: "var(--animate-float)", animationDelay: "0.8s" }}>
+          <TiltCard glowColor="rgba(139,92,246,0.3)" className="p-4">
             <div className="absolute inset-x-0 top-0 h-[2px] bg-violet-500 opacity-70" />
             <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10">
               <Timer className="h-3.5 w-3.5 text-violet-400" />
@@ -207,7 +207,7 @@ export default function DashboardPage() {
           </TiltCard>
 
           {/* 6 — Max. Wartezeit */}
-          <TiltCard glowColor={today.max_wait_seconds > 60 ? "rgba(239,68,68,0.35)" : "rgba(245,158,11,0.3)"} className="p-4" style={{ animation: "var(--animate-float)", animationDelay: "1s" }}>
+          <TiltCard glowColor={today.max_wait_seconds > 60 ? "rgba(239,68,68,0.35)" : "rgba(245,158,11,0.3)"} className="p-4">
             <div className={`absolute inset-x-0 top-0 h-[2px] ${today.max_wait_seconds > 60 ? "bg-red-500" : "bg-amber-500"} opacity-70`} />
             <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${today.max_wait_seconds > 60 ? "bg-red-500/10" : "bg-amber-500/10"}`}>
               <Clock className={`h-3.5 w-3.5 ${today.max_wait_seconds > 60 ? "text-red-400" : "text-amber-400"}`} />
