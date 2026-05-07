@@ -264,9 +264,9 @@ LIMIT 10
       key: "top_10_answered_extensions",
       title: "Top 10 Antwortende Nebenstellen",
       type: "barchart",
-      sql: `SELECT 
-    destination_dn_number, 
-    COUNT(*) AS call_count
+      sql: `SELECT
+    destination_dn_number,
+    COUNT(DISTINCT main_call_history_id) AS call_count
 FROM public.cdroutput
 WHERE cdr_started_at >= $1 AND cdr_started_at <= $2
 AND destination_entity_type = 'extension'
@@ -280,9 +280,9 @@ LIMIT 10
       key: "top_10_extensions_with_missed_calls",
       title: "Top 10 Nebenstellen mit Verpassten Anrufen",
       type: "barchart",
-      sql: `SELECT 
-    destination_dn_number, 
-    COUNT(*) AS call_count
+      sql: `SELECT
+    destination_dn_number,
+    COUNT(DISTINCT main_call_history_id) AS call_count
 FROM public.cdroutput
 WHERE cdr_started_at >= $1 AND cdr_started_at <= $2
 AND destination_entity_type = 'extension'
@@ -570,7 +570,7 @@ rg_users_stat AS (
     agent_polls.destination_dn_number AS agent_dn,
     COALESCE(agent_polls.destination_dn_name, 'Unknown') AS agent_name,
     COUNT(DISTINCT CASE WHEN rg.termination_reason IN ('continued_in', 'redirected') AND rg.termination_reason_details = 'polling' AND agent_polls.cdr_answered_at IS NOT NULL THEN rg.cdr_id END) AS agent_answered_polls_count,
-    COUNT(agent_polls.cdr_id) AS agent_received_polls_count
+    COUNT(DISTINCT agent_polls.cdr_id) AS agent_received_polls_count
   FROM public.cdroutput AS rg
   INNER JOIN rg_info ON TRUE -- This will cause issues if rg_info returns multiple rows. See note below.
   INNER JOIN public.cdroutput AS agent_polls ON
@@ -625,7 +625,7 @@ ORDER BY 1
       sql: `SELECT
   agent_polls.destination_dn_number || ' ' || COALESCE(agent_polls.destination_dn_name, 'Unknown') AS agent,
   COUNT(DISTINCT agent_polls.main_call_history_id) AS agent_received_calls_count,
-  COUNT(agent_polls.cdr_id) AS agent_received_polls_count,
+  COUNT(DISTINCT agent_polls.cdr_id) AS agent_received_polls_count,
   COUNT(DISTINCT CASE WHEN rg.termination_reason IN ('continued_in', 'redirected') AND rg.termination_reason_details = 'polling' AND agent_polls.cdr_answered_at IS NOT NULL THEN rg.cdr_id END) AS agent_answered_polls_count
 FROM public.cdroutput AS rg
 INNER JOIN public.cdroutput AS agent_polls ON
@@ -889,7 +889,7 @@ q_user_stat AS (
     agent_polls.destination_dn_number AS agent_dn,
     COALESCE(agent_polls.destination_dn_name, 'Unknown') AS agent_name,
     COUNT(DISTINCT CASE WHEN q.termination_reason IN ('continued_in', 'redirected') AND q.termination_reason_details = 'polling' AND agent_polls.cdr_answered_at IS NOT NULL THEN q.cdr_id END) AS agent_answered_polls_count,
-    COUNT(agent_polls.cdr_id) AS agent_received_polls_count,
+    COUNT(DISTINCT agent_polls.cdr_id) AS agent_received_polls_count,
     0 AS agent_qcb_serviced_count
   FROM public.cdroutput AS q
   INNER JOIN q_info ON TRUE
@@ -968,7 +968,7 @@ ORDER BY time_bucket
       sql: `SELECT
   agent_polls.destination_dn_number || ' ' || COALESCE(agent_polls.destination_dn_name, 'Unknown') AS agent,
   COUNT(DISTINCT agent_polls.main_call_history_id) AS agent_received_calls_count,
-  COUNT(agent_polls.cdr_id) AS agent_received_polls_count,
+  COUNT(DISTINCT agent_polls.cdr_id) AS agent_received_polls_count,
   COUNT(DISTINCT CASE WHEN q.termination_reason IN ('continued_in', 'redirected') AND q.termination_reason_details = 'polling' AND agent_polls.cdr_answered_at IS NOT NULL THEN q.cdr_id END) AS agent_answered_polls_count
 FROM public.cdroutput AS q
 INNER JOIN public.cdroutput AS agent_polls ON
@@ -978,7 +978,7 @@ INNER JOIN public.cdroutput AS agent_polls ON
   AND agent_polls.creation_method = 'route_to'
   AND agent_polls.creation_forward_reason = 'polling'
 WHERE q.cdr_started_at >= $1 AND q.cdr_started_at <= $2
-  
+
   AND q.destination_dn_type = 'queue'
 GROUP BY agent
 ORDER BY agent
@@ -2562,16 +2562,16 @@ ORDER BY c.started_at DESC
     AND q.cdr_started_at >= $1
     AND q.cdr_started_at <= $2
 ),
-direct_answered AS (
+answered AS (
   SELECT DISTINCT i.main_call_history_id
   FROM incoming i
-  JOIN public.cdroutput q2 ON q2.cdr_id = i.continued_in_cdr_id
-    AND q2.destination_dn_type = 'extension'
+  JOIN public.cdroutput ext ON ext.main_call_history_id = i.main_call_history_id
+    AND ext.destination_dn_type = 'extension'
 )
 SELECT
   COUNT(*)::int                                                                        AS total_incoming,
-  (SELECT COUNT(*)::int FROM direct_answered)                                          AS answered,
-  COUNT(*) FILTER (WHERE termination_reason = 'src_participant_terminated')::int      AS abandoned,
+  (SELECT COUNT(*)::int FROM answered)                                                 AS answered,
+  (COUNT(*) - (SELECT COUNT(*) FROM answered))::int                                   AS abandoned,
   COUNT(*) FILTER (WHERE wait_seconds > 20)::int                                      AS over_20s
 FROM incoming;`,
     },
@@ -2580,29 +2580,26 @@ FROM incoming;`,
       title: "SLA nach Warteschlange",
       type: "table",
       sql: `SELECT
-  q.destination_dn_number                                                        AS queue_number,
-  q.destination_dn_name                                                          AS queue_name,
-  COUNT(*)::int                                                                   AS total,
-  COUNT(*) FILTER (WHERE q2_ext_cdr_id IS NOT NULL)::int                        AS answered,
-  COUNT(*) FILTER (WHERE q.termination_reason = 'src_participant_terminated')::int AS abandoned,
-  COUNT(*) FILTER (WHERE wait_seconds > 20)::int                                AS over_20s,
-  ROUND(100.0 * COUNT(*) FILTER (WHERE wait_seconds > 20) / NULLIF(COUNT(*), 0), 1) AS over_20s_pct,
-  ROUND(AVG(wait_seconds)::numeric, 1)                                          AS avg_wait_seconds
+  q.destination_dn_number                                                              AS queue_number,
+  q.destination_dn_name                                                                AS queue_name,
+  COUNT(*)::int                                                                         AS total,
+  COUNT(*) FILTER (WHERE reached_ext IS NOT NULL)::int                                AS answered,
+  (COUNT(*) - COUNT(*) FILTER (WHERE reached_ext IS NOT NULL))::int                   AS abandoned,
+  COUNT(*) FILTER (WHERE wait_seconds > 20)::int                                      AS over_20s,
+  ROUND(100.0 * COUNT(*) FILTER (WHERE wait_seconds > 20) / NULLIF(COUNT(*), 0), 1)  AS over_20s_pct,
+  ROUND(AVG(wait_seconds)::numeric, 1)                                                AS avg_wait_seconds
 FROM (
   SELECT
     c.destination_dn_number,
     c.destination_dn_name,
-    c.termination_reason,
     EXTRACT(EPOCH FROM (c.cdr_ended_at - c.cdr_started_at)) AS wait_seconds,
-    (q2.cdr_id IS NOT NULL) AS has_abwurf,
-    q2_ext.cdr_id AS q2_ext_cdr_id
+    ext.main_call_history_id AS reached_ext
   FROM public.cdroutput c
-  LEFT JOIN public.cdroutput q2
-    ON q2.cdr_id = c.continued_in_cdr_id
-    AND q2.destination_dn_type = 'queue'
-  LEFT JOIN public.cdroutput q2_ext
-    ON q2_ext.cdr_id = c.continued_in_cdr_id
-    AND q2_ext.destination_dn_type = 'extension'
+  LEFT JOIN (
+    SELECT DISTINCT main_call_history_id
+    FROM public.cdroutput
+    WHERE destination_dn_type = 'extension'
+  ) ext ON ext.main_call_history_id = c.main_call_history_id
   WHERE c.destination_dn_type = 'queue'
     AND c.source_participant_is_incoming = true
     AND c.source_entity_type != 'queue'
@@ -2628,11 +2625,11 @@ ORDER BY total DESC;`,
     AND q.cdr_started_at >= $1
     AND q.cdr_started_at <= $2
 ),
-direct_answered AS (
+answered AS (
   SELECT DISTINCT i.main_call_history_id
   FROM incoming i
-  JOIN public.cdroutput q2 ON q2.cdr_id = i.continued_in_cdr_id
-    AND q2.destination_dn_type = 'extension'
+  JOIN public.cdroutput ext ON ext.main_call_history_id = i.main_call_history_id
+    AND ext.destination_dn_type = 'extension'
 ),
 abwurf1 AS (
   SELECT DISTINCT i.main_call_history_id
@@ -2648,7 +2645,7 @@ abwurf2 AS (
   JOIN public.cdroutput q3 ON q3.cdr_id = q2.continued_in_cdr_id
     AND q3.destination_dn_type = 'queue'
 )
-SELECT 'Direkt angenommen' AS kategorie, (SELECT COUNT(*)::int FROM direct_answered) AS anzahl
+SELECT 'Angenommen' AS kategorie, (SELECT COUNT(*)::int FROM answered) AS anzahl
 UNION ALL
 SELECT 'Abwurf 1 erreicht', (SELECT COUNT(*)::int FROM abwurf1)
 UNION ALL
@@ -2656,7 +2653,7 @@ SELECT 'Abwurf 2 erreicht', (SELECT COUNT(*)::int FROM abwurf2)
 UNION ALL
 SELECT 'Verpasst', (
   SELECT COUNT(*)::int FROM incoming
-  WHERE main_call_history_id NOT IN (SELECT main_call_history_id FROM direct_answered)
+  WHERE main_call_history_id NOT IN (SELECT main_call_history_id FROM answered)
     AND main_call_history_id NOT IN (SELECT main_call_history_id FROM abwurf1)
 );`,
     },
