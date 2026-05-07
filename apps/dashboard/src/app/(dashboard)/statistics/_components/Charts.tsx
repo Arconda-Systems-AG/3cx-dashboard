@@ -16,14 +16,60 @@ import {
   Legend,
   RadialBarChart,
   RadialBar,
+  LabelList,
+  TooltipProps,
 } from "recharts";
+import { useState } from "react";
 
+// ─── Color palette ────────────────────────────────────────────────────────────
 const COLORS = [
   "#3b82f6", "#10b981", "#f59e0b", "#ef4444",
   "#8b5cf6", "#06b6d4", "#f97316", "#14b8a6",
   "#ec4899", "#84cc16", "#a78bfa",
 ];
 
+// Semantic colors for known metric groups (answered / abandoned / total)
+const SEMANTIC_COLORS: Record<string, string> = {
+  answered:                 "#10b981", // green
+  answered_calls:           "#10b981",
+  answered_calls_count:     "#10b981",
+  calls_answered:           "#10b981",
+  inbound_answered:         "#10b981",
+  outbound_answered:        "#10b981",
+  total_answered:           "#10b981",
+  rg_answered_count:        "#10b981",
+  q_answered_count:         "#10b981",
+  agent_answered_polls_count: "#10b981",
+
+  abandoned:                "#ef4444", // red
+  missed_count:             "#ef4444",
+  calls_unanswered:         "#ef4444",
+  unanswered_calls:         "#ef4444",
+  unanswered_calls_count:   "#ef4444",
+  inbound_unanswered:       "#ef4444",
+  outbound_unanswered:      "#ef4444",
+  total_unanswered:         "#ef4444",
+  polls_missed:             "#ef4444",
+
+  total:                    "#3b82f6", // blue
+  total_calls:              "#3b82f6",
+  total_count:              "#3b82f6",
+  call_count:               "#3b82f6",
+  num_calls:                "#3b82f6",
+  connections_count:        "#3b82f6",
+  total_connections:        "#3b82f6",
+  polls_received:           "#3b82f6",
+  rg_received_count:        "#3b82f6",
+  q_received_count:         "#3b82f6",
+  agent_received_calls_count: "#3b82f6",
+  agent_received_polls_count: "#3b82f6",
+};
+
+function getBarColor(field: string, index: number): string {
+  return SEMANTIC_COLORS[field] ?? COLORS[index % COLORS.length];
+}
+
+// ─── Label map ───────────────────────────────────────────────────────────────
 /** Übersetzt rohe SQL-Feldnamen und DB-Enum-Werte in lesbare deutsche Labels */
 const LABELS: Record<string, string> = {
   // ── Anrufzähler ──────────────────────────────────────────────────
@@ -181,6 +227,7 @@ function translateLabel(key: string): string {
   return LABELS[key] ?? key.replace(/_/g, " ");
 }
 
+// ─── Types ───────────────────────────────────────────────────────────────────
 interface ChartPanelProps {
   title: string;
   rows: Record<string, unknown>[];
@@ -188,6 +235,7 @@ interface ChartPanelProps {
   type?: "barchart" | "timeseries" | "piechart" | "gauge" | "bargauge";
 }
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 function truncateLabel(label: string, max = 20): string {
   if (!label || typeof label !== "string") return String(label ?? "");
   return label.length > max ? label.slice(0, max) + "…" : label;
@@ -237,7 +285,70 @@ function isNumericSample(sample: unknown): boolean {
   return false;
 }
 
+/** Format numbers for German locale axis ticks (e.g. 3800 → "3.800") */
+function formatAxisNumber(value: number): string {
+  if (value >= 1000) return value.toLocaleString("de-DE");
+  return String(value);
+}
+
+// ─── Dark-mode custom tooltip ─────────────────────────────────────────────────
+interface TooltipPayloadItem {
+  name: string;
+  value: unknown;
+  color?: string;
+}
+
+function DarkTooltip({ active, payload, label }: TooltipProps<number, string>) {
+  if (!active || !payload || payload.length === 0) return null;
+  return (
+    <div
+      style={{
+        background: "rgba(10, 22, 40, 0.95)",
+        border: "1px solid rgba(255,255,255,0.12)",
+        borderRadius: 8,
+        padding: "8px 12px",
+        fontSize: 11,
+        color: "#f1f5f9",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+        backdropFilter: "blur(8px)",
+      }}
+    >
+      {label && (
+        <p style={{ marginBottom: 4, color: "#94a3b8", fontWeight: 500, fontSize: 10 }}>
+          {label}
+        </p>
+      )}
+      {(payload as TooltipPayloadItem[]).map((entry, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+          <span
+            style={{
+              display: "inline-block",
+              width: 8,
+              height: 8,
+              borderRadius: 2,
+              background: entry.color ?? "#3b82f6",
+              flexShrink: 0,
+            }}
+          />
+          <span style={{ color: "#94a3b8" }}>{translateLabel(entry.name)}:</span>
+          <span style={{ fontWeight: 600, color: "#f1f5f9" }}>
+            {Number(entry.value).toLocaleString("de-DE")}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Chart container ──────────────────────────────────────────────────────────
+const GRID_STROKE = "rgba(255,255,255,0.08)";
+const AXIS_TICK_COLOR = "#64748b";
+const MAX_VISIBLE_BARS = 20;
+
+// ─── Main component ───────────────────────────────────────────────────────────
 export function ChartPanel({ title, rows, fields, type = "barchart" }: ChartPanelProps) {
+  const [showAll, setShowAll] = useState(false);
+
   if (!rows || rows.length === 0) {
     return (
       <div className="rounded-xl border border-glass bg-surface-subtle p-4">
@@ -262,8 +373,8 @@ export function ChartPanel({ title, rows, fields, type = "barchart" }: ChartPane
     ),
   }));
 
+  // ─── Pie chart ──────────────────────────────────────────────────────────────
   if (type === "piechart") {
-    // Sort descending, cap at top 10, merge rest into "Sonstige"
     const sorted = [...data].sort((a, b) => (b[valueField] as number) - (a[valueField] as number));
     const top = sorted.slice(0, 10);
     const rest = sorted.slice(10);
@@ -278,10 +389,13 @@ export function ChartPanel({ title, rows, fields, type = "barchart" }: ChartPane
           ]
         : top;
 
+    // Center value: total of all visible slices
+    const pieTotal = pieData.reduce((s, d) => s + ((d[valueField] as number) || 0), 0);
+
     return (
       <div className="rounded-xl border border-glass bg-surface-subtle p-4">
         <p className="mb-3 text-xs font-semibold text-secondary">{title}</p>
-        <ResponsiveContainer width="100%" height={240}>
+        <ResponsiveContainer width="100%" height={260}>
           <PieChart>
             <Pie
               data={pieData}
@@ -289,23 +403,55 @@ export function ChartPanel({ title, rows, fields, type = "barchart" }: ChartPane
               nameKey="name"
               cx="50%"
               cy="50%"
-              outerRadius={80}
-              label={({ name, percent }) =>
-                percent > 0.04 ? `${name} (${(percent * 100).toFixed(0)}%)` : ""
-              }
-              labelLine={false}
+              outerRadius={90}
+              innerRadius={52}
+              paddingAngle={2}
+              isAnimationActive
+              animationBegin={0}
+              animationDuration={700}
             >
               {pieData.map((_, i) => (
-                <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                <Cell
+                  key={i}
+                  fill={COLORS[i % COLORS.length]}
+                  stroke="rgba(0,0,0,0.3)"
+                  strokeWidth={1}
+                />
               ))}
             </Pie>
-            <Tooltip formatter={(v: unknown) => Number(v).toLocaleString("de-DE")} />
+            {/* Center label rendered via a foreignObject trick using recharts label prop on Pie */}
+            <text
+              x="50%"
+              y="47%"
+              textAnchor="middle"
+              dominantBaseline="middle"
+              style={{ fill: "#f1f5f9", fontSize: 16, fontWeight: 700 }}
+            >
+              {pieTotal.toLocaleString("de-DE")}
+            </text>
+            <text
+              x="50%"
+              y="56%"
+              textAnchor="middle"
+              dominantBaseline="middle"
+              style={{ fill: "#64748b", fontSize: 9 }}
+            >
+              Gesamt
+            </text>
+            <Tooltip content={<DarkTooltip />} />
             <Legend
               layout="vertical"
               align="right"
               verticalAlign="middle"
-              iconSize={10}
-              wrapperStyle={{ fontSize: 10, maxHeight: 200, overflowY: "auto" }}
+              iconSize={8}
+              iconType="circle"
+              wrapperStyle={{
+                fontSize: 10,
+                maxHeight: 220,
+                overflowY: "auto",
+                lineHeight: "18px",
+                color: "#94a3b8",
+              }}
               formatter={(value) => translateLabel(String(value))}
             />
           </PieChart>
@@ -314,9 +460,10 @@ export function ChartPanel({ title, rows, fields, type = "barchart" }: ChartPane
     );
   }
 
+  // ─── Timeseries ─────────────────────────────────────────────────────────────
   if (type === "timeseries") {
     const timeField =
-      fields.find((f) => /time|date|started|bucket/i.test(f)) ?? labelField;
+      fields.find((f) => /time|date|started|bucket|hour/i.test(f)) ?? labelField;
     const timeData = rows.map((r) => {
       const raw = r[timeField];
       const label =
@@ -330,7 +477,6 @@ export function ChartPanel({ title, rows, fields, type = "barchart" }: ChartPane
           : typeof raw === "string" && /^\d{4}-\d{2}-\d{2}$/.test(raw)
           ? formatDateLabel(raw)
           : String(raw ?? "");
-      // Only spread actual numeric fields (time field excluded)
       const numOnly = numericFields.filter((f) => f !== timeField);
       return {
         name: label,
@@ -347,21 +493,52 @@ export function ChartPanel({ title, rows, fields, type = "barchart" }: ChartPane
       <div className="rounded-xl border border-glass bg-surface-subtle p-4">
         <p className="mb-3 text-xs font-semibold text-secondary">{title}</p>
         <ResponsiveContainer width="100%" height={200}>
-          <LineChart data={timeData} margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-            <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#666" }} interval="preserveStartEnd" />
-            <YAxis tick={{ fontSize: 10, fill: "#666" }} />
-            <Tooltip formatter={(v: unknown, name: unknown) => [Number(v).toLocaleString("de-DE"), translateLabel(String(name))]} />
+          <LineChart data={timeData} margin={{ top: 4, right: 12, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
+            <XAxis
+              dataKey="name"
+              tick={{ fontSize: 10, fill: AXIS_TICK_COLOR }}
+              interval="preserveStartEnd"
+              tickLine={false}
+              axisLine={{ stroke: GRID_STROKE }}
+            />
+            <YAxis
+              tick={{ fontSize: 10, fill: AXIS_TICK_COLOR }}
+              tickFormatter={formatAxisNumber}
+              tickLine={false}
+              axisLine={false}
+              width={40}
+            />
+            <Tooltip content={<DarkTooltip />} />
             {numOnly.slice(0, 3).map((f, i) => (
-              <Line key={f} type="monotone" dataKey={f} name={translateLabel(f) as never} stroke={COLORS[i]} strokeWidth={2} dot={false} />
+              <Line
+                key={f}
+                type="monotone"
+                dataKey={f}
+                name={translateLabel(f) as never}
+                stroke={getBarColor(f, i)}
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 4, strokeWidth: 0 }}
+                isAnimationActive
+                animationDuration={600}
+              />
             ))}
-            {numOnly.length > 1 && <Legend formatter={(value) => translateLabel(String(value))} />}
+            {numOnly.length > 1 && (
+              <Legend
+                wrapperStyle={{ fontSize: 10, color: "#94a3b8", paddingTop: 8 }}
+                formatter={(value) => translateLabel(String(value))}
+                iconType="plainline"
+                iconSize={14}
+              />
+            )}
           </LineChart>
         </ResponsiveContainer>
       </div>
     );
   }
 
+  // ─── Gauge ──────────────────────────────────────────────────────────────────
   if (type === "gauge") {
     const val =
       typeof rows[0]?.[valueField] === "number"
@@ -388,6 +565,8 @@ export function ChartPanel({ title, rows, fields, type = "barchart" }: ChartPane
                 dataKey="value"
                 cornerRadius={4}
                 background={{ fill: "rgba(255,255,255,0.05)" }}
+                isAnimationActive
+                animationDuration={700}
               />
             </RadialBarChart>
           </ResponsiveContainer>
@@ -397,39 +576,148 @@ export function ChartPanel({ title, rows, fields, type = "barchart" }: ChartPane
     );
   }
 
-  // Default: barchart
+  // ─── Bar chart ──────────────────────────────────────────────────────────────
   const isHorizontal = data.length > 8;
+  const visibleData = isHorizontal && !showAll ? data.slice(0, MAX_VISIBLE_BARS) : data;
+  const hiddenCount = data.length - visibleData.length;
+  // Show data labels only for small charts or single-value horizontal bars (avoid overlap)
+  const showDataLabels =
+    data.length <= 15 && (!isHorizontal || numericFields.length === 1);
+
+  // Fix #2: generous height formula — 28px per bar, min 60px padding, cap at 800
+  const chartHeight = isHorizontal
+    ? Math.min(800, visibleData.length * 28 + 60)
+    : 200;
+
+  const activeNumericFields = numericFields.slice(0, 3);
+
   return (
     <div className="rounded-xl border border-glass bg-surface-subtle p-4">
       <p className="mb-3 text-xs font-semibold text-secondary">{title}</p>
       <ResponsiveContainer
         width="100%"
-        height={isHorizontal ? Math.min(400, data.length * 22 + 40) : 200}
+        height={chartHeight}
       >
         <BarChart
-          data={data}
+          data={visibleData}
           layout={isHorizontal ? "vertical" : "horizontal"}
-          margin={{ top: 0, right: 10, left: isHorizontal ? 120 : -10, bottom: 0 }}
+          margin={{
+            top: 0,
+            right: showDataLabels && !isHorizontal ? 0 : 16,
+            left: isHorizontal ? 120 : -10,
+            bottom: 0,
+          }}
+          barCategoryGap="20%"
+          barGap={3}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke={GRID_STROKE}
+            // Fix #3: visible grid — horizontal bars get vertical lines only
+            horizontal={!isHorizontal}
+            vertical={isHorizontal}
+          />
+
           {isHorizontal ? (
             <>
-              <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: "#999" }} width={120} />
-              <XAxis type="number" tick={{ fontSize: 10, fill: "#666" }} />
+              <YAxis
+                dataKey="name"
+                type="category"
+                tick={{ fontSize: 10, fill: AXIS_TICK_COLOR }}
+                width={120}
+                tickLine={false}
+                axisLine={false}
+              />
+              <XAxis
+                type="number"
+                tick={{ fontSize: 10, fill: AXIS_TICK_COLOR }}
+                tickFormatter={formatAxisNumber}
+                tickLine={false}
+                axisLine={{ stroke: GRID_STROKE }}
+              />
             </>
           ) : (
             <>
-              <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#999" }} />
-              <YAxis tick={{ fontSize: 10, fill: "#666" }} />
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: 10, fill: AXIS_TICK_COLOR }}
+                tickLine={false}
+                axisLine={{ stroke: GRID_STROKE }}
+              />
+              <YAxis
+                tick={{ fontSize: 10, fill: AXIS_TICK_COLOR }}
+                tickFormatter={formatAxisNumber}
+                tickLine={false}
+                axisLine={false}
+                width={40}
+              />
             </>
           )}
-          <Tooltip formatter={(v: unknown, name: unknown) => [Number(v).toLocaleString("de-DE"), translateLabel(String(name))]} />
-          {numericFields.slice(0, 3).map((f, i) => (
-            <Bar key={f} dataKey={f} name={translateLabel(f) as never} fill={COLORS[i]} radius={[2, 2, 0, 0]} />
+
+          <Tooltip content={<DarkTooltip />} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
+
+          {activeNumericFields.map((f, i) => (
+            <Bar
+              key={f}
+              dataKey={f}
+              name={translateLabel(f) as never}
+              fill={getBarColor(f, i)}
+              // Fix #1: correct radius for horizontal vs vertical
+              radius={
+                isHorizontal
+                  ? [0, 2, 2, 0]   // right side rounded for horizontal bars
+                  : [2, 2, 0, 0]   // top rounded for vertical bars
+              }
+              isAnimationActive
+              animationDuration={600}
+              animationEasing="ease-out"
+            >
+              {/* Fix #9: data labels for charts with <= 15 items */}
+              {showDataLabels && (
+                <LabelList
+                  dataKey={f}
+                  position={isHorizontal ? "right" : "top"}
+                  style={{
+                    fontSize: 9,
+                    fill: "#94a3b8",
+                    fontWeight: 500,
+                  }}
+                  formatter={(v: number) =>
+                    v > 0 ? v.toLocaleString("de-DE") : ""
+                  }
+                />
+              )}
+            </Bar>
           ))}
-          {numericFields.length > 1 && <Legend formatter={(value) => translateLabel(String(value))} />}
+
+          {activeNumericFields.length > 1 && (
+            <Legend
+              wrapperStyle={{ fontSize: 10, color: "#94a3b8", paddingTop: 8 }}
+              formatter={(value) => translateLabel(String(value))}
+              iconType="rect"
+              iconSize={8}
+            />
+          )}
         </BarChart>
       </ResponsiveContainer>
+
+      {/* Fix #2 / #6: "show more" affordance when bars are truncated */}
+      {isHorizontal && hiddenCount > 0 && (
+        <button
+          onClick={() => setShowAll(true)}
+          className="mt-2 w-full rounded-lg border border-glass bg-surface-muted py-1.5 text-xs text-secondary hover:text-heading hover:bg-surface-subtle transition-colors"
+        >
+          + {hiddenCount} weitere anzeigen
+        </button>
+      )}
+      {isHorizontal && showAll && data.length > MAX_VISIBLE_BARS && (
+        <button
+          onClick={() => setShowAll(false)}
+          className="mt-2 w-full rounded-lg border border-glass bg-surface-muted py-1.5 text-xs text-secondary hover:text-heading hover:bg-surface-subtle transition-colors"
+        >
+          Weniger anzeigen
+        </button>
+      )}
     </div>
   );
 }

@@ -271,15 +271,20 @@ export default function StatisticsPage() {
       {/* Charts (Balken, Zeitreihe, Kreisdiagramm) */}
       {chartPanels.length > 0 && (
         <div className="grid gap-4 lg:grid-cols-2">
-          {chartPanels.map((p) => (
-            <ChartPanel
-              key={p.title}
-              title={p.title}
-              rows={p.rows}
-              fields={p.fields}
-              type={p.type as "barchart" | "timeseries" | "piechart" | "bargauge"}
-            />
-          ))}
+          {chartPanels.map((p) => {
+            // Charts with many rows span full width so items aren't squished
+            const isWide = p.type === "timeseries" || (p.rows?.length ?? 0) > 20;
+            return (
+              <div key={p.title} className={isWide ? "lg:col-span-2" : ""}>
+                <ChartPanel
+                  title={p.title}
+                  rows={p.rows}
+                  fields={p.fields}
+                  type={p.type as "barchart" | "timeseries" | "piechart" | "bargauge"}
+                />
+              </div>
+            );
+          })}
         </div>
       )}
 

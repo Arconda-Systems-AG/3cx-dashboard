@@ -2660,7 +2660,7 @@ SELECT 'Verpasst', (
     {
       key: "hourly_volume",
       title: "Stündliches Anrufaufkommen",
-      type: "barchart",
+      type: "timeseries",
       sql: `SELECT
   date_trunc('hour', sub.first_start AT TIME ZONE 'Europe/Berlin')  AS hour,
   COUNT(*)::int                                                       AS total,
