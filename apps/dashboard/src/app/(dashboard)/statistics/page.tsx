@@ -11,7 +11,6 @@ import { DataTable } from "./_components/DataTable";
 import { ChartPanel } from "./_components/Charts";
 
 const TAB_IDS: TabId[] = [
-  "sla",
   "overview",
   "ringGroups",
   "queues",
@@ -20,6 +19,7 @@ const TAB_IDS: TabId[] = [
   "inbound",
   "outbound",
   "inboundOutbound",
+  "sla",
 ];
 
 function defaultFrom(): string {
@@ -51,7 +51,7 @@ interface TabData {
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export default function StatisticsPage() {
-  const [activeTab, setActiveTab] = useState<TabId>("sla");
+  const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [from, setFrom] = useState(defaultFrom);
   const [to, setTo] = useState(defaultTo);
   const [fetchKey, setFetchKey] = useState(0);

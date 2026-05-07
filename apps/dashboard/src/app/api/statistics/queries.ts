@@ -2583,7 +2583,7 @@ FROM incoming;`,
   q.destination_dn_number                                                        AS queue_number,
   q.destination_dn_name                                                          AS queue_name,
   COUNT(*)::int                                                                   AS total,
-  COUNT(*) FILTER (WHERE q2_ext.cdr_id IS NOT NULL)::int                        AS answered,
+  COUNT(*) FILTER (WHERE q2_ext_cdr_id IS NOT NULL)::int                        AS answered,
   COUNT(*) FILTER (WHERE q.termination_reason = 'src_participant_terminated')::int AS abandoned,
   COUNT(*) FILTER (WHERE wait_seconds > 20)::int                                AS over_20s,
   ROUND(100.0 * COUNT(*) FILTER (WHERE wait_seconds > 20) / NULLIF(COUNT(*), 0), 1) AS over_20s_pct,
@@ -2648,14 +2648,17 @@ abwurf2 AS (
   JOIN public.cdroutput q3 ON q3.cdr_id = q2.continued_in_cdr_id
     AND q3.destination_dn_type = 'queue'
 )
-SELECT
-  'Direkt angenommen' AS kategorie,
-  (SELECT COUNT(*)::int FROM direct_answered) AS anzahl
-FROM incoming i
+SELECT 'Direkt angenommen' AS kategorie, (SELECT COUNT(*)::int FROM direct_answered) AS anzahl
 UNION ALL
-SELECT 'Abwurf 1', (SELECT COUNT(*)::int FROM abwurf1)
+SELECT 'Abwurf 1 erreicht', (SELECT COUNT(*)::int FROM abwurf1)
 UNION ALL
-SELECT 'Abwurf 2', (SELECT COUNT(*)::int FROM abwurf2);`,
+SELECT 'Abwurf 2 erreicht', (SELECT COUNT(*)::int FROM abwurf2)
+UNION ALL
+SELECT 'Verpasst', (
+  SELECT COUNT(*)::int FROM incoming
+  WHERE main_call_history_id NOT IN (SELECT main_call_history_id FROM direct_answered)
+    AND main_call_history_id NOT IN (SELECT main_call_history_id FROM abwurf1)
+);`,
     },
     {
       key: "hourly_volume",
