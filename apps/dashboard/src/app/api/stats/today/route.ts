@@ -35,7 +35,8 @@ export async function GET(request: Request) {
 
     const sql = `
       WITH incoming_queue_calls AS (
-        SELECT
+        -- Ein Eintrag pro echtem Anruf (DISTINCT ON main_call_history_id = frühester Hop)
+        SELECT DISTINCT ON (q.main_call_history_id)
           q.main_call_history_id,
           q.cdr_id,
           q.cdr_started_at,
@@ -50,12 +51,14 @@ export async function GET(request: Request) {
           AND q.cdr_started_at < $2
           AND q.source_entity_type != 'queue'
           ${queueWhere}
+        ORDER BY q.main_call_history_id, q.cdr_started_at
       ),
-      direct_answered AS (
+      -- Angenommen = irgendein CDR im Anrufverlauf erreichte eine Extension
+      answered AS (
         SELECT DISTINCT iqc.main_call_history_id
         FROM incoming_queue_calls iqc
-        JOIN public.cdroutput q2 ON q2.cdr_id = iqc.continued_in_cdr_id
-          AND q2.destination_dn_type = 'extension'
+        JOIN public.cdroutput ext ON ext.main_call_history_id = iqc.main_call_history_id
+          AND ext.destination_dn_type = 'extension'
       ),
       abwurf1 AS (
         SELECT DISTINCT iqc.main_call_history_id
@@ -71,7 +74,6 @@ export async function GET(request: Request) {
         JOIN public.cdroutput q3 ON q3.cdr_id = q2.continued_in_cdr_id
           AND q3.destination_dn_type = 'queue'
       ),
-      -- Max-Wartezeit über ALLE Queue-Segmente (inkl. Abwurf-Queues)
       max_wait AS (
         SELECT destination_dn_name,
           EXTRACT(EPOCH FROM (cdr_ended_at - cdr_started_at)) AS secs
@@ -86,7 +88,7 @@ export async function GET(request: Request) {
       )
       SELECT
         COUNT(*)::int                                                                      AS total_incoming,
-        (SELECT COUNT(*)::int FROM direct_answered)                                        AS answered,
+        (SELECT COUNT(*)::int FROM answered)                                               AS answered,
         COUNT(*) FILTER (WHERE termination_reason = 'src_participant_terminated')::int    AS abandoned,
         COUNT(*) FILTER (WHERE wait_seconds > 20)::int                                    AS not_in_20s,
         ROUND(AVG(wait_seconds)::numeric, 0)::int                                         AS avg_wait_seconds,

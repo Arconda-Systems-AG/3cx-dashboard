@@ -34,20 +34,28 @@ export async function GET(request: Request) {
 
     const sql = `
       SELECT
-        date_trunc('hour', c.cdr_started_at AT TIME ZONE 'Europe/Berlin') AS hour,
-        COUNT(*)::int AS total,
-        COUNT(q2_ext.cdr_id)::int AS answered,
-        COUNT(*) FILTER (WHERE c.termination_reason = 'src_participant_terminated')::int AS abandoned
-      FROM public.cdroutput c
-      LEFT JOIN public.cdroutput q2_ext
-        ON q2_ext.cdr_id = c.continued_in_cdr_id
-        AND q2_ext.destination_dn_type = 'extension'
-      WHERE c.destination_dn_type = 'queue'
-        AND c.source_participant_is_incoming = true
-        AND c.source_entity_type != 'queue'
-        AND c.cdr_started_at >= $1
-        AND c.cdr_started_at < $2
-        ${queueWhere}
+        date_trunc('hour', sub.first_start AT TIME ZONE 'Europe/Berlin') AS hour,
+        COUNT(*)::int                                                      AS total,
+        COUNT(sub.reached_ext)::int                                        AS answered,
+        COUNT(CASE WHEN sub.abandoned THEN 1 END)::int                    AS abandoned
+      FROM (
+        SELECT
+          c.main_call_history_id,
+          MIN(c.cdr_started_at)                                                              AS first_start,
+          BOOL_OR(c.termination_reason = 'src_participant_terminated')                       AS abandoned,
+          MAX(CASE WHEN ext.destination_dn_type = 'extension' THEN 1 ELSE NULL END)         AS reached_ext
+        FROM public.cdroutput c
+        LEFT JOIN public.cdroutput ext
+          ON ext.main_call_history_id = c.main_call_history_id
+          AND ext.destination_dn_type = 'extension'
+        WHERE c.destination_dn_type = 'queue'
+          AND c.source_participant_is_incoming = true
+          AND c.source_entity_type != 'queue'
+          AND c.cdr_started_at >= $1
+          AND c.cdr_started_at < $2
+          ${queueWhere}
+        GROUP BY c.main_call_history_id
+      ) sub
       GROUP BY 1
       ORDER BY 1;
     `;
