@@ -2690,16 +2690,16 @@ ORDER BY 1;`,
       title: "Agenten-Performance (Queue)",
       type: "table",
       sql: `SELECT
-  c.destination_dn_number                                               AS agent_dn,
-  c.destination_dn_name                                                 AS agent_name,
-  COUNT(*)::int                                                         AS calls_answered,
+  c.destination_dn_number                                                           AS agent_dn,
+  c.destination_dn_name                                                             AS agent_name,
+  COUNT(DISTINCT c.main_call_history_id)::int                                       AS calls_answered,
   ROUND(AVG(EXTRACT(EPOCH FROM (c.cdr_ended_at - c.cdr_answered_at)))::numeric, 0) AS avg_talk_seconds,
-  SUM(EXTRACT(EPOCH FROM (c.cdr_ended_at - c.cdr_answered_at)))::int  AS total_talk_seconds
+  SUM(EXTRACT(EPOCH FROM (c.cdr_ended_at - c.cdr_answered_at)))::int               AS total_talk_seconds
 FROM public.cdroutput c
 WHERE c.cdr_started_at >= $1
   AND c.cdr_started_at <= $2
   AND c.destination_dn_type = 'extension'
-  AND c.source_entity_type = 'queue'
+  AND c.creation_forward_reason = 'polling'
   AND c.cdr_answered_at IS NOT NULL
 GROUP BY 1, 2
 ORDER BY calls_answered DESC;`,
