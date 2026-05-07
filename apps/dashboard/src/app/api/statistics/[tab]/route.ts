@@ -37,9 +37,20 @@ export async function GET(
     return NextResponse.json({ error: `Unbekannter Tab: ${tab}` }, { status: 400 });
   }
 
-  const toDate = searchParams.get("to") ? new Date(searchParams.get("to")!) : new Date();
+  // Datum-Parameter als Europe/Berlin-Zeit interpretieren
+  // "2026-05-07" → from: 2026-05-07T00:00:00 Berlin, to: 2026-05-07T23:59:59 Berlin
+  function parseBerlinDate(s: string, endOfDay = false): Date {
+    const time = endOfDay ? "23:59:59" : "00:00:00";
+    const iso = /^\d{4}-\d{2}-\d{2}$/.test(s) ? `${s}T${time}` : s;
+    const naive = new Date(iso);
+    const berlinStr = naive.toLocaleString("en-US", { timeZone: "Europe/Berlin" });
+    const berlinDate = new Date(berlinStr);
+    const offset = naive.getTime() - berlinDate.getTime();
+    return new Date(naive.getTime() + offset);
+  }
+  const toDate = searchParams.get("to") ? parseBerlinDate(searchParams.get("to")!, true) : new Date();
   const fromDate = searchParams.get("from")
-    ? new Date(searchParams.get("from")!)
+    ? parseBerlinDate(searchParams.get("from")!, false)
     : new Date(toDate.getTime() - 7 * 24 * 60 * 60 * 1000);
 
   // Warteschlangen-Filter: ?queue=QUEUE_NUMBER
