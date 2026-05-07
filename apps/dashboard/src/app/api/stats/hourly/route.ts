@@ -35,9 +35,9 @@ export async function GET(request: Request) {
     const sql = `
       SELECT
         date_trunc('hour', sub.first_start AT TIME ZONE 'Europe/Berlin') AS hour,
-        COUNT(*)::int                                                      AS total,
-        COUNT(sub.reached_ext)::int                                        AS answered,
-        COUNT(CASE WHEN sub.abandoned THEN 1 END)::int                    AS abandoned
+        COUNT(*)::int                                                                     AS total,
+        COUNT(sub.reached_ext)::int                                                       AS answered,
+        COUNT(CASE WHEN sub.abandoned AND sub.reached_ext IS NULL THEN 1 END)::int       AS abandoned
       FROM (
         SELECT
           c.main_call_history_id,

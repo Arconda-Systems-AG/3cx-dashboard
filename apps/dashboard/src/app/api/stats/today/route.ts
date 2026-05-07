@@ -87,9 +87,10 @@ export async function GET(request: Request) {
         LIMIT 1
       )
       SELECT
-        COUNT(*)::int                                                                      AS total_incoming,
-        (SELECT COUNT(*)::int FROM answered)                                               AS answered,
-        COUNT(*) FILTER (WHERE termination_reason = 'src_participant_terminated')::int    AS abandoned,
+        COUNT(*)::int                                                                                              AS total_incoming,
+        (SELECT COUNT(*)::int FROM answered)                                                                       AS answered,
+        COUNT(*) FILTER (WHERE termination_reason = 'src_participant_terminated'
+                           AND main_call_history_id NOT IN (SELECT main_call_history_id FROM answered))::int      AS abandoned,
         COUNT(*) FILTER (WHERE wait_seconds > 20)::int                                    AS not_in_20s,
         ROUND(AVG(wait_seconds)::numeric, 0)::int                                         AS avg_wait_seconds,
         (SELECT ROUND(secs::numeric, 0)::int FROM max_wait)                               AS max_wait_seconds,
