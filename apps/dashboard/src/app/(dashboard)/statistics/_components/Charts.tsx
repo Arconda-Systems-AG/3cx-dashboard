@@ -192,10 +192,13 @@ function truncateLabel(label: string, max = 20): string {
 /** Format a date/timestamp string for axis labels */
 function formatDateLabel(val: string): string {
   if (/^\d{4}-\d{2}-\d{2}T/.test(val)) {
-    return new Date(val).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+    return new Date(val).toLocaleString("de-DE", {
+      day: "2-digit", month: "2-digit",
+      hour: "2-digit", minute: "2-digit",
+    });
   }
   if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
-    const [y, m, d] = val.split("-");
+    const [, m, d] = val.split("-");
     return `${d}.${m}`;
   }
   return val;
