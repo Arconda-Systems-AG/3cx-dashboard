@@ -6,7 +6,10 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
 
   const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const nowBerlin = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Berlin" }));
+  const berlinOffset = now.getTime() - nowBerlin.getTime();
+  const todayBerlinMidnight = new Date(nowBerlin.getFullYear(), nowBerlin.getMonth(), nowBerlin.getDate());
+  const todayStart = new Date(todayBerlinMidnight.getTime() + berlinOffset);
 
   const from = searchParams.get("from") ? new Date(searchParams.get("from")!) : todayStart;
   const to = searchParams.get("to") ? new Date(searchParams.get("to")!) : now;
@@ -31,7 +34,7 @@ export async function GET(request: Request) {
 
     const sql = `
       SELECT
-        date_trunc('hour', c.cdr_started_at) AS hour,
+        date_trunc('hour', c.cdr_started_at AT TIME ZONE 'Europe/Berlin') AS hour,
         COUNT(*)::int AS total,
         COUNT(q2_ext.cdr_id)::int AS answered,
         COUNT(*) FILTER (WHERE c.termination_reason = 'src_participant_terminated')::int AS abandoned

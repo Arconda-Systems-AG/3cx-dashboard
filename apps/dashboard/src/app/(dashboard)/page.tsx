@@ -47,7 +47,11 @@ function formatWait(seconds: number): string {
 
 function formatHour(isoHour: string): string {
   try {
-    return new Date(isoHour).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+    // DB gibt Europe/Berlin-Zeit als timestamp without timezone zurück
+    // Stunde direkt extrahieren, kein new Date() (vermeidet doppelte TZ-Konvertierung im Browser)
+    const match = isoHour.match(/[T ](\d{2}):(\d{2})/);
+    if (match) return `${match[1]}:${match[2]}`;
+    return isoHour;
   } catch {
     return isoHour;
   }

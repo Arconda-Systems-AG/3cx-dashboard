@@ -17,9 +17,13 @@ export async function GET(request: Request) {
 
   const client = await pool.connect();
   try {
-    // Heute 00:00 bis jetzt (lokale Serverzeit in UTC)
+    // Heute 00:00 bis jetzt in Europe/Berlin
+    const nowBerlin = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Berlin" }));
+    const todayBerlin = new Date(nowBerlin.getFullYear(), nowBerlin.getMonth(), nowBerlin.getDate());
+    // Als UTC-ISO zurückrechnen (Berlin-Mitternacht in UTC)
+    const berlinOffset = new Date().getTime() - new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Berlin" })).getTime();
     const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const today = new Date(todayBerlin.getTime() + berlinOffset);
 
     const params: unknown[] = [today.toISOString(), now.toISOString()];
     const queueWhere = queueFilter.length > 0
