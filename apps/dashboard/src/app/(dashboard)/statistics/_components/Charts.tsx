@@ -27,6 +27,10 @@ const COLORS = [
 /** Übersetzt rohe SQL-Feldnamen und DB-Enum-Werte in lesbare deutsche Labels */
 const LABELS: Record<string, string> = {
   // ── Anrufzähler ──────────────────────────────────────────────────
+  total:                           "Gesamt",
+  answered:                        "Angenommen",
+  abandoned:                       "Verpasst",
+  hour:                            "Stunde",
   total_calls:                     "Anrufe gesamt",
   answered_calls:                  "Angenommen",
   answered_calls_count:            "Angenommen",
@@ -204,13 +208,31 @@ function formatDateLabel(val: string): string {
   return val;
 }
 
-/** Detect whether a field value is truly numeric (exclude ISO date strings) */
+/**
+ * Field names that are always identifiers/labels — never treat as numeric values.
+ * Extension numbers like "04024", DIDs, names, phone numbers all fall into this category.
+ */
+const LABEL_FIELD_NAMES = new Set([
+  "agent", "agent_name", "agent_dn", "extension", "dn", "dn_name", "dn_number",
+  "did", "name", "number", "queue", "queue_name", "queue_number",
+  "destination_dn_number", "destination_dn_name", "destination_participant",
+  "source_dn_number", "source_dn_name", "source_participant",
+  "caller", "callee", "termination_reason", "direction", "kategorie", "category",
+  "consumer", "rg_name", "rg_dn", "q_name", "q_dn",
+  "duration_type", "cost_type", "xcb_type", "xcb_status", "xcb_final_type",
+  "destination_bill_rate_name", "destination_bill_code", "queue_number", "queue_name",
+]);
+
+/** Detect whether a field value is truly numeric.
+ *  Rejects: ISO dates, strings with spaces, phone/extension numbers (leading 0 or +),
+ *  and anything that isn't a clean integer or decimal. */
 function isNumericSample(sample: unknown): boolean {
   if (typeof sample === "number") return true;
   if (typeof sample === "string") {
-    // Exclude ISO date strings — parseFloat("2026-01-15...") = 2026 but it's a date
-    if (/^\d{4}-\d{2}-\d{2}/.test(sample)) return false;
-    return !isNaN(parseFloat(sample));
+    if (/^\d{4}-\d{2}-\d{2}/.test(sample)) return false;  // ISO date
+    if (sample.includes(" ")) return false;                  // "04024 John Smith" etc.
+    if (/^[0+]/.test(sample)) return false;                  // phone/extension (leading 0 or +)
+    return /^-?\d+(\.\d+)?$/.test(sample);
   }
   return false;
 }
@@ -225,8 +247,11 @@ export function ChartPanel({ title, rows, fields, type = "barchart" }: ChartPane
     );
   }
 
-  const numericFields = fields.filter((f) => isNumericSample(rows[0]?.[f]));
-  const labelField = fields.find((f) => !numericFields.includes(f)) ?? fields[0];
+  const numericFields = fields.filter((f) => !LABEL_FIELD_NAMES.has(f) && isNumericSample(rows[0]?.[f]));
+  const labelField =
+    fields.find((f) => LABEL_FIELD_NAMES.has(f)) ??
+    fields.find((f) => !numericFields.includes(f)) ??
+    fields[0];
   const valueField = numericFields[0] ?? fields[1];
 
   const data: Array<Record<string, string | number>> = rows.map((r) => ({
