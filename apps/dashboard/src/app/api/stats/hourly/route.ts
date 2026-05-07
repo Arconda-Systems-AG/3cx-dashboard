@@ -37,12 +37,11 @@ export async function GET(request: Request) {
         date_trunc('hour', sub.first_start AT TIME ZONE 'Europe/Berlin') AS hour,
         COUNT(*)::int                                                                     AS total,
         COUNT(sub.reached_ext)::int                                                       AS answered,
-        COUNT(CASE WHEN sub.abandoned AND sub.reached_ext IS NULL THEN 1 END)::int       AS abandoned
+        COUNT(CASE WHEN sub.reached_ext IS NULL THEN 1 END)::int                           AS abandoned
       FROM (
         SELECT
           c.main_call_history_id,
           MIN(c.cdr_started_at)                                                              AS first_start,
-          BOOL_OR(c.termination_reason = 'src_participant_terminated')                       AS abandoned,
           MAX(CASE WHEN ext.destination_dn_type = 'extension' THEN 1 ELSE NULL END)         AS reached_ext
         FROM public.cdroutput c
         LEFT JOIN public.cdroutput ext

@@ -60,14 +60,6 @@ export async function GET(request: Request) {
         JOIN public.cdroutput ext ON ext.main_call_history_id = iqc.main_call_history_id
           AND ext.destination_dn_type = 'extension'
       ),
-      -- Abgebrochen = Caller legte in irgendeinem Queue-Hop auf (auch Abwurf-Queue)
-      aborted AS (
-        SELECT DISTINCT iqc.main_call_history_id
-        FROM incoming_queue_calls iqc
-        JOIN public.cdroutput q2 ON q2.main_call_history_id = iqc.main_call_history_id
-          AND q2.destination_dn_type = 'queue'
-          AND q2.termination_reason = 'src_participant_terminated'
-      ),
       abwurf1 AS (
         SELECT DISTINCT iqc.main_call_history_id
         FROM incoming_queue_calls iqc
@@ -97,8 +89,7 @@ export async function GET(request: Request) {
       SELECT
         COUNT(*)::int                                                                                              AS total_incoming,
         (SELECT COUNT(*)::int FROM answered)                                                                       AS answered,
-        (SELECT COUNT(*)::int FROM aborted
-           WHERE main_call_history_id NOT IN (SELECT main_call_history_id FROM answered))                        AS abandoned,
+        (COUNT(*) - (SELECT COUNT(*) FROM answered))::int                                                        AS abandoned,
         COUNT(*) FILTER (WHERE wait_seconds > 20)::int                                    AS not_in_20s,
         ROUND(AVG(wait_seconds)::numeric, 0)::int                                         AS avg_wait_seconds,
         (SELECT ROUND(secs::numeric, 0)::int FROM max_wait)                               AS max_wait_seconds,
