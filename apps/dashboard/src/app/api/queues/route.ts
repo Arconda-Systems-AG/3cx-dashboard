@@ -27,7 +27,7 @@ export async function GET() {
       xapiFetch<ODataList<{ Number: string; QueueStatus?: string; CurrentProfileName?: string; IsRegistered?: boolean }>>(
         "Users?$select=Number,QueueStatus,CurrentProfileName,IsRegistered"
       ).catch(() => ({ value: [] as { Number: string; QueueStatus?: string; CurrentProfileName?: string; IsRegistered?: boolean }[] })),
-      xapiFetch<ODataList<ActiveCall>>("ActiveCalls?$select=Id,Caller,Callee,Status").catch(
+      xapiFetch<ODataList<ActiveCall>>("ActiveCalls?$select=Id,Caller,Callee,Status,EstablishedAt").catch(
         () => ({ value: [] as ActiveCall[] })
       ),
     ]);
@@ -46,11 +46,12 @@ export async function GET() {
     const activeDns = new Set<string>(
       callsData.value.flatMap((c) => [parseCallDn(c.Caller), parseCallDn(c.Callee)])
     );
-    // Nur klingelnde Calls: Callee-DNs mit Status "Ringing"
+    // Klingelnde DNs: Anrufe die noch NICHT verbunden sind (EstablishedAt fehlt)
+    // Zuverlässiger als Status="Ringing" da 3CX intern kein separates Leg erstellt
     const ringingDns = new Set<string>(
       callsData.value
-        .filter((c) => c.Status === "Ringing")
-        .map((c) => parseCallDn(c.Callee))
+        .filter((c) => !c.EstablishedAt)
+        .flatMap((c) => [parseCallDn(c.Caller), parseCallDn(c.Callee)])
     );
 
     // Agenten anreichern + LoggedInAgents + ActiveCallCount berechnen
