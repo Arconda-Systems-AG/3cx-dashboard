@@ -9,7 +9,6 @@ import {
   PhoneCall,
   History,
   ListOrdered,
-  Server,
   Settings,
   BarChart2,
   ChevronLeft,
@@ -28,7 +27,6 @@ const navItems = [
   { label: "Anrufprotokoll", href: "/calls/history", icon: History },
   { label: "Statistiken", href: "/statistics", icon: BarChart2 },
   { label: "KI-Auswertung", href: "/ai", icon: Brain },
-  { label: "System", href: "/system", icon: Server },
   { label: "Einstellungen", href: "/settings", icon: Settings },
 ];
 
