@@ -294,7 +294,7 @@ export default function DashboardPage() {
 
       {/* ── Abwurf-Funnel · KI-Analyse · Stunden-Chart (3 Kacheln) ── */}
       {(today || chartData.length > 0 || aiData) && (
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid gap-4 lg:grid-cols-[4fr_7fr_9fr]">
 
           {/* 1 — Abwurf-Funnel */}
           {today && (
@@ -368,10 +368,10 @@ export default function DashboardPage() {
                 <p className="line-clamp-3 text-xs leading-relaxed text-muted">{aiData.zusammenfassung}</p>
                 {/* Erkenntnisse als farbige Chips */}
                 {aiData.erkenntnisse && aiData.erkenntnisse.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 overflow-hidden">
+                  <div className="flex flex-col gap-1">
                     {aiData.erkenntnisse.slice(0, 3).map((e, i) => (
-                      <span key={i} className={`inline-block max-w-full truncate rounded-full border px-2 py-0.5 text-xs font-medium ${chipColors[i % chipColors.length]}`}>
-                        {e.length > 55 ? e.slice(0, 52) + "…" : e}
+                      <span key={i} className={`w-full rounded-md border px-2 py-0.5 text-xs font-medium leading-snug ${chipColors[i % chipColors.length]}`}>
+                        {e}
                       </span>
                     ))}
                   </div>
