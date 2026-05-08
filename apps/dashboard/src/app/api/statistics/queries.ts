@@ -249,13 +249,19 @@ ORDER BY time
       key: "top_10_most_dialled_numbers",
       title: "Top 10 Meistgewählte Nummern",
       type: "barchart",
-      sql: `SELECT 
-    CASE WHEN c.destination_participant_phone_number IS NULL OR c.destination_participant_phone_number = '' THEN c.destination_dn_number ELSE c.destination_participant_phone_number END AS destination_dn_number, 
+      sql: `SELECT
+    CASE
+      WHEN c.destination_participant_phone_number IS NULL OR c.destination_participant_phone_number = ''
+        THEN c.destination_dn_number || COALESCE(' ' || MAX(c.destination_dn_name), '')
+      ELSE c.destination_participant_phone_number
+    END AS extension,
     COUNT(DISTINCT c.main_call_history_id) AS call_count
 FROM public.cdroutput AS c
 WHERE c.cdr_started_at >= $1 AND c.cdr_started_at <= $2
 AND c.destination_dn_number NOT IN ('EndCall', 'QCB')
-GROUP BY CASE WHEN c.destination_participant_phone_number IS NULL OR c.destination_participant_phone_number = '' THEN c.destination_dn_number ELSE c.destination_participant_phone_number END
+GROUP BY
+  CASE WHEN c.destination_participant_phone_number IS NULL OR c.destination_participant_phone_number = ''
+    THEN c.destination_dn_number ELSE c.destination_participant_phone_number END
 ORDER BY call_count DESC
 LIMIT 10
 ;`,
@@ -265,13 +271,13 @@ LIMIT 10
       title: "Top 10 Antwortende Nebenstellen",
       type: "barchart",
       sql: `SELECT
-    destination_dn_number,
-    COUNT(DISTINCT main_call_history_id) AS call_count
-FROM public.cdroutput
-WHERE cdr_started_at >= $1 AND cdr_started_at <= $2
-AND destination_entity_type = 'extension'
-AND cdr_answered_at IS NOT NULL
-GROUP BY destination_dn_number
+    c.destination_dn_number || COALESCE(' ' || MAX(c.destination_dn_name), '') AS extension,
+    COUNT(DISTINCT c.main_call_history_id) AS call_count
+FROM public.cdroutput c
+WHERE c.cdr_started_at >= $1 AND c.cdr_started_at <= $2
+AND c.destination_entity_type = 'extension'
+AND c.cdr_answered_at IS NOT NULL
+GROUP BY c.destination_dn_number
 ORDER BY call_count DESC
 LIMIT 10
 ;`,
@@ -281,13 +287,13 @@ LIMIT 10
       title: "Top 10 Nebenstellen mit Verpassten Anrufen",
       type: "barchart",
       sql: `SELECT
-    destination_dn_number,
-    COUNT(DISTINCT main_call_history_id) AS call_count
-FROM public.cdroutput
-WHERE cdr_started_at >= $1 AND cdr_started_at <= $2
-AND destination_entity_type = 'extension'
-AND cdr_answered_at IS NULL
-GROUP BY destination_dn_number
+    c.destination_dn_number || COALESCE(' ' || MAX(c.destination_dn_name), '') AS extension,
+    COUNT(DISTINCT c.main_call_history_id) AS call_count
+FROM public.cdroutput c
+WHERE c.cdr_started_at >= $1 AND c.cdr_started_at <= $2
+AND c.destination_entity_type = 'extension'
+AND c.cdr_answered_at IS NULL
+GROUP BY c.destination_dn_number
 ORDER BY call_count DESC
 LIMIT 10
 ;`,
