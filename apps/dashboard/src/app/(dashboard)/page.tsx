@@ -377,7 +377,11 @@ export default function DashboardPage() {
               const totalAgents = queue.Agents?.length ?? 0;
               const loggedIn = queue.LoggedInAgents ?? 0;
               const activeCallCount = queue.ActiveCallCount ?? 0;
+              const waitingCallCount = queue.WaitingCallCount ?? 0;
               const hasActiveCalls = activeCallCount > 0;
+              const hasWaiting = waitingCallCount > 0;
+              // Auslastung: wie viele angemeldete Agenten telefonieren gerade
+              const agentsInCall = (queue.Agents ?? []).filter((a) => a.HasActiveCall).length;
               const isExpanded = expandedQueues.has(queue.Id);
               const visibleAgents = isExpanded ? queue.Agents : queue.Agents?.slice(0, 4);
               const hiddenCount = totalAgents - 4;
@@ -393,7 +397,14 @@ export default function DashboardPage() {
                 <TiltCard key={queue.Id} maxTilt={6} glowColor={hasActiveCalls ? "rgba(245,158,11,0.25)" : "rgba(240,128,23,0.15)"} className="p-4">
                   <div className="mb-3 flex items-start justify-between">
                     <div>
-                      <h3 className="text-sm font-semibold text-heading">{queue.Name}</h3>
+                      <div className="flex items-center gap-1.5">
+                        <h3 className="text-sm font-semibold text-heading">{queue.Name}</h3>
+                        {hasWaiting && (
+                          <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold bg-sky-500/20 text-sky-400 animate-pulse">
+                            <Phone className="h-2.5 w-2.5" /> Klingelt
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-muted">Nr. {queue.Number ?? "–"}</p>
                     </div>
                     <LedIndicator status={queue.IsRegistered ? "online" : "offline"} size="sm" pulse={false} />
@@ -424,7 +435,7 @@ export default function DashboardPage() {
                       {[
                         {
                           label: "Auslastung",
-                          pct: loggedIn > 0 ? Math.min(100, Math.round((activeCallCount / loggedIn) * 100)) : 0,
+                          pct: loggedIn > 0 ? Math.min(100, Math.round((agentsInCall / loggedIn) * 100)) : 0,
                           color: (p: number) => p >= 80 ? "#ef4444" : p >= 50 ? "#f59e0b" : "#10b981",
                         },
                         {
@@ -458,7 +469,7 @@ export default function DashboardPage() {
                           const isLoggedIn = agent.QueueStatus === "LoggedIn";
                           const isRegistered = agent.IsRegistered ?? true;
                           const hasCall = agent.HasActiveCall;
-                          const isRinging = agent.IsRinging ?? false;
+                          const isRinging = false; // XAPI erstellt kein Agent-Leg beim Klingeln
                           const isOffline = isLoggedIn && !isRegistered;
                           const profile = agent.CurrentProfile ?? "Available";
                           const badge = profile !== "Available" ? (profileBadge[profile] ?? { label: profile, cls: "bg-gray-500/20 text-gray-400" }) : null;

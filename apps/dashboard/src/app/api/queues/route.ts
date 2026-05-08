@@ -46,13 +46,8 @@ export async function GET() {
     const activeDns = new Set<string>(
       callsData.value.flatMap((c) => [parseCallDn(c.Caller), parseCallDn(c.Callee)])
     );
-    // Klingelnde DNs: Anrufe die noch NICHT verbunden sind (EstablishedAt fehlt)
-    // Zuverlässiger als Status="Ringing" da 3CX intern kein separates Leg erstellt
-    const ringingDns = new Set<string>(
-      callsData.value
-        .filter((c) => !c.EstablishedAt)
-        .flatMap((c) => [parseCallDn(c.Caller), parseCallDn(c.Callee)])
-    );
+    // Agent-ringing ist via XAPI nicht detektierbar (3CX erstellt kein separates Leg).
+    // Stattdessen: WaitingCallCount pro Queue = Calls in Queue ohne EstablishedAt.
 
     // Agenten anreichern + LoggedInAgents + ActiveCallCount berechnen
     const enriched: Queue[] = queuesData.value.map((queue) => {
@@ -65,18 +60,18 @@ export async function GET() {
           IsRegistered: ext?.isRegistered ?? false,
           CurrentProfile: ext?.currentProfile ?? "Available",
           HasActiveCall: activeDns.has(agent.Number),
-          IsRinging: ringingDns.has(agent.Number),
         };
       });
 
       const loggedInCount = enrichedAgents.filter((a) => a.QueueStatus === "LoggedIn" && a.IsRegistered).length;
 
       // Aktive Anrufe IN dieser Queue: Callee beginnt mit der Queue-Nummer
-      const activeCallCount = callsData.value.filter(
-        (c) => parseCallDn(c.Callee) === queue.Number
-      ).length;
+      const queueCalls = callsData.value.filter((c) => parseCallDn(c.Callee) === queue.Number);
+      const activeCallCount = queueCalls.length;
+      // Wartende (klingende) Calls: in Queue aber noch nicht angenommen
+      const waitingCallCount = queueCalls.filter((c) => !c.EstablishedAt).length;
 
-      return { ...queue, Agents: enrichedAgents, LoggedInAgents: loggedInCount, ActiveCallCount: activeCallCount };
+      return { ...queue, Agents: enrichedAgents, LoggedInAgents: loggedInCount, ActiveCallCount: activeCallCount, WaitingCallCount: waitingCallCount };
     });
 
     return NextResponse.json({ ...queuesData, value: enriched });

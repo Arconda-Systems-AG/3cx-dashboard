@@ -91,6 +91,7 @@ export interface Queue {
   LoggedInAgents?: number;
   // Vom Server angereichert (cross-referenz mit ActiveCalls):
   ActiveCallCount?: number;   // Aktive Gespräche IN dieser Queue
+  WaitingCallCount?: number;  // Anrufe in Queue die noch NICHT angenommen (klingeln)
 }
 
 export interface QueueAgent {
