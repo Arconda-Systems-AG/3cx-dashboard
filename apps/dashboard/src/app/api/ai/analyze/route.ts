@@ -61,9 +61,12 @@ export async function POST() {
 
   // ─── Daten parallel sammeln ────────────────────────────────────────────────
 
-  const [queuesResult, callsResult, dbResult] = await Promise.allSettled([
+  const [queuesResult, callsResult, extResult, dbResult] = await Promise.allSettled([
     xapiFetch<ODataList<Queue>>("Queues?$expand=Agents,Managers"),
     xapiFetch<ODataList<ActiveCall>>("ActiveCalls?$select=Id,Caller,Callee,Status,EstablishedAt"),
+    xapiFetch<ODataList<{ Number: string; QueueStatus?: string; CurrentProfileName?: string; IsRegistered?: boolean }>>(
+      "Users?$select=Number,QueueStatus,CurrentProfileName,IsRegistered"
+    ),
     collectDbStats(settings),
   ]);
 
@@ -71,16 +74,34 @@ export async function POST() {
   const activeCalls = callsResult.status === "fulfilled" ? (callsResult.value.value ?? []) : [];
   const dbStats = dbResult.status === "fulfilled" ? dbResult.value : null;
 
+  // Extension-Map für korrekte LoggedIn-Berechnung (wie in /api/queues)
+  const extMap = extResult.status === "fulfilled"
+    ? new Map((extResult.value.value ?? []).map((e) => [e.Number, e]))
+    : new Map<string, { QueueStatus?: string; CurrentProfileName?: string; IsRegistered?: boolean }>();
+
+  const activeDns = new Set(activeCalls.flatMap((c) => [
+    (c.Caller ?? "").split(" ")[0],
+    (c.Callee ?? "").split(" ")[0],
+  ]));
+
   // ─── Zusammenfassung aufbauen ──────────────────────────────────────────────
 
-  const queuesSummary = queues.map((q) => ({
-    name: q.Name,
-    nummer: q.Number ?? "?",
-    agenten_gesamt: q.Agents?.length ?? 0,
-    agenten_angemeldet: q.LoggedInAgents ?? 0,
-    aktive_anrufe: q.ActiveCallCount ?? 0,
-    wartende_anrufe: q.WaitingCallCount ?? 0,
-  }));
+  const queuesSummary = queues.map((q) => {
+    const agents = q.Agents ?? [];
+    const loggedIn = agents.filter((a) => {
+      const ext = extMap.get(a.Number);
+      return ext?.QueueStatus === "LoggedIn" && ext?.CurrentProfileName === "Available";
+    }).length;
+    const inCall = agents.filter((a) => activeDns.has(a.Number)).length;
+    const queueCalls = activeCalls.filter((c) => (c.Callee ?? "").split(" ")[0] === q.Number);
+    return {
+      name: q.Name,
+      agenten_angemeldet: loggedIn,
+      agenten_gesamt: agents.length,
+      agenten_im_gespraech: inCall,
+      wartende_anrufe: queueCalls.filter((c) => c.Status === "Rerouting").length,
+    };
+  }).filter((q) => q.agenten_gesamt > 0);
 
   const currentData: Record<string, unknown> = {
     zeitpunkt: new Date().toISOString(),
@@ -105,13 +126,12 @@ export async function POST() {
     "Antworte NUR mit validem JSON.";
 
   const userPrompt =
-    `Aktuelle 3CX-Daten:\n${JSON.stringify(currentData, null, 2)}\n\n` +
-    `Analysiere diese Daten und gib deine Erkenntnisse als JSON mit folgenden Feldern zurück: ` +
-    `status ("gut"|"warnung"|"kritisch"), ` +
-    `zusammenfassung (1-2 Sätze), ` +
-    `erkenntnisse (Array von max. 5 Erkenntnissen), ` +
-    `empfehlungen (Array von max. 3 konkreten Empfehlungen), ` +
-    `anomalien (Array von bemerkenswerten Auffälligkeiten, leer wenn keine).`;
+    `3CX-Daten:\n${JSON.stringify(currentData)}\n\n` +
+    `JSON-Antwort mit: status ("gut"|"warnung"|"kritisch"), ` +
+    `zusammenfassung (1 Satz), ` +
+    `erkenntnisse (max. 3 kurze Stichpunkte), ` +
+    `empfehlungen (max. 2 konkrete Empfehlungen), ` +
+    `anomalien (nur wenn wirklich auffällig, sonst leer Array).`;
 
   // ─── KI-API aufrufen ───────────────────────────────────────────────────────
 
@@ -134,7 +154,8 @@ export async function POST() {
           { role: "user", content: userPrompt },
         ],
         temperature: 0.2,
-        max_tokens: 1024,
+        max_tokens: 512,
+        chat_template_kwargs: { enable_thinking: false },
       }),
       signal: AbortSignal.timeout(60_000),
     });
