@@ -119,6 +119,13 @@ export default function DashboardPage() {
   const totalIncoming = today?.total_incoming ?? 0;
   const answerRate = totalIncoming > 0 ? Math.round((answered / totalIncoming) * 100) : null;
 
+  // Klingelnde Nebenstellen aus activeCalls (5s-Polling)
+  const ringingNumbers = new Set(
+    activeCalls
+      .filter((c) => c.Status === "Ringing")
+      .map((c) => parseDn(c.Callee ?? ""))
+  );
+
   // Echtzeit-Kacheln aus XAPI (kein DB-Query nötig)
   const activeQueues = selectedDept ? filteredQueues : queues;
   const queueNumberSet = new Set(activeQueues.map((q) => String(q.Number)));
@@ -448,11 +455,14 @@ export default function DashboardPage() {
                           const isLoggedIn = agent.QueueStatus === "LoggedIn";
                           const isRegistered = agent.IsRegistered ?? true;
                           const hasCall = agent.HasActiveCall;
+                          const isRinging = ringingNumbers.has(agent.Number);
                           const isOffline = isLoggedIn && !isRegistered;
                           const profile = agent.CurrentProfile ?? "Available";
                           const badge = profile !== "Available" ? (profileBadge[profile] ?? { label: profile, cls: "bg-gray-500/20 text-gray-400" }) : null;
 
-                          const dotColor = hasCall
+                          const dotColor = isRinging
+                            ? "bg-sky-400 animate-ping"
+                            : hasCall
                             ? "bg-amber-400 animate-pulse"
                             : isOffline
                             ? "bg-red-400"
@@ -460,9 +470,9 @@ export default function DashboardPage() {
                             ? "bg-emerald-400"
                             : "bg-gray-500";
 
-                          const statusLabel = hasCall ? "Gespräch" : isOffline ? "Offline" : isLoggedIn ? "Angemeldet" : "Abgemeldet";
-                          const statusColor = hasCall ? "text-amber-400" : isOffline ? "text-red-400" : isLoggedIn ? "text-emerald-400" : "text-muted";
-                          const rowBg = hasCall ? "bg-amber-500/10" : isOffline ? "bg-red-500/10" : "hover:bg-surface-muted";
+                          const statusLabel = isRinging ? "Klingelt" : hasCall ? "Gespräch" : isOffline ? "Offline" : isLoggedIn ? "Angemeldet" : "Abgemeldet";
+                          const statusColor = isRinging ? "text-sky-400" : hasCall ? "text-amber-400" : isOffline ? "text-red-400" : isLoggedIn ? "text-emerald-400" : "text-muted";
+                          const rowBg = isRinging ? "bg-sky-500/10" : hasCall ? "bg-amber-500/10" : isOffline ? "bg-red-500/10" : "hover:bg-surface-muted";
 
                           return (
                             <div
