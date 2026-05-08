@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import useSWR from "swr";
 import { GlassCard } from "@3cx-dash/ui";
 import { useSettings } from "@/hooks/use-data";
@@ -151,6 +151,14 @@ export default function AiPage() {
   const [error, setError] = useState<string | null>(null);
 
   const aiConfigured = !!(settings?.aiUrl);
+
+  // Minütlicher Snapshot-Poll für Verlaufsdaten
+  useEffect(() => {
+    const collect = () => fetch("/api/stats/snapshot", { method: "POST" }).catch(() => {});
+    collect();
+    const id = setInterval(collect, 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   async function handleAnalyze() {
     setAnalyzing(true);

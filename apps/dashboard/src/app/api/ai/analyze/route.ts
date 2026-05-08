@@ -5,6 +5,7 @@ import type { AppSettings, AiAnalysis } from "@3cx-dash/types";
 import { DEFAULT_SETTINGS } from "@3cx-dash/types";
 import { createPool } from "@/lib/pg";
 import { fetchEnrichedQueues } from "@/lib/queue-data";
+import { appendSnapshot, buildTrendSummary, type QueueSnapshot } from "@/lib/snapshots";
 
 function getSettingsPath(): string {
   return process.env.SETTINGS_PATH ?? path.join(process.cwd(), "data", "settings.json");
@@ -81,6 +82,25 @@ export async function POST() {
       wartende_anrufe: q.WaitingCallCount ?? 0,
     }));
 
+  // ─── Snapshot speichern (Rolling Buffer) ──────────────────────────────────
+
+  const snap: QueueSnapshot = {
+    t: new Date().toISOString(),
+    queues: queuesSummary.map((q) => ({
+      name: q.name,
+      loggedIn: q.agenten_angemeldet,
+      total: q.agenten_gesamt,
+      inCall: q.agenten_im_gespraech,
+      waiting: q.wartende_anrufe,
+    })),
+    calls: activeCalls.length,
+    talking: activeCalls.filter((c) => c.Status === "Talking").length,
+  };
+  const allSnapshots = await appendSnapshot(snap);
+  const trend = buildTrendSummary(allSnapshots);
+
+  // ─── currentData zusammenstellen ─────────────────────────────────────────
+
   const currentData: Record<string, unknown> = {
     zeitpunkt: new Date().toISOString(),
     aktive_anrufe_gesamt: activeCalls.length,
@@ -91,6 +111,10 @@ export async function POST() {
     },
     warteschlangen: queuesSummary,
   };
+
+  if (trend) {
+    currentData.verlauf_letzte_stunde = trend;
+  }
 
   if (dbStats) {
     currentData.tages_statistiken = dbStats;
