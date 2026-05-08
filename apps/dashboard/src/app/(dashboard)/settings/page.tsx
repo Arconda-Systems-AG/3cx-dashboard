@@ -66,7 +66,8 @@ function SystemForm({
   const [dbTestResult, setDbTestResult] = useState<{ ok: boolean; latency?: number; error?: string } | null>(null);
   const [testingDb, setTestingDb] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showDb, setShowDb] = useState(!!(initial?.pgHost));
+  const [saved, setSaved] = useState(false);
+  const [showDb, setShowDb] = useState(!!(initial?.pgHost || initial?.customerName || initial?.customerLogoUrl));
   const logoFileRef = useRef<HTMLInputElement>(null);
 
   function set(key: keyof SystemFormData, val: string | number) {
@@ -177,7 +178,8 @@ function SystemForm({
           body: JSON.stringify(payload),
         });
       }
-      onSave();
+      setSaved(true);
+      setTimeout(() => onSave(), 1000);
     } catch (e) {
       setError(String(e));
     } finally {
@@ -437,15 +439,16 @@ function SystemForm({
         </div>
       )}
       {error && <p className="text-sm text-red-400">{error}</p>}
+      {saved && <p className="text-sm text-emerald-400">Gespeichert ✓</p>}
 
       <div className="flex items-center gap-2">
         <button
           type="submit"
-          disabled={saving}
+          disabled={saving || saved}
           className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50 hover:bg-primary-hover"
         >
           <Save className="h-4 w-4" />
-          {saving ? "Speichert..." : systemId ? "Speichern" : "Hinzufügen"}
+          {saving ? "Speichert..." : saved ? "Gespeichert ✓" : systemId ? "Speichern" : "Hinzufügen"}
         </button>
         <button
           type="button"
