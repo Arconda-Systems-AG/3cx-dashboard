@@ -250,18 +250,30 @@ ORDER BY time
       title: "Top 10 Meistgewählte Nummern",
       type: "barchart",
       sql: `SELECT
-    CASE
-      WHEN c.destination_participant_phone_number IS NULL OR c.destination_participant_phone_number = ''
-        THEN c.destination_dn_number || COALESCE(' ' || MAX(c.destination_dn_name), '')
+  CASE
+    WHEN grp_key = dn_number
+      THEN dn_number || COALESCE(' ' || dn_name, '')
+    ELSE grp_key
+  END AS extension,
+  call_count
+FROM (
+  SELECT
+    CASE WHEN c.destination_participant_phone_number IS NULL OR c.destination_participant_phone_number = ''
+      THEN c.destination_dn_number
       ELSE c.destination_participant_phone_number
-    END AS extension,
+    END AS grp_key,
+    MAX(c.destination_dn_number) AS dn_number,
+    MAX(c.destination_dn_name)   AS dn_name,
     COUNT(DISTINCT c.main_call_history_id) AS call_count
-FROM public.cdroutput AS c
-WHERE c.cdr_started_at >= $1 AND c.cdr_started_at <= $2
-AND c.destination_dn_number NOT IN ('EndCall', 'QCB')
-GROUP BY
-  CASE WHEN c.destination_participant_phone_number IS NULL OR c.destination_participant_phone_number = ''
-    THEN c.destination_dn_number ELSE c.destination_participant_phone_number END
+  FROM public.cdroutput AS c
+  WHERE c.cdr_started_at >= $1 AND c.cdr_started_at <= $2
+    AND c.destination_dn_number NOT IN ('EndCall', 'QCB')
+  GROUP BY
+    CASE WHEN c.destination_participant_phone_number IS NULL OR c.destination_participant_phone_number = ''
+      THEN c.destination_dn_number
+      ELSE c.destination_participant_phone_number
+    END
+) sub
 ORDER BY call_count DESC
 LIMIT 10
 ;`,
