@@ -315,16 +315,16 @@ export default function DashboardPage() {
                   { label: "Abwurf 2", value: ab2, pct: Math.round((ab2 / total) * 100), color: "bg-red-500", textColor: "text-red-400" },
                 ];
                 return (
-                  <div className="flex flex-1 flex-col justify-around">
+                  <div className="flex flex-1 flex-col justify-around gap-1">
                     {bars.map((b) => (
-                      <div key={b.label} className="flex items-center gap-2">
-                        <span className="w-14 shrink-0 text-xs text-muted">{b.label}</span>
-                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-muted">
+                      <div key={b.label}>
+                        <div className="mb-1 flex items-center justify-between text-xs">
+                          <span className="text-muted">{b.label}</span>
+                          <span className={`tabular-nums font-semibold ${b.textColor}`}>{b.value} <span className="font-normal text-muted">({b.pct}%)</span></span>
+                        </div>
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-muted">
                           <div className={`h-full rounded-full transition-all duration-700 ${b.color}`} style={{ width: `${b.pct}%` }} />
                         </div>
-                        <span className={`w-16 shrink-0 text-right text-xs tabular-nums ${b.textColor}`}>
-                          {b.value} <span className="text-muted font-normal">({b.pct}%)</span>
-                        </span>
                       </div>
                     ))}
                   </div>
