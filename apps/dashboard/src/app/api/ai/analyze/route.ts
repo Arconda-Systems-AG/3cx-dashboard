@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
-import type { AppSettings, AiAnalysis, Queue, ActiveCall, ODataList } from "@3cx-dash/types";
+import type { AppSettings, AiAnalysis } from "@3cx-dash/types";
 import { DEFAULT_SETTINGS } from "@3cx-dash/types";
-import { xapiFetch } from "@/lib/threecx-client";
 import { createPool } from "@/lib/pg";
+import { fetchEnrichedQueues } from "@/lib/queue-data";
 
 function getSettingsPath(): string {
   return process.env.SETTINGS_PATH ?? path.join(process.cwd(), "data", "settings.json");
@@ -34,7 +34,6 @@ export async function GET() {
     const analysis: AiAnalysis = JSON.parse(content);
     return NextResponse.json(analysis);
   } catch {
-    // Noch keine Analyse vorhanden
     return NextResponse.json(null);
   }
 }
@@ -59,49 +58,28 @@ export async function POST() {
     );
   }
 
-  // ─── Daten parallel sammeln ────────────────────────────────────────────────
+  // ─── Daten parallel sammeln (gleiche Logik wie /api/queues) ──────────────
 
-  const [queuesResult, callsResult, extResult, dbResult] = await Promise.allSettled([
-    xapiFetch<ODataList<Queue>>("Queues?$expand=Agents,Managers"),
-    xapiFetch<ODataList<ActiveCall>>("ActiveCalls?$select=Id,Caller,Callee,Status,EstablishedAt"),
-    xapiFetch<ODataList<{ Number: string; QueueStatus?: string; CurrentProfileName?: string; IsRegistered?: boolean }>>(
-      "Users?$select=Number,QueueStatus,CurrentProfileName,IsRegistered"
-    ),
+  const [queueData, dbStats] = await Promise.all([
+    fetchEnrichedQueues().catch(() => null),
     collectDbStats(settings),
   ]);
 
-  const queues = queuesResult.status === "fulfilled" ? (queuesResult.value.value ?? []) : [];
-  const activeCalls = callsResult.status === "fulfilled" ? (callsResult.value.value ?? []) : [];
-  const dbStats = dbResult.status === "fulfilled" ? dbResult.value : null;
-
-  // Extension-Map für korrekte LoggedIn-Berechnung (wie in /api/queues)
-  const extMap = extResult.status === "fulfilled"
-    ? new Map((extResult.value.value ?? []).map((e) => [e.Number, e]))
-    : new Map<string, { QueueStatus?: string; CurrentProfileName?: string; IsRegistered?: boolean }>();
-
-  const activeDns = new Set(activeCalls.flatMap((c) => [
-    (c.Caller ?? "").split(" ")[0],
-    (c.Callee ?? "").split(" ")[0],
-  ]));
+  const queues = queueData?.queues ?? [];
+  const activeCalls = queueData?.activeCalls ?? [];
+  const activeDns = queueData?.activeDns ?? new Set<string>();
 
   // ─── Zusammenfassung aufbauen ──────────────────────────────────────────────
 
-  const queuesSummary = queues.map((q) => {
-    const agents = q.Agents ?? [];
-    const loggedIn = agents.filter((a) => {
-      const ext = extMap.get(a.Number);
-      return ext?.QueueStatus === "LoggedIn" && ext?.CurrentProfileName === "Available";
-    }).length;
-    const inCall = agents.filter((a) => activeDns.has(a.Number)).length;
-    const queueCalls = activeCalls.filter((c) => (c.Callee ?? "").split(" ")[0] === q.Number);
-    return {
+  const queuesSummary = queues
+    .filter((q) => (q.Agents?.length ?? 0) > 0)
+    .map((q) => ({
       name: q.Name,
-      agenten_angemeldet: loggedIn,
-      agenten_gesamt: agents.length,
-      agenten_im_gespraech: inCall,
-      wartende_anrufe: queueCalls.filter((c) => c.Status === "Rerouting").length,
-    };
-  }).filter((q) => q.agenten_gesamt > 0);
+      agenten_angemeldet: q.LoggedInAgents ?? 0,
+      agenten_gesamt: q.Agents?.length ?? 0,
+      agenten_im_gespraech: (q.Agents ?? []).filter((a) => activeDns.has(a.Number)).length,
+      wartende_anrufe: q.WaitingCallCount ?? 0,
+    }));
 
   const currentData: Record<string, unknown> = {
     zeitpunkt: new Date().toISOString(),
@@ -183,7 +161,6 @@ export async function POST() {
 
   let parsed: Partial<AiAnalysis>;
   try {
-    // Manche Modelle wrappen JSON in Markdown-Codeblöcke
     const jsonMatch = rawContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/) ??
       rawContent.match(/(\{[\s\S]*\})/);
     const jsonStr = jsonMatch ? jsonMatch[1] : rawContent;
