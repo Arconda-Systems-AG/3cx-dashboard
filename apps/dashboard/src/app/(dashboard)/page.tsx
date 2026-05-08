@@ -419,26 +419,31 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  {loggedIn > 0 && (
-                    <div className="mb-3">
-                      {(() => {
-                        const pct = Math.min(100, Math.round((activeCallCount / loggedIn) * 100));
-                        const barColor = pct >= 80 ? "#ef4444" : pct >= 50 ? "#f59e0b" : "#10b981";
-                        return (
-                          <>
-                            <div className="mb-1 flex items-center justify-between">
-                              <span className="text-xs text-muted">Auslastung</span>
-                              <span className="text-xs font-semibold text-secondary">{pct}%</span>
-                            </div>
-                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-muted">
-                              <div
-                                className="h-full rounded-full transition-all duration-700"
-                                style={{ width: `${pct}%`, background: barColor }}
-                              />
-                            </div>
-                          </>
-                        );
-                      })()}
+                  {totalAgents > 0 && (
+                    <div className="mb-3 space-y-1.5">
+                      {[
+                        {
+                          label: "Auslastung",
+                          pct: loggedIn > 0 ? Math.min(100, Math.round((activeCallCount / loggedIn) * 100)) : 0,
+                          color: (p: number) => p >= 80 ? "#ef4444" : p >= 50 ? "#f59e0b" : "#10b981",
+                        },
+                        {
+                          label: "Anmeldequote",
+                          pct: Math.round((loggedIn / totalAgents) * 100),
+                          color: (p: number) => p >= 80 ? "#10b981" : p >= 40 ? "#f59e0b" : "#ef4444",
+                        },
+                      ].map(({ label, pct, color }) => (
+                        <div key={label} className="flex items-center gap-2">
+                          <span className="w-20 shrink-0 text-[10px] text-muted">{label}</span>
+                          <div className="relative flex-1 h-1 overflow-hidden rounded-full bg-surface-muted">
+                            <div
+                              className="h-full rounded-full transition-all duration-700"
+                              style={{ width: `${pct}%`, background: color(pct) }}
+                            />
+                          </div>
+                          <span className="w-7 shrink-0 text-right text-[10px] font-semibold tabular-nums text-secondary">{pct}%</span>
+                        </div>
+                      ))}
                     </div>
                   )}
 
