@@ -236,7 +236,7 @@ interface ChartPanelProps {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-function truncateLabel(label: string, max = 20): string {
+function truncateLabel(label: string, max = 24): string {
   if (!label || typeof label !== "string") return String(label ?? "");
   return label.length > max ? label.slice(0, max) + "…" : label;
 }
@@ -342,7 +342,7 @@ function DarkTooltip({ active, payload, label }: TooltipProps<number, string>) {
 
 // ─── Chart container ──────────────────────────────────────────────────────────
 const GRID_STROKE = "rgba(255,255,255,0.08)";
-const AXIS_TICK_COLOR = "#64748b";
+const AXIS_TICK_COLOR = "#94a3b8";
 const MAX_VISIBLE_BARS = 20;
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -603,8 +603,8 @@ export function ChartPanel({ title, rows, fields, type = "barchart" }: ChartPane
           layout={isHorizontal ? "vertical" : "horizontal"}
           margin={{
             top: 0,
-            right: showDataLabels && !isHorizontal ? 0 : 16,
-            left: isHorizontal ? 120 : -10,
+            right: showDataLabels && isHorizontal ? 36 : showDataLabels ? 0 : 16,
+            left: isHorizontal ? 0 : -10,
             bottom: 0,
           }}
           barCategoryGap="20%"
@@ -624,7 +624,7 @@ export function ChartPanel({ title, rows, fields, type = "barchart" }: ChartPane
                 dataKey="name"
                 type="category"
                 tick={{ fontSize: 10, fill: AXIS_TICK_COLOR }}
-                width={120}
+                width={160}
                 tickLine={false}
                 axisLine={false}
               />
