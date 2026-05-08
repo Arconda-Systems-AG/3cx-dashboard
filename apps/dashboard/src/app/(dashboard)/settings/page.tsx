@@ -795,13 +795,14 @@ export default function SettingsPage() {
                         authMethod: sys.authMethod,
                         clientId: (sys as any).clientId ?? "",
                         webUser: (sys as any).webUser ?? "",
-                        pgHost: (sys as any).pgHost ?? "",
-                        pgPort: (sys as any).pgPort ?? 5432,
-                        pgDatabase: (sys as any).pgDatabase ?? "postgres",
-                        pgUser: (sys as any).pgUser ?? "postgres",
-                        pgPassword: (sys as any).pgPassword ?? "",
-                        customerName: (sys as any).customerName ?? "",
-                        customerLogoUrl: (sys as any).customerLogoUrl ?? "",
+                        // Fallback auf Top-Level-Settings für bestehende Konfigurationen
+                        pgHost: (sys as any).pgHost ?? settings?.pgHost ?? "",
+                        pgPort: (sys as any).pgPort ?? settings?.pgPort ?? 5432,
+                        pgDatabase: (sys as any).pgDatabase ?? settings?.pgDatabase ?? "postgres",
+                        pgUser: (sys as any).pgUser ?? settings?.pgUser ?? "postgres",
+                        pgPassword: (sys as any).pgPassword ?? (settings?.pgPassword ? PW_PLACEHOLDER : ""),
+                        customerName: (sys as any).customerName ?? settings?.customerName ?? "",
+                        customerLogoUrl: (sys as any).customerLogoUrl ?? settings?.customerLogoUrl ?? "",
                       }}
                       onSave={() => { setEditingId(null); mutateSystems(); }}
                       onCancel={() => setEditingId(null)}

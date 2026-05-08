@@ -63,6 +63,7 @@ export default function QueuesPage() {
             const loggedIn = queue.LoggedInAgents ?? 0;
             const activeCallCount = queue.ActiveCallCount ?? 0;
             const hasActiveCalls = activeCallCount > 0;
+            const queueIsRinging = (queue.WaitingCallCount ?? 0) > 0;
 
             const isExpanded = expandedQueues.has(queue.Id);
             const visibleAgents = isExpanded ? queue.Agents : queue.Agents?.slice(0, 6);
@@ -137,9 +138,13 @@ export default function QueuesPage() {
                         const hasCall = agent.HasActiveCall;
                         const isOffline = isLoggedIn && !isRegistered;
                         const profile = agent.CurrentProfile ?? "Available";
+                        // Klingelt = Queue verteilt gerade (Rerouting) + Agent wäre verfügbar
+                        const isRinging = queueIsRinging && isLoggedIn && isRegistered && !hasCall;
 
                         const dotColor = hasCall
                           ? "bg-amber-400 animate-pulse"
+                          : isRinging
+                          ? "bg-sky-400 animate-pulse"
                           : isOffline
                           ? "bg-red-400"
                           : isLoggedIn
@@ -148,6 +153,8 @@ export default function QueuesPage() {
 
                         const statusLabel = hasCall
                           ? "Gespräch"
+                          : isRinging
+                          ? "Klingelt"
                           : isOffline
                           ? "Offline"
                           : isLoggedIn
@@ -156,6 +163,8 @@ export default function QueuesPage() {
 
                         const statusColor = hasCall
                           ? "text-amber-400"
+                          : isRinging
+                          ? "text-sky-400"
                           : isOffline
                           ? "text-red-400"
                           : isLoggedIn
@@ -164,6 +173,8 @@ export default function QueuesPage() {
 
                         const rowBg = hasCall
                           ? "bg-amber-500/10 hover:bg-amber-500/20"
+                          : isRinging
+                          ? "bg-sky-500/10 hover:bg-sky-500/20"
                           : isOffline
                           ? "bg-red-500/10 hover:bg-red-500/20"
                           : "hover:bg-surface-muted";

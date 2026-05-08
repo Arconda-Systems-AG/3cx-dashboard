@@ -469,7 +469,7 @@ export default function DashboardPage() {
                           const isLoggedIn = agent.QueueStatus === "LoggedIn";
                           const isRegistered = agent.IsRegistered ?? true;
                           const hasCall = agent.HasActiveCall;
-                          const isRinging = false; // XAPI erstellt kein Agent-Leg beim Klingeln
+                          const isRinging = hasWaiting && isLoggedIn && isRegistered && !hasCall;
                           const isOffline = isLoggedIn && !isRegistered;
                           const profile = agent.CurrentProfile ?? "Available";
                           const badge = profile !== "Available" ? (profileBadge[profile] ?? { label: profile, cls: "bg-gray-500/20 text-gray-400" }) : null;
