@@ -5,7 +5,7 @@ import type { AppSettings, AiAnalysis } from "@3cx-dash/types";
 import { DEFAULT_SETTINGS } from "@3cx-dash/types";
 import { createPool } from "@/lib/pg";
 import { fetchEnrichedQueues } from "@/lib/queue-data";
-import { appendSnapshot, buildTrendSummary, type QueueSnapshot } from "@/lib/snapshots";
+import { appendSnapshot, buildAiTrendContext, type QueueSnapshot } from "@/lib/snapshots";
 
 function getSettingsPath(): string {
   return process.env.SETTINGS_PATH ?? path.join(process.cwd(), "data", "settings.json");
@@ -97,7 +97,7 @@ export async function POST() {
     talking: activeCalls.filter((c) => c.Status === "Talking").length,
   };
   const allSnapshots = await appendSnapshot(snap);
-  const trend = buildTrendSummary(allSnapshots);
+  const trend = buildAiTrendContext(allSnapshots);
 
   // ─── currentData zusammenstellen ─────────────────────────────────────────
 
@@ -124,16 +124,18 @@ export async function POST() {
 
   const systemPrompt =
     "Du bist ein Call-Center-Analyse-Assistent für ein 3CX-Telefonanlage-Dashboard. " +
-    "Analysiere die bereitgestellten Echtzeitdaten und gib präzise, actionable Erkenntnisse auf Deutsch. " +
+    "Analysiere Echtzeit- UND Tagesverlaufsdaten. Erkenne Muster, Peaks und Probleme im Tagesverlauf. " +
     "Antworte NUR mit validem JSON.";
 
   const userPrompt =
     `3CX-Daten:\n${JSON.stringify(currentData)}\n\n` +
+    `Wenn 'verlauf_heute' vorhanden: Nutze die stündlichen Daten um Tagesprobleme zu erkennen ` +
+    `(z.B. Stoßzeiten ohne ausreichend Agenten, Stunden mit vielen Anrufen aber wenig Personal).\n\n` +
     `JSON-Antwort mit: status ("gut"|"warnung"|"kritisch"), ` +
-    `zusammenfassung (1 Satz), ` +
-    `erkenntnisse (max. 3 kurze Stichpunkte), ` +
+    `zusammenfassung (1 Satz, Schwerpunkt auf dem Tagesverlauf wenn Daten vorhanden), ` +
+    `erkenntnisse (max. 3 kurze Stichpunkte, auch über den Tag verteilt), ` +
     `empfehlungen (max. 2 konkrete Empfehlungen), ` +
-    `anomalien (nur wenn wirklich auffällig, sonst leer Array).`;
+    `anomalien (auffällige Stunden oder Muster im Tagesverlauf).`;
 
   // ─── KI-API aufrufen ───────────────────────────────────────────────────────
 
@@ -156,7 +158,7 @@ export async function POST() {
           { role: "user", content: userPrompt },
         ],
         temperature: 0.2,
-        max_tokens: 512,
+        max_tokens: 700,
         chat_template_kwargs: { enable_thinking: false },
       }),
       signal: AbortSignal.timeout(60_000),
