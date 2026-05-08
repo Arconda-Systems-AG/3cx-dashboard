@@ -19,14 +19,17 @@ async function loadSettings(): Promise<AppSettings> {
 
 export async function createPool(): Promise<Pool | null> {
   const settings = await loadSettings();
-  if (!settings.pgHost) return null;
+  // Per-system DB config takes priority; fall back to top-level settings for backwards compat
+  const activeSystem = settings.systems?.find((s) => s.id === settings.activeSystemId);
+  const host = activeSystem?.pgHost || settings.pgHost;
+  if (!host) return null;
 
   return new Pool({
-    host: settings.pgHost,
-    port: settings.pgPort ?? 5432,
-    database: settings.pgDatabase ?? "postgres",
-    user: settings.pgUser ?? "postgres",
-    password: settings.pgPassword ?? "",
+    host,
+    port: activeSystem?.pgPort ?? settings.pgPort ?? 5432,
+    database: activeSystem?.pgDatabase ?? settings.pgDatabase ?? "postgres",
+    user: activeSystem?.pgUser ?? settings.pgUser ?? "postgres",
+    password: activeSystem?.pgPassword ?? settings.pgPassword ?? "",
     connectionTimeoutMillis: 5000,
     idleTimeoutMillis: 10000,
     max: 3,

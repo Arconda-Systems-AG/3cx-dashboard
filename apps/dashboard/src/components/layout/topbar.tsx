@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { ThemeToggle, LedIndicator } from "@3cx-dash/ui";
 import { useCallsStore } from "@/store/calls-store";
-import { useHealth, useSystems, useSettings } from "@/hooks/use-data";
+import { useHealth, useSystems } from "@/hooks/use-data";
 import { RefreshCw, ChevronDown, Phone, Check } from "lucide-react";
 import { mutate } from "swr";
 
@@ -26,7 +26,6 @@ export function Topbar() {
   const lastWsEvent = useCallsStore((s) => s.lastWsEvent);
   const { data: health } = useHealth();
   const { data: systemsData, mutate: mutateSystems } = useSystems();
-  const { data: settings } = useSettings();
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -127,17 +126,17 @@ export function Topbar() {
 
       {/* Rechts: Kunden-Logo + Refresh + Theme Toggle */}
       <div className="flex items-center gap-3">
-        {/* Kunden-Logo / Name */}
-        {(settings?.customerLogoUrl || settings?.customerName) && (
+        {/* Kunden-Logo / Name (aus aktiver Telefonanlage) */}
+        {(activeSystem?.customerLogoUrl || activeSystem?.customerName) && (
           <div className="flex items-center gap-2 border-r border-glass pr-3">
-            {settings.customerLogoUrl ? (
+            {activeSystem.customerLogoUrl ? (
               <img
-                src={settings.customerLogoUrl}
-                alt={settings.customerName ?? "Logo"}
+                src={activeSystem.customerLogoUrl}
+                alt={activeSystem.customerName ?? "Logo"}
                 className="h-11 max-w-[160px] object-contain"
               />
             ) : (
-              <span className="text-sm font-semibold text-heading">{settings.customerName}</span>
+              <span className="text-sm font-semibold text-heading">{activeSystem.customerName}</span>
             )}
           </div>
         )}

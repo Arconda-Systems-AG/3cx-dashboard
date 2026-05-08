@@ -58,6 +58,15 @@ export async function POST(request: Request) {
       ...(body.authMethod === "client_credentials"
         ? { clientId: body.clientId, clientSecret: body.clientSecret }
         : { webUser: body.webUser, webPassword: body.webPassword }),
+      // DB config
+      ...(body.pgHost ? { pgHost: body.pgHost } : {}),
+      ...(body.pgPort ? { pgPort: body.pgPort } : {}),
+      ...(body.pgDatabase ? { pgDatabase: body.pgDatabase } : {}),
+      ...(body.pgUser ? { pgUser: body.pgUser } : {}),
+      ...(body.pgPassword && body.pgPassword !== PW_PLACEHOLDER ? { pgPassword: body.pgPassword } : {}),
+      // Branding
+      ...(body.customerName ? { customerName: body.customerName } : {}),
+      ...(body.customerLogoUrl ? { customerLogoUrl: body.customerLogoUrl } : {}),
     };
 
     settings.systems = [...(settings.systems ?? []), newSystem];
@@ -74,10 +83,13 @@ export async function POST(request: Request) {
   }
 }
 
-function sanitizeSystem(s: ThreeCXSystem): Omit<ThreeCXSystem, "clientSecret" | "webPassword"> & { hasSecret: boolean } {
-  const { clientSecret, webPassword, ...rest } = s;
+const PW_PLACEHOLDER = "••••••••";
+
+function sanitizeSystem(s: ThreeCXSystem) {
+  const { clientSecret, webPassword, pgPassword, ...rest } = s;
   return {
     ...rest,
     hasSecret: !!(clientSecret || webPassword),
+    pgPassword: pgPassword ? PW_PLACEHOLDER : "",
   };
 }

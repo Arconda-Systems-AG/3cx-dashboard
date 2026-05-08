@@ -219,7 +219,8 @@ export async function POST(request: Request) {
   const now = new Date();
   const dateStr = formatDate(now);
   const generatedAt = `${formatDate(now)} ${formatTime(now)}`;
-  const customerName = settings.customerName ?? "Hansa Nord";
+  const activeSystem = settings.systems?.find((s) => s.id === settings.activeSystemId);
+  const customerName = activeSystem?.customerName ?? settings.customerName ?? "Hansa Nord";
 
   const stats = await fetchTodayStats().catch(() => null);
 

@@ -5,6 +5,8 @@ import type { AppSettings, ThreeCXSystem } from "@3cx-dash/types";
 import { DEFAULT_SETTINGS } from "@3cx-dash/types";
 import { invalidateTokenCache } from "@/lib/threecx-client";
 
+const PW_PLACEHOLDER = "••••••••";
+
 function getSettingsPath(): string {
   return process.env.SETTINGS_PATH ?? path.join(process.cwd(), "data", "settings.json");
 }
@@ -56,14 +58,27 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       delete updated.clientSecret;
     }
 
+    // DB config — empty string clears field, placeholder = keep existing
+    if (body.pgHost !== undefined) updated.pgHost = body.pgHost || undefined;
+    if (body.pgPort !== undefined) updated.pgPort = body.pgPort || undefined;
+    if (body.pgDatabase !== undefined) updated.pgDatabase = body.pgDatabase || undefined;
+    if (body.pgUser !== undefined) updated.pgUser = body.pgUser || undefined;
+    if (body.pgPassword !== undefined && body.pgPassword !== PW_PLACEHOLDER) {
+      updated.pgPassword = body.pgPassword || undefined;
+    }
+
+    // Branding
+    if (body.customerName !== undefined) updated.customerName = body.customerName || undefined;
+    if (body.customerLogoUrl !== undefined) updated.customerLogoUrl = body.customerLogoUrl || undefined;
+
     settings.systems[idx] = updated;
     await writeSettings(settings);
 
     // Token-Cache für diese Anlage leeren
     invalidateTokenCache(id);
 
-    const { clientSecret, webPassword, ...sanitized } = updated;
-    return NextResponse.json({ system: { ...sanitized, hasSecret: !!(clientSecret || webPassword) } });
+    const { clientSecret, webPassword, pgPassword, ...sanitized } = updated;
+    return NextResponse.json({ system: { ...sanitized, hasSecret: !!(clientSecret || webPassword), pgPassword: pgPassword ? PW_PLACEHOLDER : "" } });
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }

@@ -177,10 +177,18 @@ export interface ThreeCXSystem {
   // --- web_auth (Nebenstelle + Passwort) ---
   webUser?: string;        // Nebenstellennummer, z.B. "87"
   webPassword?: string;
-  // --- CallControl API (Enterprise) – separater Service Principal mit Integer-DN als client_id ---
-  // In 3CX Admin: Integrationen → API → Neuer Client mit Integer-DN (z.B. "200") + CallControl aktiviert
-  callControlClientId?: string;   // Muss eine Integer-DN sein (z.B. "200"), nicht in Verwendung als Extension
+  // --- CallControl API (Enterprise) ---
+  callControlClientId?: string;
   callControlClientSecret?: string;
+  // --- PostgreSQL (pro Anlage) ---
+  pgHost?: string;
+  pgPort?: number;
+  pgDatabase?: string;
+  pgUser?: string;
+  pgPassword?: string;
+  // --- Kunden-Branding (pro Anlage) ---
+  customerName?: string;
+  customerLogoUrl?: string;
 }
 
 // ─────────────────────────────────────────────

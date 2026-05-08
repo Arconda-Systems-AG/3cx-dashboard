@@ -18,6 +18,15 @@ interface SystemFormData {
   clientSecret: string;
   webUser: string;
   webPassword: string;
+  // DB config (pro Anlage)
+  pgHost: string;
+  pgPort: number;
+  pgDatabase: string;
+  pgUser: string;
+  pgPassword: string;
+  // Branding (pro Anlage)
+  customerName: string;
+  customerLogoUrl: string;
 }
 
 const EMPTY_FORM: SystemFormData = {
@@ -28,7 +37,16 @@ const EMPTY_FORM: SystemFormData = {
   clientSecret: "",
   webUser: "",
   webPassword: "",
+  pgHost: "",
+  pgPort: 5432,
+  pgDatabase: "postgres",
+  pgUser: "postgres",
+  pgPassword: "",
+  customerName: "",
+  customerLogoUrl: "",
 };
+
+const PW_PLACEHOLDER = "••••••••";
 
 function SystemForm({
   initial,
@@ -45,11 +63,55 @@ function SystemForm({
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; latency?: number; error?: string } | null>(null);
+  const [dbTestResult, setDbTestResult] = useState<{ ok: boolean; latency?: number; error?: string } | null>(null);
+  const [testingDb, setTestingDb] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showDb, setShowDb] = useState(!!(initial?.pgHost));
+  const logoFileRef = useRef<HTMLInputElement>(null);
 
-  function set(key: keyof SystemFormData, val: string) {
+  function set(key: keyof SystemFormData, val: string | number) {
     setForm((f) => ({ ...f, [key]: val }));
-    setTestResult(null);
+    if (key !== "pgHost" && key !== "pgPort" && key !== "pgDatabase" && key !== "pgUser" && key !== "pgPassword") {
+      setTestResult(null);
+    }
+  }
+
+  async function handleDbTest() {
+    setTestingDb(true);
+    setDbTestResult(null);
+    try {
+      const res = await fetch("/api/statistics/test-db", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          host: form.pgHost,
+          port: form.pgPort,
+          database: form.pgDatabase,
+          user: form.pgUser,
+          password: form.pgPassword === PW_PLACEHOLDER ? undefined : form.pgPassword,
+        }),
+      });
+      const data = await res.json();
+      setDbTestResult(data);
+    } catch (e) {
+      setDbTestResult({ ok: false, error: String(e) });
+    } finally {
+      setTestingDb(false);
+    }
+  }
+
+  function handleLogoFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Logo zu groß (max. 2 MB)");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setForm((f) => ({ ...f, customerLogoUrl: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
   }
 
   async function handleTest() {
@@ -83,6 +145,7 @@ function SystemForm({
     setSaving(true);
     setError(null);
     try {
+      const pgPassword = form.pgPassword === PW_PLACEHOLDER ? PW_PLACEHOLDER : (form.pgPassword || undefined);
       const payload = {
         name: form.name,
         url: form.url,
@@ -90,6 +153,15 @@ function SystemForm({
         ...(form.authMethod === "client_credentials"
           ? { clientId: form.clientId, clientSecret: form.clientSecret || undefined }
           : { webUser: form.webUser, webPassword: form.webPassword || undefined }),
+        // DB config
+        pgHost: form.pgHost || undefined,
+        pgPort: form.pgHost ? (form.pgPort || 5432) : undefined,
+        pgDatabase: form.pgHost ? (form.pgDatabase || "postgres") : undefined,
+        pgUser: form.pgHost ? (form.pgUser || "postgres") : undefined,
+        pgPassword,
+        // Branding
+        customerName: form.customerName || undefined,
+        customerLogoUrl: form.customerLogoUrl || undefined,
       };
 
       if (systemId) {
@@ -214,6 +286,142 @@ function SystemForm({
         )}
       </div>
 
+      {/* Datenbank & Branding (aufklappbar) */}
+      <div className="rounded-lg border border-glass">
+        <button
+          type="button"
+          onClick={() => setShowDb((v) => !v)}
+          className="flex w-full items-center justify-between px-3 py-2.5 text-xs font-medium text-secondary hover:text-heading"
+        >
+          <span className="flex items-center gap-2">
+            <Database className="h-3.5 w-3.5" />
+            Datenbank &amp; Branding
+            {form.pgHost && <span className="ml-1 rounded-full bg-primary/20 px-1.5 py-0.5 text-[10px] text-primary">konfiguriert</span>}
+          </span>
+          {showDb ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+        </button>
+
+        {showDb && (
+          <div className="border-t border-glass p-3 space-y-4">
+            {/* DB */}
+            <div>
+              <p className="mb-2 text-xs font-medium text-secondary">PostgreSQL (3CX CDR-Datenbank)</p>
+              <div className="grid gap-2 sm:grid-cols-3">
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-[11px] text-muted">Host</label>
+                  <input
+                    value={form.pgHost}
+                    onChange={(e) => set("pgHost", e.target.value)}
+                    placeholder="10.1.70.56"
+                    className="w-full rounded-lg border border-glass bg-input px-3 py-1.5 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] text-muted">Port</label>
+                  <input
+                    type="number"
+                    value={form.pgPort}
+                    onChange={(e) => set("pgPort", Number(e.target.value))}
+                    className="w-full rounded-lg border border-glass bg-input px-3 py-1.5 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] text-muted">Datenbank</label>
+                  <input
+                    value={form.pgDatabase}
+                    onChange={(e) => set("pgDatabase", e.target.value)}
+                    placeholder="postgres"
+                    className="w-full rounded-lg border border-glass bg-input px-3 py-1.5 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] text-muted">Benutzer</label>
+                  <input
+                    value={form.pgUser}
+                    onChange={(e) => set("pgUser", e.target.value)}
+                    placeholder="postgres"
+                    className="w-full rounded-lg border border-glass bg-input px-3 py-1.5 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] text-muted">Passwort {systemId ? "(leer = unverändert)" : ""}</label>
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    value={form.pgPassword}
+                    onFocus={(e) => { if (e.target.value === PW_PLACEHOLDER) set("pgPassword", ""); }}
+                    onChange={(e) => set("pgPassword", e.target.value)}
+                    placeholder={systemId ? PW_PLACEHOLDER : ""}
+                    className="w-full rounded-lg border border-glass bg-input px-3 py-1.5 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+              </div>
+              {dbTestResult && (
+                <div className={`mt-2 rounded-lg px-3 py-2 text-sm ${dbTestResult.ok ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"}`}>
+                  {dbTestResult.ok ? `DB-Verbindung erfolgreich (${dbTestResult.latency}ms)` : `DB-Fehler: ${dbTestResult.error}`}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={handleDbTest}
+                disabled={testingDb || !form.pgHost}
+                className="mt-2 flex items-center gap-2 rounded-lg border border-glass px-3 py-1.5 text-xs text-secondary hover:text-heading disabled:opacity-50"
+              >
+                <Wifi className="h-3.5 w-3.5" />
+                {testingDb ? "Teste DB..." : "DB-Verbindung testen"}
+              </button>
+            </div>
+
+            {/* Branding */}
+            <div>
+              <p className="mb-2 text-xs font-medium text-secondary">Kunden-Branding</p>
+              <div className="mb-2">
+                <label className="mb-1 block text-[11px] text-muted">Kundenname (im Header)</label>
+                <input
+                  value={form.customerName}
+                  onChange={(e) => set("customerName", e.target.value)}
+                  placeholder="z.B. HansaNord"
+                  className="w-full rounded-lg border border-glass bg-input px-3 py-1.5 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] text-muted">Kunden-Logo (PNG/SVG/WebP, max. 2 MB)</label>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-24 items-center justify-center rounded-lg border border-glass bg-surface-subtle">
+                    {form.customerLogoUrl ? (
+                      <img src={form.customerLogoUrl} alt="Logo" className="h-10 max-w-[88px] object-contain" />
+                    ) : (
+                      <ImageOff className="h-5 w-5 text-muted" />
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => logoFileRef.current?.click()}
+                      className="flex items-center gap-1.5 rounded-lg border border-glass px-2.5 py-1.5 text-xs text-secondary hover:text-heading"
+                    >
+                      <Upload className="h-3.5 w-3.5" />
+                      {form.customerLogoUrl ? "Ersetzen" : "Hochladen"}
+                    </button>
+                    {form.customerLogoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => set("customerLogoUrl", "")}
+                        className="flex items-center gap-1.5 rounded-lg border border-red-500/30 px-2.5 py-1.5 text-xs text-red-400 hover:bg-red-500/10"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Entfernen
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <input ref={logoFileRef} type="file" accept="image/*" className="hidden" onChange={handleLogoFile} />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Verbindungstest */}
       {testResult && (
         <div
@@ -261,312 +469,9 @@ function SystemForm({
   );
 }
 
-// ─── DB Config Section ───────────────────────────────────────
-function DbConfigSection({ settings }: { settings: AppSettings | undefined }) {
-  const [dbForm, setDbForm] = useState({
-    pgHost: settings?.pgHost ?? "",
-    pgPort: settings?.pgPort ?? 5432,
-    pgDatabase: settings?.pgDatabase ?? "postgres",
-    pgUser: settings?.pgUser ?? "postgres",
-    pgPassword: settings?.pgPassword ?? "",
-  });
 
-  // Sync form state when settings loads asynchronously
-  useEffect(() => {
-    if (settings) {
-      setDbForm({
-        pgHost: settings.pgHost ?? "",
-        pgPort: settings.pgPort ?? 5432,
-        pgDatabase: settings.pgDatabase ?? "postgres",
-        pgUser: settings.pgUser ?? "postgres",
-        pgPassword: settings.pgPassword ?? "",
-      });
-    }
-  }, [settings]);
-  const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{ ok: boolean; latency?: number; error?: string } | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-
-  function set(key: keyof typeof dbForm, val: string | number) {
-    setDbForm((f) => ({ ...f, [key]: val }));
-    setTestResult(null);
-  }
-
-  async function handleTest() {
-    setTesting(true);
-    setTestResult(null);
-    try {
-      const res = await fetch("/api/statistics/test-db", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          host: dbForm.pgHost,
-          port: dbForm.pgPort,
-          database: dbForm.pgDatabase,
-          user: dbForm.pgUser,
-          password: dbForm.pgPassword,
-        }),
-      });
-      const data = await res.json();
-      setTestResult(data);
-    } catch (e) {
-      setTestResult({ ok: false, error: String(e) });
-    } finally {
-      setTesting(false);
-    }
-  }
-
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setMessage(null);
-    try {
-      await updateSettings(dbForm);
-      setMessage("Gespeichert");
-    } catch (e) {
-      setMessage(`Fehler: ${e}`);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <GlassCard className="p-5">
-      <div className="mb-4 flex items-center gap-2">
-        <Database className="h-4 w-4 text-primary" />
-        <h2 className="text-sm font-semibold text-heading">Datenbankquelle (PostgreSQL)</h2>
-      </div>
-      <p className="mb-4 text-xs text-muted">
-        Verbindung zur 3CX PostgreSQL-Datenbank für Statistiken und Anrufauswertungen.
-      </p>
-      <form onSubmit={handleSave} className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="sm:col-span-2">
-            <label className="mb-1 block text-xs font-medium text-secondary">Host</label>
-            <input
-              value={dbForm.pgHost}
-              onChange={(e) => set("pgHost", e.target.value)}
-              placeholder="10.1.70.56"
-              className="w-full rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-secondary">Port</label>
-            <input
-              type="number"
-              value={dbForm.pgPort}
-              onChange={(e) => set("pgPort", Number(e.target.value))}
-              placeholder="5432"
-              className="w-full rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-secondary">Datenbankname</label>
-            <input
-              value={dbForm.pgDatabase}
-              onChange={(e) => set("pgDatabase", e.target.value)}
-              placeholder="postgres"
-              className="w-full rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-secondary">Benutzername</label>
-            <input
-              value={dbForm.pgUser}
-              onChange={(e) => set("pgUser", e.target.value)}
-              placeholder="postgres"
-              className="w-full rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-secondary">Passwort</label>
-            <input
-              type="password"
-              value={dbForm.pgPassword}
-              onChange={(e) => set("pgPassword", e.target.value)}
-              placeholder="••••••••"
-              autoComplete="new-password"
-              className="w-full rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
-          </div>
-        </div>
-
-        {testResult && (
-          <div
-            className={`rounded-lg px-3 py-2 text-sm ${
-              testResult.ok
-                ? "bg-emerald-500/10 text-emerald-400"
-                : "bg-red-500/10 text-red-400"
-            }`}
-          >
-            {testResult.ok
-              ? `Verbindung erfolgreich (${testResult.latency}ms)`
-              : `Fehler: ${testResult.error}`}
-          </div>
-        )}
-        {message && (
-          <p className={`text-sm ${message.startsWith("Fehler") ? "text-red-400" : "text-emerald-400"}`}>
-            {message}
-          </p>
-        )}
-
-        <div className="flex items-center gap-2">
-          <button
-            type="submit"
-            disabled={saving}
-            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50 hover:bg-primary-hover"
-          >
-            <Save className="h-4 w-4" />
-            {saving ? "Speichert..." : "Speichern"}
-          </button>
-          <button
-            type="button"
-            onClick={handleTest}
-            disabled={testing || !dbForm.pgHost}
-            className="flex items-center gap-2 rounded-lg border border-glass px-3 py-2 text-sm text-secondary hover:text-heading disabled:opacity-50"
-          >
-            <Wifi className="h-4 w-4" />
-            {testing ? "Teste..." : "Verbindung testen"}
-          </button>
-        </div>
-      </form>
-    </GlassCard>
-  );
-}
-
-// ─── Branding Section ────────────────────────────────────────
-function BrandingSection({ settings, onUpdate }: { settings: AppSettings | undefined; onUpdate: () => void }) {
-  const [customerName, setCustomerName] = useState(settings?.customerName ?? "");
-  const [logoPreview, setLogoPreview] = useState<string | null>(settings?.customerLogoUrl ?? null);
-  const [uploading, setUploading] = useState(false);
-  const [savingName, setSavingName] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (settings) {
-      setCustomerName(settings.customerName ?? "");
-      setLogoPreview(settings.customerLogoUrl ?? null);
-    }
-  }, [settings]);
-
-  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    setMessage(null);
-    try {
-      const fd = new FormData();
-      fd.append("logo", file);
-      const res = await fetch("/api/settings/logo", { method: "POST", body: fd });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setLogoPreview(data.logoUrl);
-      setMessage("Logo gespeichert");
-      onUpdate();
-    } catch (err) {
-      setMessage(`Fehler: ${err}`);
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  async function handleRemoveLogo() {
-    setMessage(null);
-    await fetch("/api/settings/logo", { method: "DELETE" });
-    setLogoPreview(null);
-    setMessage("Logo entfernt");
-    onUpdate();
-  }
-
-  async function handleSaveName() {
-    setSavingName(true);
-    setMessage(null);
-    try {
-      await updateSettings({ customerName });
-      setMessage("Name gespeichert");
-      onUpdate();
-    } catch (err) {
-      setMessage(`Fehler: ${err}`);
-    } finally {
-      setSavingName(false);
-    }
-  }
-
-  return (
-    <GlassCard className="p-5">
-      <h2 className="mb-4 text-sm font-semibold text-heading">Kunden-Branding</h2>
-      <div className="space-y-4">
-        {/* Kundenname */}
-        <div>
-          <label className="mb-1 block text-xs font-medium text-secondary">Kundenname (wird im Header angezeigt)</label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              placeholder="z.B. HansaNord"
-              className="flex-1 rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
-            <button
-              onClick={handleSaveName}
-              disabled={savingName}
-              className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50 hover:bg-primary-hover"
-            >
-              <Save className="h-4 w-4" />
-              {savingName ? "..." : "Speichern"}
-            </button>
-          </div>
-        </div>
-
-        {/* Logo */}
-        <div>
-          <label className="mb-2 block text-xs font-medium text-secondary">Kunden-Logo (PNG/SVG/WebP, max. 2 MB)</label>
-          <div className="flex items-center gap-4">
-            {/* Vorschau */}
-            <div className="flex h-16 w-32 items-center justify-center rounded-lg border border-glass bg-surface-subtle">
-              {logoPreview ? (
-                <img src={logoPreview} alt="Logo Vorschau" className="h-12 max-w-[120px] object-contain" />
-              ) : (
-                <ImageOff className="h-6 w-6 text-muted" />
-              )}
-            </div>
-            {/* Buttons */}
-            <div className="flex flex-col gap-2">
-              <button
-                onClick={() => fileRef.current?.click()}
-                disabled={uploading}
-                className="flex items-center gap-2 rounded-lg border border-glass px-3 py-2 text-sm text-secondary hover:text-heading disabled:opacity-50"
-              >
-                <Upload className="h-4 w-4" />
-                {uploading ? "Lädt hoch..." : logoPreview ? "Logo ersetzen" : "Logo hochladen"}
-              </button>
-              {logoPreview && (
-                <button
-                  onClick={handleRemoveLogo}
-                  className="flex items-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Logo entfernen
-                </button>
-              )}
-            </div>
-          </div>
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
-        </div>
-
-        {message && (
-          <p className={`text-sm ${message.startsWith("Fehler") ? "text-red-400" : "text-emerald-400"}`}>{message}</p>
-        )}
-      </div>
-    </GlassCard>
-  );
-}
 
 // ─── Email Report Section ─────────────────────────────────────
-const PW_PLACEHOLDER = "••••••••";
-
 function EmailReportSection({ settings }: { settings: AppSettings | undefined }) {
   const [form, setForm] = useState({
     smtpHost: settings?.smtpHost ?? "",
@@ -736,7 +641,7 @@ function EmailReportSection({ settings }: { settings: AppSettings | undefined })
 // ─── Main Page ───────────────────────────────────────────────
 export default function SettingsPage() {
   const { data: settingsData, mutate: mutateSystems } = useSystems();
-  const { data: settings, mutate: mutateSettings } = useSettings();
+  const { data: settings } = useSettings();
   const { data: health } = useHealth();
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -887,6 +792,13 @@ export default function SettingsPage() {
                         authMethod: sys.authMethod,
                         clientId: (sys as any).clientId ?? "",
                         webUser: (sys as any).webUser ?? "",
+                        pgHost: (sys as any).pgHost ?? "",
+                        pgPort: (sys as any).pgPort ?? 5432,
+                        pgDatabase: (sys as any).pgDatabase ?? "postgres",
+                        pgUser: (sys as any).pgUser ?? "postgres",
+                        pgPassword: (sys as any).pgPassword ?? "",
+                        customerName: (sys as any).customerName ?? "",
+                        customerLogoUrl: (sys as any).customerLogoUrl ?? "",
                       }}
                       onSave={() => { setEditingId(null); mutateSystems(); }}
                       onCancel={() => setEditingId(null)}
@@ -979,9 +891,6 @@ export default function SettingsPage() {
           </button>
         </form>
       </GlassCard>
-
-      {/* ── Kunden-Branding ── */}
-      <BrandingSection settings={settings} onUpdate={() => mutateSettings()} />
 
       {/* ── E-Mail-Report ── */}
       <EmailReportSection settings={settings} />
