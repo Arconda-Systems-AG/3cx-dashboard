@@ -252,6 +252,10 @@ export interface AppSettings {
   smtpPassword?: string;       // Klartext in settings.json, bei GET als "••••••••" zurück
   smtpFrom?: string;           // Absender-E-Mail
   reportRecipients?: string;   // Komma-getrennte Empfänger-E-Mails
+  // KI-Auswertung
+  aiUrl?: string;              // OpenAI-compatible API URL z.B. http://10.1.70.145:8000/v1
+  aiApiKey?: string;           // API-Key (Klartext in settings.json, bei GET als "••••••••" zurück)
+  aiModel?: string;            // Modell-Name z.B. "llama3", "gpt-3.5-turbo"
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -269,4 +273,21 @@ export const DEFAULT_SETTINGS: AppSettings = {
   pgDatabase: "postgres",
   pgUser: "postgres",
   pgPassword: "",
+  aiUrl: "",
+  aiApiKey: "",
+  aiModel: "",
 };
+
+// ─────────────────────────────────────────────
+// KI-Auswertung
+// ─────────────────────────────────────────────
+
+export interface AiAnalysis {
+  timestamp: string;
+  status: "gut" | "warnung" | "kritisch";
+  zusammenfassung: string;
+  erkenntnisse: string[];
+  empfehlungen: string[];
+  anomalien: string[];
+  dauer_ms?: number;
+}

@@ -5,7 +5,7 @@ import { GlassCard, LedIndicator } from "@3cx-dash/ui";
 import { useSettings, updateSettings, useSystems } from "@/hooks/use-data";
 import { useHealth } from "@/hooks/use-data";
 import {
-  Save, Plus, Trash2, CheckCircle, Wifi, Edit2, X, ChevronDown, ChevronUp, Database, Upload, ImageOff, Mail, Send,
+  Save, Plus, Trash2, CheckCircle, Wifi, Edit2, X, ChevronDown, ChevronUp, Database, Upload, ImageOff, Mail, Send, Brain,
 } from "lucide-react";
 import type { AppSettings, ThreeCXSystem, AuthMethod } from "@3cx-dash/types";
 
@@ -641,6 +641,108 @@ function EmailReportSection({ settings }: { settings: AppSettings | undefined })
   );
 }
 
+// ─── AI Settings Section ─────────────────────────────────────
+function AiSettingsSection({ settings }: { settings: AppSettings | undefined }) {
+  const [form, setForm] = useState({
+    aiUrl: settings?.aiUrl ?? "",
+    aiApiKey: settings?.aiApiKey ?? "",
+    aiModel: settings?.aiModel ?? "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (settings) {
+      setForm({
+        aiUrl: settings.aiUrl ?? "",
+        aiApiKey: settings.aiApiKey ?? "",
+        aiModel: settings.aiModel ?? "",
+      });
+    }
+  }, [settings]);
+
+  function set(key: keyof typeof form, val: string) {
+    setForm((f) => ({ ...f, [key]: val }));
+    setMessage(null);
+  }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setMessage(null);
+    try {
+      const payload: Record<string, unknown> = { ...form };
+      if (payload.aiApiKey === PW_PLACEHOLDER) delete payload.aiApiKey;
+      await updateSettings(payload as Partial<AppSettings>);
+      setMessage("KI-Einstellungen gespeichert");
+    } catch (err) {
+      setMessage(`Fehler: ${err}`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <GlassCard className="p-5">
+      <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-heading">
+        <Brain className="h-4 w-4 text-primary" />
+        KI-Analyse (OpenAI-kompatible API)
+      </h2>
+      <form onSubmit={handleSave} className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-xs font-medium text-secondary">API URL</label>
+            <input
+              type="text"
+              placeholder="http://10.1.70.145:8000/v1"
+              value={form.aiUrl}
+              onChange={(e) => set("aiUrl", e.target.value)}
+              className="w-full rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-secondary">API-Key</label>
+            <input
+              type="password"
+              autoComplete="new-password"
+              placeholder="sk-..."
+              value={form.aiApiKey}
+              onFocus={(e) => { if (e.target.value === PW_PLACEHOLDER) set("aiApiKey", ""); }}
+              onChange={(e) => set("aiApiKey", e.target.value)}
+              className="w-full rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-secondary">Modell</label>
+            <input
+              type="text"
+              placeholder="llama3"
+              value={form.aiModel}
+              onChange={(e) => set("aiModel", e.target.value)}
+              className="w-full rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </div>
+        </div>
+
+        {message && (
+          <p className={`text-sm ${message.startsWith("Fehler") ? "text-red-400" : "text-emerald-400"}`}>
+            {message}
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={saving}
+          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50 hover:bg-primary-hover"
+        >
+          <Save className="h-4 w-4" />
+          {saving ? "Speichert..." : "Speichern"}
+        </button>
+      </form>
+    </GlassCard>
+  );
+}
+
 // ─── Main Page ───────────────────────────────────────────────
 export default function SettingsPage() {
   const { data: settingsData, mutate: mutateSystems } = useSystems();
@@ -898,6 +1000,9 @@ export default function SettingsPage() {
 
       {/* ── E-Mail-Report ── */}
       <EmailReportSection settings={settings} />
+
+      {/* ── KI-Analyse ── */}
+      <AiSettingsSection settings={settings} />
     </div>
   );
 }

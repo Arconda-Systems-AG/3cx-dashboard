@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Phone,
+  Brain,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -26,6 +27,7 @@ const navItems = [
   { label: "Aktive Anrufe", href: "/calls", icon: PhoneCall },
   { label: "Anrufprotokoll", href: "/calls/history", icon: History },
   { label: "Statistiken", href: "/statistics", icon: BarChart2 },
+  { label: "KI-Auswertung", href: "/ai", icon: Brain },
   { label: "System", href: "/system", icon: Server },
   { label: "Einstellungen", href: "/settings", icon: Settings },
 ];

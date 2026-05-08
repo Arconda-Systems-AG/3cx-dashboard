@@ -18,6 +18,7 @@ export async function GET() {
     // Passwörter maskieren — niemals Klartextpasswort an den Client schicken
     if (settings.smtpPassword) settings.smtpPassword = PW_PLACEHOLDER;
     if (settings.pgPassword) settings.pgPassword = PW_PLACEHOLDER;
+    if (settings.aiApiKey) settings.aiApiKey = PW_PLACEHOLDER;
     return NextResponse.json(settings);
   } catch {
     return NextResponse.json(DEFAULT_SETTINGS);
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
     // Passwort-Placeholder nicht übernehmen — nur echte Werte speichern
     if (body.smtpPassword === PW_PLACEHOLDER) delete body.smtpPassword;
     if (body.pgPassword === PW_PLACEHOLDER) delete body.pgPassword;
+    if (body.aiApiKey === PW_PLACEHOLDER) delete body.aiApiKey;
 
     const updated: AppSettings = { ...existing, ...body };
     await fs.writeFile(settingsPath, JSON.stringify(updated, null, 2), "utf-8");
