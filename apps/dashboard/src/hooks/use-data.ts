@@ -133,6 +133,11 @@ export function useCustomerLogo() {
   return useSWR<{ logoUrl: string | null }>("/api/settings/logo", fetcher, { revalidateOnFocus: false });
 }
 
+// KI-Analyse (letzte gespeicherte)
+export function useAiAnalysis() {
+  return useSWR<import("@3cx-dash/types").AiAnalysis | null>("/api/ai/analyze", fetcher, { refreshInterval: 120_000 });
+}
+
 // Systems (Telefonanlagen)
 export function useSystems() {
   return useSWR<{ systems: (Omit<ThreeCXSystem, "clientSecret" | "webPassword"> & { hasSecret: boolean })[]; activeSystemId: string }>(

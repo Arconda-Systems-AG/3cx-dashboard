@@ -11,6 +11,7 @@ import {
   useToday,
   useHourly,
   useCustomerLogo,
+  useAiAnalysis,
 } from "@/hooks/use-data";
 import {
   Phone,
@@ -24,6 +25,7 @@ import {
   CheckCircle2,
   Timer,
   TrendingDown,
+  Sparkles,
 } from "lucide-react";
 import {
   BarChart,
@@ -57,6 +59,12 @@ function formatHour(isoHour: string): string {
   }
 }
 
+const statusColors: Record<string, string> = {
+  gut: "text-emerald-400",
+  warnung: "text-amber-400",
+  kritisch: "text-red-400",
+};
+
 export default function DashboardPage() {
   const { data: health } = useHealth();
   const { data: callsData } = useActiveCalls();
@@ -64,6 +72,7 @@ export default function DashboardPage() {
   const { data: queuesData } = useQueues();
   const { data: deptData } = useDepartments();
   const { data: logoData } = useCustomerLogo();
+  const { data: aiData } = useAiAnalysis();
   const [selectedDeptId, setSelectedDeptId] = useState<string>("");
   const [expandedQueues, setExpandedQueues] = useState<Set<number>>(new Set());
 
@@ -290,10 +299,10 @@ export default function DashboardPage() {
       {/* ── Abwurf-Funnel + Stunden-Chart ── */}
       {(today || chartData.length > 0) && (
         <div className="grid gap-4 lg:grid-cols-5">
-          {/* Abwurf-Funnel */}
+          {/* Abwurf-Funnel + KI-Zusammenfassung */}
           {today && (
             <GlassCard className="p-5 lg:col-span-2">
-              <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-heading">
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-heading">
                 <TrendingDown className="h-4 w-4 text-primary" />
                 Abwurf-Funnel heute
               </h2>
@@ -301,33 +310,58 @@ export default function DashboardPage() {
                 const ab1 = today.abwurf1_reached;
                 const ab2 = today.abwurf2_reached;
                 const total = today.total_incoming || 1;
-                // Non-overlapping segments: each call falls into exactly one bucket
-                const noOverflow = total - ab1;        // handled in Queue 1, no overflow
-                const ab1Only = ab1 - ab2;             // reached Abwurf 1, not Abwurf 2
+                const noOverflow = total - ab1;
+                const ab1Only = ab1 - ab2;
                 const bars = [
-                  { label: "Erstqueue (kein Abwurf)", value: noOverflow, pct: Math.round((noOverflow / total) * 100), color: "bg-emerald-500", textColor: "text-emerald-400" },
-                  { label: "Abwurf 1 erreicht", value: ab1Only, pct: Math.round((ab1Only / total) * 100), color: "bg-amber-500", textColor: "text-amber-400" },
-                  { label: "Abwurf 2 erreicht", value: ab2, pct: Math.round((ab2 / total) * 100), color: "bg-red-500", textColor: "text-red-400" },
+                  { label: "Erstqueue", value: noOverflow, pct: Math.round((noOverflow / total) * 100), color: "bg-emerald-500", textColor: "text-emerald-400" },
+                  { label: "Abwurf 1", value: ab1Only, pct: Math.round((ab1Only / total) * 100), color: "bg-amber-500", textColor: "text-amber-400" },
+                  { label: "Abwurf 2", value: ab2, pct: Math.round((ab2 / total) * 100), color: "bg-red-500", textColor: "text-red-400" },
                 ];
                 return (
-                  <div className="space-y-4">
+                  <div className="space-y-1.5">
                     {bars.map((b) => (
-                      <div key={b.label}>
-                        <div className="mb-1 flex items-center justify-between text-xs">
-                          <span className="text-muted">{b.label}</span>
-                          <span className={`font-semibold tabular-nums ${b.textColor}`}>{b.value} <span className="text-muted font-normal">({b.pct}%)</span></span>
-                        </div>
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-surface-muted">
+                      <div key={b.label} className="flex items-center gap-2">
+                        <span className="w-16 shrink-0 text-xs text-muted">{b.label}</span>
+                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-muted">
                           <div
                             className={`h-full rounded-full transition-all duration-700 ${b.color}`}
                             style={{ width: `${b.pct}%` }}
                           />
                         </div>
+                        <span className={`w-14 shrink-0 text-right text-xs tabular-nums ${b.textColor}`}>
+                          {b.value} <span className="text-muted font-normal">({b.pct}%)</span>
+                        </span>
                       </div>
                     ))}
                   </div>
                 );
               })()}
+
+              {/* KI-Zusammenfassung */}
+              {aiData && aiData.zusammenfassung && (
+                <div className="mt-4 border-t border-white/5 pt-3">
+                  <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted">
+                    <Sparkles className="h-3 w-3 text-primary" />
+                    KI-Analyse
+                    {aiData.status && (
+                      <span className={`ml-auto text-xs font-semibold ${statusColors[aiData.status] ?? "text-muted"}`}>
+                        {aiData.status === "gut" ? "✓ Gut" : aiData.status === "warnung" ? "⚠ Warnung" : "✕ Kritisch"}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs leading-relaxed text-muted">{aiData.zusammenfassung}</p>
+                  {aiData.erkenntnisse && aiData.erkenntnisse.length > 0 && (
+                    <ul className="mt-2 space-y-0.5">
+                      {aiData.erkenntnisse.slice(0, 2).map((e, i) => (
+                        <li key={i} className="flex gap-1.5 text-xs text-muted">
+                          <span className="shrink-0 text-primary">·</span>
+                          <span>{e}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
             </GlassCard>
           )}
 

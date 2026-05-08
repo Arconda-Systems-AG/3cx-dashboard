@@ -189,11 +189,7 @@ export default function AiPage() {
           </h1>
           <p className="mt-1 text-sm text-muted">
             Automatische Analyse alle 10 Minuten &middot; Powered by{" "}
-            {settings?.aiModel ? (
-              <span className="font-medium text-secondary">{settings.aiModel}</span>
-            ) : (
-              "KI-Modell"
-            )}
+            <span className="font-medium text-secondary">Arconda.AI</span>
           </p>
         </div>
 
