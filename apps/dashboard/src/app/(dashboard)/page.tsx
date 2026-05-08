@@ -271,7 +271,7 @@ export default function DashboardPage() {
             <p className={`text-2xl font-bold tabular-nums tracking-tight ${nowTalking > 0 ? "text-amber-400" : "text-muted"}`}>
               {nowTalking}
             </p>
-            <p className="mt-1 text-xs font-medium text-muted">Gespräche jetzt</p>
+            <p className="mt-1 text-xs font-medium text-muted">Gespräche (WS)</p>
           </TiltCard>
 
           {/* 8 — Wartende Anrufe (Echtzeit, 5s-Polling) */}
@@ -283,7 +283,7 @@ export default function DashboardPage() {
             <p className={`text-2xl font-bold tabular-nums tracking-tight ${nowWaiting > 0 ? "text-red-400" : "text-muted"}`}>
               {nowWaiting}
             </p>
-            <p className="mt-1 text-xs font-medium text-muted">Wartende Anrufe</p>
+            <p className="mt-1 text-xs font-medium text-muted">Wartend (WS)</p>
           </TiltCard>
         </div>
 
