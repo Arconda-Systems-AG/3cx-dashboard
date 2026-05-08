@@ -104,7 +104,8 @@ export interface QueueAgent {
   IsRegistered?: boolean;     // Telefon/Gerät registriert (online)
   CurrentProfile?: string;    // Profil: "Available", "DND", "Away", "Lunch", "Business Trip"
   // Vom Server angereichert via ActiveCalls:
-  HasActiveCall?: boolean;    // Agent ist gerade im Gespräch
+  HasActiveCall?: boolean;    // Agent ist gerade im Gespräch (Ringing oder Talking)
+  IsRinging?: boolean;        // Telefon klingelt gerade (Status="Ringing" in ActiveCalls)
 }
 
 export interface QueueManager {

@@ -42,9 +42,15 @@ export async function GET() {
       }])
     );
 
-    // Alle aktiven Gesprächs-DNs (Caller + Callee)
+    // Alle aktiven DNs (Caller + Callee, any status)
     const activeDns = new Set<string>(
       callsData.value.flatMap((c) => [parseCallDn(c.Caller), parseCallDn(c.Callee)])
+    );
+    // Nur klingelnde Calls: Callee-DNs mit Status "Ringing"
+    const ringingDns = new Set<string>(
+      callsData.value
+        .filter((c) => c.Status === "Ringing")
+        .map((c) => parseCallDn(c.Callee))
     );
 
     // Agenten anreichern + LoggedInAgents + ActiveCallCount berechnen
@@ -58,6 +64,7 @@ export async function GET() {
           IsRegistered: ext?.isRegistered ?? false,
           CurrentProfile: ext?.currentProfile ?? "Available",
           HasActiveCall: activeDns.has(agent.Number),
+          IsRinging: ringingDns.has(agent.Number),
         };
       });
 

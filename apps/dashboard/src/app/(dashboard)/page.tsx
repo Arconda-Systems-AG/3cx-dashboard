@@ -119,13 +119,6 @@ export default function DashboardPage() {
   const totalIncoming = today?.total_incoming ?? 0;
   const answerRate = totalIncoming > 0 ? Math.round((answered / totalIncoming) * 100) : null;
 
-  // Klingelnde Nebenstellen aus activeCalls (5s-Polling)
-  const ringingNumbers = new Set(
-    activeCalls
-      .filter((c) => c.Status === "Ringing")
-      .map((c) => parseDn(c.Callee ?? ""))
-  );
-
   // Echtzeit-Kacheln aus XAPI (kein DB-Query nötig)
   const activeQueues = selectedDept ? filteredQueues : queues;
   const queueNumberSet = new Set(activeQueues.map((q) => String(q.Number)));
@@ -455,7 +448,7 @@ export default function DashboardPage() {
                           const isLoggedIn = agent.QueueStatus === "LoggedIn";
                           const isRegistered = agent.IsRegistered ?? true;
                           const hasCall = agent.HasActiveCall;
-                          const isRinging = ringingNumbers.has(agent.Number);
+                          const isRinging = agent.IsRinging ?? false;
                           const isOffline = isLoggedIn && !isRegistered;
                           const profile = agent.CurrentProfile ?? "Available";
                           const badge = profile !== "Available" ? (profileBadge[profile] ?? { label: profile, cls: "bg-gray-500/20 text-gray-400" }) : null;
