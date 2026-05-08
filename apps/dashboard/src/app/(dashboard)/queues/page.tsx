@@ -74,8 +74,8 @@ export default function QueuesPage() {
             const agentsInCall = (queue.Agents ?? []).filter((a) => a.HasActiveCall).length;
 
             const isExpanded = expandedQueues.has(queue.Id);
-            const visibleAgents = isExpanded ? queue.Agents : queue.Agents?.slice(0, 4);
-            const hiddenCount = totalAgents - 4;
+            const visibleAgents = isExpanded ? queue.Agents : queue.Agents?.slice(0, 6);
+            const hiddenCount = totalAgents - 6;
 
             return (
               <TiltCard key={queue.Id} maxTilt={7} glowColor={hasActiveCalls ? "rgba(245,158,11,0.3)" : "rgba(240,128,23,0.18)"} className="p-5">
