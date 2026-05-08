@@ -3,9 +3,9 @@ import { promises as fs } from "fs";
 import path from "path";
 import type { AppSettings, AiAnalysis } from "@3cx-dash/types";
 import { DEFAULT_SETTINGS } from "@3cx-dash/types";
-import { createPool } from "@/lib/pg";
 import { fetchEnrichedQueues } from "@/lib/queue-data";
 import { appendSnapshot, buildAiTrendContext, type QueueSnapshot } from "@/lib/snapshots";
+import { collectFullDayStats } from "@/lib/db-stats";
 
 function getSettingsPath(): string {
   return process.env.SETTINGS_PATH ?? path.join(process.cwd(), "data", "settings.json");
@@ -59,18 +59,18 @@ export async function POST() {
     );
   }
 
-  // ─── Daten parallel sammeln (gleiche Logik wie /api/queues) ──────────────
+  // ─── Daten parallel sammeln ────────────────────────────────────────────────
 
   const [queueData, dbStats] = await Promise.all([
     fetchEnrichedQueues().catch(() => null),
-    collectDbStats(settings),
+    collectFullDayStats(),
   ]);
 
   const queues = queueData?.queues ?? [];
   const activeCalls = queueData?.activeCalls ?? [];
   const activeDns = queueData?.activeDns ?? new Set<string>();
 
-  // ─── Zusammenfassung aufbauen ──────────────────────────────────────────────
+  // ─── Queue-Zusammenfassung ────────────────────────────────────────────────
 
   const queuesSummary = queues
     .filter((q) => (q.Agents?.length ?? 0) > 0)
@@ -82,7 +82,7 @@ export async function POST() {
       wartende_anrufe: q.WaitingCallCount ?? 0,
     }));
 
-  // ─── Snapshot speichern (Rolling Buffer) ──────────────────────────────────
+  // ─── Snapshot speichern (ganztägiger Rolling Buffer) ──────────────────────
 
   const snap: QueueSnapshot = {
     t: new Date().toISOString(),
@@ -99,7 +99,7 @@ export async function POST() {
   const allSnapshots = await appendSnapshot(snap);
   const trend = buildAiTrendContext(allSnapshots);
 
-  // ─── currentData zusammenstellen ─────────────────────────────────────────
+  // ─── currentData für KI-Prompt ────────────────────────────────────────────
 
   const currentData: Record<string, unknown> = {
     zeitpunkt: new Date().toISOString(),
@@ -113,14 +113,26 @@ export async function POST() {
   };
 
   if (trend) {
-    currentData.verlauf_letzte_stunde = trend;
+    currentData.verlauf_heute = trend;
   }
 
   if (dbStats) {
-    currentData.datenbank_heute = dbStats;
+    currentData.datenbank_heute = {
+      gesamt: dbStats.today.total_incoming,
+      angenommen: dbStats.today.answered,
+      abgebrochen: dbStats.today.abandoned,
+      nicht_in_20s: dbStats.today.not_in_20s,
+      avg_wartezeit_s: dbStats.today.avg_wait_seconds,
+      max_wartezeit_s: dbStats.today.max_wait_seconds,
+      max_wartezeit_queue: dbStats.today.max_wait_queue,
+      abwurf1: dbStats.today.abwurf1_reached,
+      abwurf2: dbStats.today.abwurf2_reached,
+      stundenverteilung: dbStats.stundenverteilung,
+      queues: dbStats.queues,
+    };
   }
 
-  // ─── KI-Prompt aufbauen ───────────────────────────────────────────────────
+  // ─── KI-Prompt ───────────────────────────────────────────────────────────
 
   const systemPrompt =
     "Du bist ein Call-Center-Analyse-Assistent für ein 3CX-Telefonanlage-Dashboard. " +
@@ -129,24 +141,24 @@ export async function POST() {
 
   const userPrompt =
     `3CX-Daten:\n${JSON.stringify(currentData)}\n\n` +
-    `Hinweise zur Analyse:\n` +
-    `- 'datenbank_heute': historische CDR-Daten aus PostgreSQL (zuverlässig, alle Anrufe heute)\n` +
-    `- 'verlauf_heute': Echtzeit-Snapshots (Agenten-Status stündlich gemittelt)\n` +
-    `- 'warteschlangen': aktueller Live-Status\n` +
-    `Kombiniere alle drei Quellen. Erkenne Stoßzeiten, Unterbesetzungen, SLA-Probleme (nicht_in_20s).\n\n` +
-    `JSON-Antwort mit: status ("gut"|"warnung"|"kritisch"), ` +
-    `zusammenfassung (1-2 Sätze, Tagesüberblick), ` +
-    `erkenntnisse (max. 3 Stichpunkte: Aufkommen, SLA, Agenten-Deckung), ` +
-    `empfehlungen (max. 2 konkrete Maßnahmen basierend auf heutigen Daten), ` +
-    `anomalien (auffällige Queue, Stunde oder Muster — leer wenn nichts Auffälliges).`;
+    `Hinweise:\n` +
+    `- 'datenbank_heute': CDR-Daten aus PostgreSQL (alle Anrufe heute, zuverlässig)\n` +
+    `- 'datenbank_heute.stundenverteilung': Anrufvolumen pro Stunde ({"08":23,"09":45,...})\n` +
+    `- 'datenbank_heute.queues': Pro-Queue-Statistik mit nicht_in_20s und avg_wartezeit_s\n` +
+    `- 'verlauf_heute': Echtzeit-Snapshots (Agenten-Besetzung über den Tag)\n` +
+    `- 'warteschlangen': aktueller Live-Status\n\n` +
+    `Erkenne: Stoßzeiten, SLA-Probleme (nicht_in_20s), Queue-Unterbesetzung, Abwurf-Kaskaden.\n\n` +
+    `JSON mit: status ("gut"|"warnung"|"kritisch"), ` +
+    `zusammenfassung (1-2 Sätze), ` +
+    `erkenntnisse (max. 3: Aufkommen/SLA/Besetzung), ` +
+    `empfehlungen (max. 2 konkrete Maßnahmen), ` +
+    `anomalien (auffällige Queue, Stunde, Muster — leer wenn unauffällig).`;
 
-  // ─── KI-API aufrufen ───────────────────────────────────────────────────────
+  // ─── KI-API aufrufen ────────────────────────────────────────────────────
 
   let aiResponse: Response;
   try {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (settings.aiApiKey) {
       headers["Authorization"] = `Bearer ${settings.aiApiKey}`;
     }
@@ -220,145 +232,4 @@ export async function POST() {
   await fs.writeFile(analysisPath, JSON.stringify(analysis, null, 2), "utf-8");
 
   return NextResponse.json(analysis);
-}
-
-// ─── DB-Statistiken für heute (optional) ─────────────────────────────────────
-
-interface DbStats {
-  gesamt: number;
-  angenommen: number;
-  abgebrochen: number;
-  nicht_in_20s: number;
-  avg_wartezeit_s: number;
-  max_wartezeit_s: number;
-  stundenverteilung: Record<string, number>;
-  queues: Array<{ name: string; anrufe: number; angenommen: number; abgebrochen: number; avg_wartezeit_s: number }>;
-}
-
-async function collectDbStats(
-  _settings: AppSettings
-): Promise<DbStats | null> {
-  const pool = await createPool();
-  if (!pool) return null;
-
-  const client = await pool.connect();
-  try {
-    // Tages-Grenzen in Europe/Berlin → UTC
-    const nowBerlin = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Berlin" }));
-    const todayBerlin = new Date(nowBerlin.getFullYear(), nowBerlin.getMonth(), nowBerlin.getDate());
-    const berlinOffset = new Date().getTime() - new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Berlin" })).getTime();
-    const today = new Date(todayBerlin.getTime() + berlinOffset);
-    const now = new Date();
-
-    // ── KPI-Query ─────────────────────────────────────────────────────────────
-    const kpiSql = `
-      WITH incoming AS (
-        SELECT DISTINCT ON (main_call_history_id)
-          main_call_history_id,
-          cdr_started_at,
-          cdr_answered_at,
-          cdr_ended_at,
-          destination_dn_name,
-          EXTRACT(EPOCH FROM (COALESCE(cdr_answered_at, cdr_ended_at) - cdr_started_at))::numeric AS wait_s
-        FROM public.cdroutput
-        WHERE destination_dn_type = 'queue'
-          AND source_participant_is_incoming = true
-          AND cdr_started_at >= $1 AND cdr_started_at < $2
-          AND source_entity_type != 'queue'
-        ORDER BY main_call_history_id, cdr_started_at
-      ),
-      answered AS (
-        SELECT DISTINCT i.main_call_history_id
-        FROM incoming i
-        JOIN public.cdroutput ext ON ext.main_call_history_id = i.main_call_history_id
-          AND ext.destination_dn_type = 'extension'
-      )
-      SELECT
-        COUNT(*)::int                                            AS gesamt,
-        (SELECT COUNT(*)::int FROM answered)                    AS angenommen,
-        (COUNT(*) - (SELECT COUNT(*) FROM answered))::int       AS abgebrochen,
-        COUNT(*) FILTER (WHERE wait_s > 20)::int                AS nicht_in_20s,
-        ROUND(AVG(wait_s), 1)::float                            AS avg_wait_s,
-        COALESCE(MAX(wait_s)::int, 0)                           AS max_wait_s
-      FROM incoming
-    `;
-
-    // ── Stündliche Verteilung ─────────────────────────────────────────────────
-    const hourlySql = `
-      SELECT
-        EXTRACT(HOUR FROM cdr_started_at AT TIME ZONE 'Europe/Berlin')::int AS h,
-        COUNT(DISTINCT main_call_history_id)::int AS n
-      FROM public.cdroutput
-      WHERE destination_dn_type = 'queue'
-        AND source_participant_is_incoming = true
-        AND source_entity_type != 'queue'
-        AND cdr_started_at >= $1 AND cdr_started_at < $2
-      GROUP BY 1 ORDER BY 1
-    `;
-
-    // ── Pro-Queue-Stats ───────────────────────────────────────────────────────
-    const queueSql = `
-      WITH incoming AS (
-        SELECT DISTINCT ON (main_call_history_id)
-          main_call_history_id,
-          destination_dn_name,
-          EXTRACT(EPOCH FROM (COALESCE(cdr_answered_at, cdr_ended_at) - cdr_started_at))::numeric AS wait_s
-        FROM public.cdroutput
-        WHERE destination_dn_type = 'queue'
-          AND source_participant_is_incoming = true
-          AND source_entity_type != 'queue'
-          AND cdr_started_at >= $1 AND cdr_started_at < $2
-        ORDER BY main_call_history_id, cdr_started_at
-      ),
-      answered AS (
-        SELECT DISTINCT main_call_history_id
-        FROM public.cdroutput WHERE destination_dn_type = 'extension'
-      )
-      SELECT
-        i.destination_dn_name                                       AS queue,
-        COUNT(*)::int                                               AS anrufe,
-        COUNT(a.main_call_history_id)::int                          AS angenommen,
-        (COUNT(*) - COUNT(a.main_call_history_id))::int             AS abgebrochen,
-        ROUND(AVG(i.wait_s), 0)::int                               AS avg_wait_s
-      FROM incoming i
-      LEFT JOIN answered a ON a.main_call_history_id = i.main_call_history_id
-      GROUP BY i.destination_dn_name
-      ORDER BY anrufe DESC
-      LIMIT 10
-    `;
-
-    const [kpiRes, hourlyRes, queueRes] = await Promise.all([
-      client.query(kpiSql, [today.toISOString(), now.toISOString()]),
-      client.query(hourlySql, [today.toISOString(), now.toISOString()]),
-      client.query(queueSql, [today.toISOString(), now.toISOString()]),
-    ]);
-
-    const kpi = kpiRes.rows[0] ?? {};
-    const stundenverteilung: Record<string, number> = {};
-    for (const row of hourlyRes.rows) {
-      stundenverteilung[String(row.h).padStart(2, "0")] = Number(row.n);
-    }
-
-    return {
-      gesamt: Number(kpi.gesamt ?? 0),
-      angenommen: Number(kpi.angenommen ?? 0),
-      abgebrochen: Number(kpi.abgebrochen ?? 0),
-      nicht_in_20s: Number(kpi.nicht_in_20s ?? 0),
-      avg_wartezeit_s: Number(kpi.avg_wait_s ?? 0),
-      max_wartezeit_s: Number(kpi.max_wait_s ?? 0),
-      stundenverteilung,
-      queues: queueRes.rows.map((r) => ({
-        name: r.queue,
-        anrufe: Number(r.anrufe),
-        angenommen: Number(r.angenommen),
-        abgebrochen: Number(r.abgebrochen),
-        avg_wartezeit_s: Number(r.avg_wait_s ?? 0),
-      })),
-    };
-  } catch {
-    return null;
-  } finally {
-    client.release();
-    await pool.end();
-  }
 }
