@@ -419,21 +419,26 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  {totalAgents > 0 && (
+                  {loggedIn > 0 && (
                     <div className="mb-3">
-                      <div className="mb-1 flex items-center justify-between">
-                        <span className="text-xs text-muted">Auslastung</span>
-                        <span className="text-xs font-semibold text-secondary">{Math.round((loggedIn / totalAgents) * 100)}%</span>
-                      </div>
-                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-muted">
-                        <div
-                          className="h-full rounded-full transition-all duration-700"
-                          style={{
-                            width: `${Math.round((loggedIn / totalAgents) * 100)}%`,
-                            background: loggedIn === 0 ? "#475569" : "linear-gradient(90deg, #10b981, #34d399)",
-                          }}
-                        />
-                      </div>
+                      {(() => {
+                        const pct = Math.min(100, Math.round((activeCallCount / loggedIn) * 100));
+                        const barColor = pct >= 80 ? "#ef4444" : pct >= 50 ? "#f59e0b" : "#10b981";
+                        return (
+                          <>
+                            <div className="mb-1 flex items-center justify-between">
+                              <span className="text-xs text-muted">Auslastung</span>
+                              <span className="text-xs font-semibold text-secondary">{pct}%</span>
+                            </div>
+                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-muted">
+                              <div
+                                className="h-full rounded-full transition-all duration-700"
+                                style={{ width: `${pct}%`, background: barColor }}
+                              />
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   )}
 
