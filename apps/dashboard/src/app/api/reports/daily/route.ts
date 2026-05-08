@@ -54,12 +54,12 @@ function buildHtml(
 ): string {
   if (isTest) {
     return `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:32px;background:#0a1628;font-family:Arial,sans-serif;color:#e2e8f0;">
+<body style="margin:0;padding:32px;background:#f1f5f9;font-family:Arial,sans-serif;color:#1e293b;">
   <table width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;margin:0 auto;">
     <tr><td style="background:linear-gradient(135deg,#001524,#0f2d4e);padding:28px 32px;border-radius:12px;text-align:center;">
       <h1 style="margin:0 0 8px;font-size:22px;color:#f0f6fc;">✓ E-Mail-Konfiguration erfolgreich</h1>
-      <p style="margin:0;color:#64b5f6;font-size:14px;">Der 3CX Tagesbericht wird an diese Adresse gesendet.</p>
-      <p style="margin:16px 0 0;color:#94a3b8;font-size:12px;">Generiert: ${generatedAt} · Powered by Arconda.AI</p>
+      <p style="margin:0;color:#93c5fd;font-size:14px;">Der 3CX Tagesbericht wird an diese Adresse gesendet.</p>
+      <p style="margin:16px 0 0;color:#64b5f6;font-size:12px;">Generiert: ${generatedAt} · Powered by Arconda.AI</p>
     </td></tr>
   </table>
 </body></html>`;
@@ -73,32 +73,32 @@ function buildHtml(
   const abandonRate = today && today.total_incoming > 0
     ? Math.round((today.abandoned / today.total_incoming) * 100) : 0;
 
-  // ── Status-Farben ──────────────────────────────────────────────────────────
+  // ── Status-Farben (helles Theme) ──────────────────────────────────────────
   const statusCfg = {
-    gut:      { bg: "#052e16", border: "#166534", text: "#4ade80", icon: "✓", label: "Gut" },
-    warnung:  { bg: "#451a03", border: "#92400e", text: "#fbbf24", icon: "⚠", label: "Warnung" },
-    kritisch: { bg: "#450a0a", border: "#991b1b", text: "#f87171", icon: "✕", label: "Kritisch" },
+    gut:      { bg: "#f0fdf4", border: "#86efac", text: "#15803d", icon: "✓", label: "Gut" },
+    warnung:  { bg: "#fffbeb", border: "#fcd34d", text: "#b45309", icon: "⚠", label: "Warnung" },
+    kritisch: { bg: "#fef2f2", border: "#fca5a5", text: "#b91c1c", icon: "✕", label: "Kritisch" },
   };
   const sc = ai ? (statusCfg[ai.status as keyof typeof statusCfg] ?? statusCfg.warnung) : null;
 
   // ── KPI-Kacheln ────────────────────────────────────────────────────────────
   const kpis = today ? [
-    { label: "Eingehend",       value: String(today.total_incoming), color: "#3b82f6", sub: "Anrufe heute" },
-    { label: "Angenommen",      value: `${answerRate}%`,             color: answerRate >= 80 ? "#10b981" : answerRate >= 60 ? "#f59e0b" : "#ef4444", sub: `${today.answered} Anrufe` },
-    { label: "SLA ≤ 20 Sek.",   value: `${slaRate}%`,               color: slaRate >= 80 ? "#10b981" : slaRate >= 60 ? "#f59e0b" : "#ef4444",   sub: `${today.not_in_20s} überschritten` },
-    { label: "Abbrüche",        value: `${abandonRate}%`,            color: abandonRate <= 10 ? "#10b981" : abandonRate <= 25 ? "#f59e0b" : "#ef4444", sub: `${today.abandoned} Anrufe` },
+    { label: "Eingehend",     value: String(today.total_incoming), color: "#2563eb", sub: "Anrufe heute" },
+    { label: "Angenommen",   value: `${answerRate}%`,  color: answerRate >= 80 ? "#16a34a" : answerRate >= 60 ? "#d97706" : "#dc2626", sub: `${today.answered} Anrufe` },
+    { label: "SLA ≤ 20 Sek.", value: `${slaRate}%`,   color: slaRate >= 80 ? "#16a34a" : slaRate >= 60 ? "#d97706" : "#dc2626",   sub: `${today.not_in_20s} überschritten` },
+    { label: "Abbrüche",     value: `${abandonRate}%`, color: abandonRate <= 10 ? "#16a34a" : abandonRate <= 25 ? "#d97706" : "#dc2626", sub: `${today.abandoned} Anrufe` },
   ] : [];
 
   const kpiCells = kpis.map((k) => `
-    <td width="25%" style="padding:0 6px;">
-      <div style="background:#0d1f35;border:1px solid #1e3a5f;border-radius:10px;padding:16px 12px;text-align:center;">
-        <div style="font-size:26px;font-weight:700;color:${k.color};line-height:1;">${k.value}</div>
-        <div style="font-size:11px;font-weight:600;color:#e2e8f0;margin-top:4px;text-transform:uppercase;letter-spacing:.05em;">${k.label}</div>
-        <div style="font-size:11px;color:#64748b;margin-top:2px;">${k.sub}</div>
+    <td width="25%" style="padding:0 5px;">
+      <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:14px 10px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06);">
+        <div style="font-size:24px;font-weight:700;color:${k.color};line-height:1;">${k.value}</div>
+        <div style="font-size:10px;font-weight:600;color:#374151;margin-top:4px;text-transform:uppercase;letter-spacing:.05em;">${k.label}</div>
+        <div style="font-size:10px;color:#9ca3af;margin-top:2px;">${k.sub}</div>
       </div>
     </td>`).join("");
 
-  // ── Abwurf-Funnel (visuelle Balken) ────────────────────────────────────────
+  // ── Abwurf-Funnel ────────────────────────────────────────────────────────
   const funnelHtml = (() => {
     if (!today) return "";
     const total = today.total_incoming || 1;
@@ -107,29 +107,27 @@ function buildHtml(
     const noFlow = total - ab1;
     const ab1Only = ab1 - ab2;
     const bars = [
-      { label: "Erstqueue (direkt)", value: noFlow,  pct: Math.round((noFlow / total) * 100),  color: "#10b981" },
-      { label: "Abwurf 1 erreicht", value: ab1Only, pct: Math.round((ab1Only / total) * 100), color: "#f59e0b" },
-      { label: "Abwurf 2 erreicht", value: ab2,     pct: Math.round((ab2 / total) * 100),     color: "#ef4444" },
+      { label: "Erstqueue (direkt)", value: noFlow,  pct: Math.round((noFlow / total) * 100),  color: "#16a34a", track: "#dcfce7" },
+      { label: "Abwurf 1 erreicht", value: ab1Only, pct: Math.round((ab1Only / total) * 100), color: "#d97706", track: "#fef3c7" },
+      { label: "Abwurf 2 erreicht", value: ab2,     pct: Math.round((ab2 / total) * 100),     color: "#dc2626", track: "#fee2e2" },
     ];
     return bars.map((b) => `
-      <tr>
-        <td style="padding:5px 0;">
-          <table width="100%" cellpadding="0" cellspacing="0">
-            <tr>
-              <td style="font-size:12px;color:#94a3b8;padding-bottom:3px;">${b.label}</td>
-              <td style="font-size:12px;font-weight:600;color:${b.color};text-align:right;padding-bottom:3px;">${b.value} <span style="color:#475569;font-weight:400;">(${b.pct}%)</span></td>
-            </tr>
-            <tr>
-              <td colspan="2" style="background:#132640;border-radius:4px;height:8px;overflow:hidden;">
-                <div style="width:${b.pct}%;background:${b.color};height:8px;border-radius:4px;"></div>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>`).join("");
+      <tr><td style="padding:5px 0;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="font-size:12px;color:#4b5563;padding-bottom:3px;">${b.label}</td>
+            <td style="font-size:12px;font-weight:600;color:${b.color};text-align:right;padding-bottom:3px;">${b.value} <span style="color:#9ca3af;font-weight:400;">(${b.pct}%)</span></td>
+          </tr>
+          <tr>
+            <td colspan="2" style="background:${b.track};border-radius:4px;height:8px;overflow:hidden;">
+              <div style="width:${b.pct}%;background:${b.color};height:8px;border-radius:4px;"></div>
+            </td>
+          </tr>
+        </table>
+      </td></tr>`).join("");
   })();
 
-  // ── Stundenverteilung (Balken-Chart) ───────────────────────────────────────
+  // ── Stundenverteilung ────────────────────────────────────────────────────
   const hourlyHtml = (() => {
     if (!stats?.stundenverteilung) return "";
     const hours = Object.entries(stats.stundenverteilung).sort(([a], [b]) => a.localeCompare(b));
@@ -138,37 +136,35 @@ function buildHtml(
     const bars = hours.map(([h, v]) => {
       const pct = Math.round((v / maxVal) * 100);
       return `<td style="text-align:center;padding:0 2px;vertical-align:bottom;">
-        <div style="font-size:9px;color:#64748b;margin-bottom:2px;">${v}</div>
+        <div style="font-size:9px;color:#6b7280;margin-bottom:2px;">${v}</div>
         <div style="background:#3b82f6;width:18px;height:${Math.max(4, Math.round(pct * 0.6))}px;border-radius:2px 2px 0 0;margin:0 auto;"></div>
-        <div style="font-size:9px;color:#475569;margin-top:3px;">${h}</div>
+        <div style="font-size:9px;color:#9ca3af;margin-top:3px;">${h}</div>
       </td>`;
     }).join("");
-    return `<table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
-      <tr style="vertical-align:bottom;">${bars}</tr>
-    </table>`;
+    return `<table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;"><tr style="vertical-align:bottom;">${bars}</tr></table>`;
   })();
 
-  // ── Queue-Tabelle ──────────────────────────────────────────────────────────
+  // ── Queue-Tabelle ────────────────────────────────────────────────────────
   const queueRows = (stats?.queues ?? []).map((q, i) => {
     const sla = q.anrufe > 0 ? Math.round(((q.anrufe - q.nicht_in_20s) / q.anrufe) * 100) : 100;
-    const slaColor = sla >= 80 ? "#4ade80" : sla >= 60 ? "#fbbf24" : "#f87171";
-    return `<tr style="background:${i % 2 === 0 ? "#0d1f35" : "#0a1a2e"};">
-      <td style="padding:8px 12px;font-size:12px;color:#e2e8f0;border-bottom:1px solid #132640;">${q.name}</td>
-      <td style="padding:8px 12px;font-size:12px;text-align:right;color:#94a3b8;border-bottom:1px solid #132640;">${q.anrufe}</td>
-      <td style="padding:8px 12px;font-size:12px;text-align:right;color:#4ade80;border-bottom:1px solid #132640;">${q.angenommen}</td>
-      <td style="padding:8px 12px;font-size:12px;text-align:right;color:${slaColor};border-bottom:1px solid #132640;font-weight:600;">${sla}%</td>
-      <td style="padding:8px 12px;font-size:12px;text-align:right;color:#94a3b8;border-bottom:1px solid #132640;">${fmtWait(q.avg_wartezeit_s)}</td>
+    const slaColor = sla >= 80 ? "#16a34a" : sla >= 60 ? "#d97706" : "#dc2626";
+    return `<tr style="background:${i % 2 === 0 ? "#ffffff" : "#f8fafc"};">
+      <td style="padding:8px 12px;font-size:12px;color:#1e293b;border-bottom:1px solid #f1f5f9;">${q.name}</td>
+      <td style="padding:8px 12px;font-size:12px;text-align:right;color:#374151;border-bottom:1px solid #f1f5f9;">${q.anrufe}</td>
+      <td style="padding:8px 12px;font-size:12px;text-align:right;color:#16a34a;border-bottom:1px solid #f1f5f9;">${q.angenommen}</td>
+      <td style="padding:8px 12px;font-size:12px;text-align:right;color:${slaColor};border-bottom:1px solid #f1f5f9;font-weight:600;">${sla}%</td>
+      <td style="padding:8px 12px;font-size:12px;text-align:right;color:#374151;border-bottom:1px solid #f1f5f9;">${fmtWait(q.avg_wartezeit_s)}</td>
     </tr>`;
-  }).join("") || `<tr><td colspan="5" style="padding:16px;text-align:center;color:#475569;font-size:12px;">Keine Queue-Daten</td></tr>`;
+  }).join("") || `<tr><td colspan="5" style="padding:16px;text-align:center;color:#9ca3af;font-size:12px;">Keine Queue-Daten</td></tr>`;
 
-  // ── KI-Analyse-Block ───────────────────────────────────────────────────────
+  // ── KI-Analyse-Block ────────────────────────────────────────────────────
   const aiBlock = (() => {
     if (!ai || !sc) return "";
     const chips = (ai.erkenntnisse ?? []).slice(0, 3).map((e, i) => {
       const colors = [
-        { bg: "#1e3a5f", border: "#3b82f6", text: "#93c5fd" },
-        { bg: "#2d1b4e", border: "#7c3aed", text: "#c4b5fd" },
-        { bg: "#0f3338", border: "#0e7490", text: "#67e8f9" },
+        { bg: "#eff6ff", border: "#bfdbfe", text: "#1d4ed8" },
+        { bg: "#f5f3ff", border: "#ddd6fe", text: "#6d28d9" },
+        { bg: "#ecfeff", border: "#a5f3fc", text: "#0e7490" },
       ];
       const c = colors[i % colors.length];
       return `<tr><td style="padding:4px 0;">
@@ -177,28 +173,26 @@ function buildHtml(
     }).join("");
 
     const recs = (ai.empfehlungen ?? []).slice(0, 2).map((r) =>
-      `<tr><td style="padding:4px 0 4px 16px;font-size:12px;color:#94a3b8;line-height:1.5;border-left:2px solid #1e3a5f;">→ ${r}</td></tr>`
+      `<tr><td style="padding:4px 0 4px 16px;font-size:12px;color:#4b5563;line-height:1.5;border-left:2px solid #e2e8f0;">→ ${r}</td></tr>`
     ).join("");
 
     return `
-    <tr><td style="background:#0d1f35;padding:24px 32px;border-top:1px solid #132640;">
+    <tr><td style="background:#f8fafc;padding:24px 32px;border-top:1px solid #e2e8f0;">
       <table width="100%" cellpadding="0" cellspacing="0">
-        <tr>
-          <td style="padding-bottom:16px;">
-            <table cellpadding="0" cellspacing="0">
-              <tr>
-                <td style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;vertical-align:middle;">✦ KI-Analyse · Arconda.AI</td>
-                <td style="padding-left:12px;vertical-align:middle;">
-                  <span style="background:${sc.bg};border:1px solid ${sc.border};border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;color:${sc.text};">${sc.icon} ${sc.label}</span>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-        <tr><td style="font-size:13px;color:#cbd5e1;line-height:1.6;padding-bottom:16px;">${ai.zusammenfassung}</td></tr>
-        ${chips ? `<tr><td><table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">${chips}</table></td></tr>` : ""}
-        ${recs ? `<tr><td><div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Empfehlungen</div>
-          <table width="100%" cellpadding="0" cellspacing="4">${recs}</table></td></tr>` : ""}
+        <tr><td style="padding-bottom:14px;">
+          <table cellpadding="0" cellspacing="0"><tr>
+            <td style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;vertical-align:middle;">✦ KI-Analyse · Arconda.AI</td>
+            <td style="padding-left:12px;vertical-align:middle;">
+              <span style="background:${sc.bg};border:1px solid ${sc.border};border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;color:${sc.text};">${sc.icon} ${sc.label}</span>
+            </td>
+          </tr></table>
+        </td></tr>
+        <tr><td style="font-size:13px;color:#374151;line-height:1.6;padding-bottom:14px;">${ai.zusammenfassung}</td></tr>
+        ${chips ? `<tr><td><table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:14px;">${chips}</table></td></tr>` : ""}
+        ${recs ? `<tr><td>
+          <div style="font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Empfehlungen</div>
+          <table width="100%" cellpadding="0" cellspacing="4">${recs}</table>
+        </td></tr>` : ""}
       </table>
     </td></tr>`;
   })();
@@ -210,60 +204,56 @@ function buildHtml(
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>3CX Tagesbericht ${dateStr}</title>
 </head>
-<body style="margin:0;padding:32px 16px;background:#060e1a;font-family:-apple-system,Arial,sans-serif;color:#e2e8f0;">
-<table width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;margin:0 auto;border-radius:14px;overflow:hidden;border:1px solid #132640;">
+<body style="margin:0;padding:32px 16px;background:#f1f5f9;font-family:-apple-system,Arial,sans-serif;color:#1e293b;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;margin:0 auto;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,.08);">
 
-  <!-- HEADER -->
+  <!-- HEADER (bleibt dunkel) -->
   <tr>
     <td style="background:linear-gradient(135deg,#001524 0%,#0c2340 60%,#0f3358 100%);padding:28px 32px 24px;">
-      <table width="100%" cellpadding="0" cellspacing="0">
-        <tr>
-          <td>
-            <div style="font-size:10px;font-weight:600;letter-spacing:.15em;color:#3b82f6;text-transform:uppercase;margin-bottom:6px;">Tagesbericht · 3CX Dashboard</div>
-            <div style="font-size:24px;font-weight:700;color:#f0f6fc;line-height:1.2;">${customerName}</div>
-            <div style="font-size:14px;color:#64b5f6;margin-top:4px;">${dateStr}</div>
-          </td>
-          <td style="text-align:right;vertical-align:top;">
-            <div style="display:inline-block;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);border-radius:8px;padding:8px 14px;">
-              <div style="font-size:20px;font-weight:700;color:#3b82f6;">${today?.total_incoming ?? "–"}</div>
-              <div style="font-size:10px;color:#64b5f6;text-transform:uppercase;letter-spacing:.05em;">Anrufe heute</div>
-            </div>
-          </td>
-        </tr>
-      </table>
+      <table width="100%" cellpadding="0" cellspacing="0"><tr>
+        <td>
+          <div style="font-size:10px;font-weight:600;letter-spacing:.15em;color:#60a5fa;text-transform:uppercase;margin-bottom:6px;">Tagesbericht · 3CX Dashboard</div>
+          <div style="font-size:24px;font-weight:700;color:#f0f6fc;line-height:1.2;">${customerName}</div>
+          <div style="font-size:14px;color:#93c5fd;margin-top:4px;">${dateStr}</div>
+        </td>
+        <td style="text-align:right;vertical-align:top;">
+          <div style="display:inline-block;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:8px;padding:8px 14px;">
+            <div style="font-size:20px;font-weight:700;color:#ffffff;">${today?.total_incoming ?? "–"}</div>
+            <div style="font-size:10px;color:#93c5fd;text-transform:uppercase;letter-spacing:.05em;">Anrufe heute</div>
+          </div>
+        </td>
+      </tr></table>
     </td>
   </tr>
 
   <!-- KPI-KACHELN -->
-  ${kpis.length > 0 ? `<tr><td style="background:#091629;padding:20px 26px;">
+  ${kpis.length > 0 ? `<tr><td style="background:#ffffff;padding:20px 26px;border-bottom:1px solid #f1f5f9;">
     <table width="100%" cellpadding="0" cellspacing="0"><tr>${kpiCells}</tr></table>
   </td></tr>` : ""}
 
   <!-- ABWURF-FUNNEL -->
-  ${funnelHtml ? `<tr><td style="background:#0d1f35;padding:20px 32px;border-top:1px solid #132640;">
-    <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">Abwurf-Funnel</div>
+  ${funnelHtml ? `<tr><td style="background:#ffffff;padding:20px 32px;border-top:1px solid #f1f5f9;">
+    <div style="font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">Abwurf-Funnel</div>
     <table width="100%" cellpadding="0" cellspacing="0">${funnelHtml}</table>
   </td></tr>` : ""}
 
   <!-- STUNDENVERTEILUNG -->
-  ${hourlyHtml ? `<tr><td style="background:#091629;padding:20px 32px;border-top:1px solid #132640;">
-    <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">Anrufaufkommen nach Stunde</div>
+  ${hourlyHtml ? `<tr><td style="background:#f8fafc;padding:20px 32px;border-top:1px solid #f1f5f9;">
+    <div style="font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">Anrufaufkommen nach Stunde</div>
     ${hourlyHtml}
   </td></tr>` : ""}
 
   <!-- QUEUE-TABELLE -->
-  ${stats?.queues?.length ? `<tr><td style="background:#0d1f35;padding:20px 32px;border-top:1px solid #132640;">
-    <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">Statistik pro Warteschlange</div>
-    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
-      <thead>
-        <tr style="background:#132640;">
-          <th style="padding:8px 12px;text-align:left;font-size:11px;color:#64b5f6;font-weight:600;">Queue</th>
-          <th style="padding:8px 12px;text-align:right;font-size:11px;color:#64b5f6;font-weight:600;">Eingehend</th>
-          <th style="padding:8px 12px;text-align:right;font-size:11px;color:#64b5f6;font-weight:600;">Angenommen</th>
-          <th style="padding:8px 12px;text-align:right;font-size:11px;color:#64b5f6;font-weight:600;">SLA</th>
-          <th style="padding:8px 12px;text-align:right;font-size:11px;color:#64b5f6;font-weight:600;">⌀ Wartezeit</th>
-        </tr>
-      </thead>
+  ${stats?.queues?.length ? `<tr><td style="background:#ffffff;padding:20px 32px;border-top:1px solid #f1f5f9;">
+    <div style="font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">Statistik pro Warteschlange</div>
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #f1f5f9;border-radius:8px;overflow:hidden;">
+      <thead><tr style="background:#f8fafc;">
+        <th style="padding:8px 12px;text-align:left;font-size:11px;color:#6b7280;font-weight:600;">Queue</th>
+        <th style="padding:8px 12px;text-align:right;font-size:11px;color:#6b7280;font-weight:600;">Eingehend</th>
+        <th style="padding:8px 12px;text-align:right;font-size:11px;color:#6b7280;font-weight:600;">Angenommen</th>
+        <th style="padding:8px 12px;text-align:right;font-size:11px;color:#6b7280;font-weight:600;">SLA</th>
+        <th style="padding:8px 12px;text-align:right;font-size:11px;color:#6b7280;font-weight:600;">⌀ Wartezeit</th>
+      </tr></thead>
       <tbody>${queueRows}</tbody>
     </table>
   </td></tr>` : ""}
@@ -273,13 +263,11 @@ function buildHtml(
 
   <!-- FOOTER -->
   <tr>
-    <td style="background:#060e1a;padding:16px 32px;border-top:1px solid #132640;">
-      <table width="100%" cellpadding="0" cellspacing="0">
-        <tr>
-          <td style="font-size:11px;color:#334155;">Generiert: ${generatedAt} Uhr</td>
-          <td style="text-align:right;font-size:11px;color:#334155;">Powered by <span style="color:#3b82f6;">Arconda.AI</span></td>
-        </tr>
-      </table>
+    <td style="background:#f8fafc;padding:14px 32px;border-top:1px solid #e2e8f0;">
+      <table width="100%" cellpadding="0" cellspacing="0"><tr>
+        <td style="font-size:11px;color:#9ca3af;">Generiert: ${generatedAt} Uhr</td>
+        <td style="text-align:right;font-size:11px;color:#9ca3af;">Powered by <span style="color:#2563eb;font-weight:600;">Arconda.AI</span></td>
+      </tr></table>
     </td>
   </tr>
 

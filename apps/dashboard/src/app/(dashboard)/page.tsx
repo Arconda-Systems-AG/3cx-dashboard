@@ -166,11 +166,11 @@ export default function DashboardPage() {
           <select
             value={selectedDeptId}
             onChange={(e) => setSelectedDeptId(e.target.value)}
-            className="appearance-none rounded-lg border border-glass bg-input px-3 py-1.5 pr-8 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30 hover:border-primary/40 transition-colors cursor-pointer"
+            className="appearance-none rounded-lg border border-primary/30 bg-surface-solid px-3 py-1.5 pr-8 text-sm text-heading focus:outline-none focus:ring-2 focus:ring-primary/30 hover:border-primary/50 transition-colors cursor-pointer"
           >
-            <option value="">Alle Abteilungen</option>
+            <option value="" className="bg-surface-solid text-heading">Alle Abteilungen</option>
             {departments.map((d) => (
-              <option key={d.id} value={String(d.id)}>{d.name}</option>
+              <option key={d.id} value={String(d.id)} className="bg-surface-solid text-heading">{d.name}</option>
             ))}
           </select>
           <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
