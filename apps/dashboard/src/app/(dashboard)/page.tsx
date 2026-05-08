@@ -157,19 +157,16 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="grid grid-cols-3 items-center gap-4">
-        <h1 className="text-2xl font-bold text-heading">Übersicht</h1>
-        <div className="flex justify-center">
-          {logoData?.logoUrl ? (
-            <img src={logoData.logoUrl} alt="Kunden-Logo" className="h-16 w-auto object-contain" />
-          ) : null}
-        </div>
-        <div className="flex justify-end">
-        <div className="relative">
+      <div className="flex items-center gap-4">
+        <h1 className="text-lg font-bold text-heading">Übersicht</h1>
+        {logoData?.logoUrl && (
+          <img src={logoData.logoUrl} alt="Kunden-Logo" className="h-8 w-auto object-contain" />
+        )}
+        <div className="relative ml-auto">
           <select
             value={selectedDeptId}
             onChange={(e) => setSelectedDeptId(e.target.value)}
-            className="appearance-none rounded-xl border border-glass bg-input px-3 py-2 pr-8 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30 hover:border-primary/40 transition-colors cursor-pointer"
+            className="appearance-none rounded-lg border border-glass bg-input px-3 py-1.5 pr-8 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30 hover:border-primary/40 transition-colors cursor-pointer"
           >
             <option value="">Alle Abteilungen</option>
             {departments.map((d) => (
@@ -177,7 +174,6 @@ export default function DashboardPage() {
             ))}
           </select>
           <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-        </div>
         </div>
       </div>
 
