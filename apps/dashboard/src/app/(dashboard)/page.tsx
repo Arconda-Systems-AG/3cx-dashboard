@@ -294,9 +294,52 @@ export default function DashboardPage() {
 
       {/* ── Abwurf-Funnel · KI-Analyse · Stunden-Chart (3 Kacheln) ── */}
       {(today || chartData.length > 0 || aiData) && (
-        <div className="grid gap-4 lg:grid-cols-[4fr_7fr_9fr]">
+        <div className="grid gap-4 lg:grid-cols-[7fr_4fr_9fr]">
 
-          {/* 1 — Abwurf-Funnel */}
+          {/* 1 — KI-Analyse */}
+          {(() => {
+            const statusCfg = {
+              gut:      { bg: "bg-emerald-500/15", border: "border-emerald-500/30", text: "text-emerald-400", dot: "bg-emerald-400", label: "Gut" },
+              warnung:  { bg: "bg-amber-500/15",   border: "border-amber-500/30",   text: "text-amber-400",  dot: "bg-amber-400",  label: "Warnung" },
+              kritisch: { bg: "bg-red-500/15",      border: "border-red-500/30",     text: "text-red-400",    dot: "bg-red-400",    label: "Kritisch" },
+            };
+            const chipColors = [
+              "bg-blue-500/15 text-blue-300 border-blue-500/25",
+              "bg-violet-500/15 text-violet-300 border-violet-500/25",
+              "bg-cyan-500/15 text-cyan-300 border-cyan-500/25",
+            ];
+            if (!aiData?.zusammenfassung) {
+              return (
+                <GlassCard className="flex h-full items-center justify-center p-4">
+                  <span className="text-xs text-muted">Noch keine KI-Analyse vorhanden.</span>
+                </GlassCard>
+              );
+            }
+            const cfg = statusCfg[aiData.status as keyof typeof statusCfg] ?? statusCfg.warnung;
+            return (
+              <GlassCard className="p-4 overflow-hidden">
+                <div className="mb-2.5 flex items-center gap-2">
+                  <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted">KI-Analyse</span>
+                  <span className={`ml-auto flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${cfg.bg} ${cfg.border} ${cfg.text}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+                    {cfg.label}
+                  </span>
+                </div>
+                {aiData.erkenntnisse && aiData.erkenntnisse.length > 0 && (
+                  <div className="flex flex-col gap-1.5">
+                    {aiData.erkenntnisse.slice(0, 3).map((e, i) => (
+                      <span key={i} className={`w-full rounded-md border px-2 py-1 text-[11px] font-medium leading-snug line-clamp-2 ${chipColors[i % chipColors.length]}`}>
+                        {e}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </GlassCard>
+            );
+          })()}
+
+          {/* 2 — Abwurf-Funnel */}
           {today && (
             <GlassCard className="flex flex-col p-4">
               <h2 className="mb-2.5 flex shrink-0 items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted">
@@ -332,51 +375,6 @@ export default function DashboardPage() {
               })()}
             </GlassCard>
           )}
-
-          {/* 2 — KI-Analyse (kompakt, feste Höhe) */}
-          {(() => {
-            const statusCfg = {
-              gut:      { bg: "bg-emerald-500/15", border: "border-emerald-500/30", text: "text-emerald-400", dot: "bg-emerald-400", label: "Gut" },
-              warnung:  { bg: "bg-amber-500/15",   border: "border-amber-500/30",   text: "text-amber-400",  dot: "bg-amber-400",  label: "Warnung" },
-              kritisch: { bg: "bg-red-500/15",      border: "border-red-500/30",     text: "text-red-400",    dot: "bg-red-400",    label: "Kritisch" },
-            };
-            const chipColors = [
-              "bg-blue-500/15 text-blue-300 border-blue-500/25",
-              "bg-violet-500/15 text-violet-300 border-violet-500/25",
-              "bg-cyan-500/15 text-cyan-300 border-cyan-500/25",
-            ];
-            if (!aiData?.zusammenfassung) {
-              return (
-                <GlassCard className="flex h-full items-center justify-center p-4">
-                  <span className="text-xs text-muted">Noch keine KI-Analyse vorhanden.</span>
-                </GlassCard>
-              );
-            }
-            const cfg = statusCfg[aiData.status as keyof typeof statusCfg] ?? statusCfg.warnung;
-            return (
-              <GlassCard className="p-4 overflow-hidden">
-                {/* Header */}
-                <div className="mb-2.5 flex items-center gap-2">
-                  <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
-                  <span className="text-xs font-semibold uppercase tracking-wide text-muted">KI-Analyse</span>
-                  <span className={`ml-auto flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${cfg.bg} ${cfg.border} ${cfg.text}`}>
-                    <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
-                    {cfg.label}
-                  </span>
-                </div>
-                {/* Erkenntnisse — max 2 Zeilen je Chip */}
-                {aiData.erkenntnisse && aiData.erkenntnisse.length > 0 && (
-                  <div className="flex flex-col gap-1.5">
-                    {aiData.erkenntnisse.slice(0, 3).map((e, i) => (
-                      <span key={i} className={`w-full rounded-md border px-2 py-1 text-[11px] font-medium leading-snug line-clamp-2 ${chipColors[i % chipColors.length]}`}>
-                        {e}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </GlassCard>
-            );
-          })()}
 
           {/* 3 — Stunden-Chart */}
           {chartData.length > 0 && (
