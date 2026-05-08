@@ -119,6 +119,24 @@ export default function DashboardPage() {
   const totalIncoming = today?.total_incoming ?? 0;
   const answerRate = totalIncoming > 0 ? Math.round((answered / totalIncoming) * 100) : null;
 
+  // Echtzeit-Kacheln aus XAPI (kein DB-Query nötig)
+  const activeQueues = selectedDept ? filteredQueues : queues;
+  const queueNumberSet = new Set(activeQueues.map((q) => String(q.Number)));
+  const agentNumberSet = new Set(
+    activeQueues.flatMap((q) => (q.Agents ?? []).map((a) => a.Number))
+  );
+  // Wartende: Anrufer wo das Ziel (Callee) eine Queue-Nummer ist
+  const nowWaiting = activeCalls.filter((c) =>
+    queueNumberSet.has(parseDn(c.Callee ?? ""))
+  ).length;
+  // Gespräche: Talking-Calls wo Caller oder Callee ein Agent der gefilterten Queues ist
+  const nowTalking = activeCalls.filter((c) => {
+    if (c.Status !== "Talking") return false;
+    const caller = parseDn(c.Caller ?? "");
+    const callee = parseDn(c.Callee ?? "");
+    return agentNumberSet.has(caller) || agentNumberSet.has(callee);
+  }).length;
+
   // Stunden-Chart
   const chartData = (hourlyData?.buckets ?? []).map((b) => ({
     hour: formatHour(b.hour),
@@ -164,16 +182,15 @@ export default function DashboardPage() {
         </GlassCard>
       )}
 
-      {/* ── Tages-KPIs (6 Kacheln) ── */}
-      {today && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+      {/* ── Tages-KPIs + Echtzeit (8 Kacheln) ── */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
           {/* 1 — Eingehend */}
           <TiltCard glowColor="rgba(59,130,246,0.3)" className="p-4">
             <div className="absolute inset-x-0 top-0 h-[2px] bg-blue-500 opacity-70" />
             <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10">
               <PhoneIncoming className="h-3.5 w-3.5 text-blue-400" />
             </div>
-            <p className="text-2xl font-bold tabular-nums tracking-tight text-blue-400">{totalIncoming}</p>
+            <p className="text-2xl font-bold tabular-nums tracking-tight text-blue-400">{today ? totalIncoming : "–"}</p>
             <p className="mt-1 text-xs font-medium text-muted">Eingehend heute</p>
           </TiltCard>
 
@@ -190,28 +207,32 @@ export default function DashboardPage() {
           </TiltCard>
 
           {/* 3 — Nicht in 20s */}
-          <TiltCard glowColor={today.not_in_20s > 0 ? "rgba(239,68,68,0.35)" : "rgba(16,185,129,0.3)"} className="p-4">
-            <div className={`absolute inset-x-0 top-0 h-[2px] ${today.not_in_20s > 0 ? "bg-red-500" : "bg-emerald-500"} opacity-70`} />
-            <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${today.not_in_20s > 0 ? "bg-red-500/10" : "bg-emerald-500/10"}`}>
-              <Clock className={`h-3.5 w-3.5 ${today.not_in_20s > 0 ? "text-red-400" : "text-emerald-400"}`} />
+          {(() => { const v = today?.not_in_20s ?? 0; return (
+          <TiltCard glowColor={v > 0 ? "rgba(239,68,68,0.35)" : "rgba(16,185,129,0.3)"} className="p-4">
+            <div className={`absolute inset-x-0 top-0 h-[2px] ${v > 0 ? "bg-red-500" : "bg-emerald-500"} opacity-70`} />
+            <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${v > 0 ? "bg-red-500/10" : "bg-emerald-500/10"}`}>
+              <Clock className={`h-3.5 w-3.5 ${v > 0 ? "text-red-400" : "text-emerald-400"}`} />
             </div>
-            <p className={`text-2xl font-bold tabular-nums tracking-tight ${today.not_in_20s > 0 ? "text-red-400" : "text-emerald-400"}`}>
-              {today.not_in_20s}
+            <p className={`text-2xl font-bold tabular-nums tracking-tight ${v > 0 ? "text-red-400" : "text-emerald-400"}`}>
+              {today ? v : "–"}
             </p>
             <p className="mt-1 text-xs font-medium text-muted">Nicht in 20 Sek.</p>
           </TiltCard>
+          ); })()}
 
           {/* 4 — Abgebrochen */}
-          <TiltCard glowColor={today.abandoned > 0 ? "rgba(249,115,22,0.3)" : "rgba(16,185,129,0.3)"} className="p-4">
-            <div className={`absolute inset-x-0 top-0 h-[2px] ${today.abandoned > 0 ? "bg-orange-500" : "bg-emerald-500"} opacity-70`} />
-            <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${today.abandoned > 0 ? "bg-orange-500/10" : "bg-emerald-500/10"}`}>
-              <PhoneMissed className={`h-3.5 w-3.5 ${today.abandoned > 0 ? "text-orange-400" : "text-emerald-400"}`} />
+          {(() => { const v = today?.abandoned ?? 0; return (
+          <TiltCard glowColor={v > 0 ? "rgba(249,115,22,0.3)" : "rgba(16,185,129,0.3)"} className="p-4">
+            <div className={`absolute inset-x-0 top-0 h-[2px] ${v > 0 ? "bg-orange-500" : "bg-emerald-500"} opacity-70`} />
+            <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${v > 0 ? "bg-orange-500/10" : "bg-emerald-500/10"}`}>
+              <PhoneMissed className={`h-3.5 w-3.5 ${v > 0 ? "text-orange-400" : "text-emerald-400"}`} />
             </div>
-            <p className={`text-2xl font-bold tabular-nums tracking-tight ${today.abandoned > 0 ? "text-orange-400" : "text-emerald-400"}`}>
-              {today.abandoned}
+            <p className={`text-2xl font-bold tabular-nums tracking-tight ${v > 0 ? "text-orange-400" : "text-emerald-400"}`}>
+              {today ? v : "–"}
             </p>
             <p className="mt-1 text-xs font-medium text-muted">Abgebrochen</p>
           </TiltCard>
+          ); })()}
 
           {/* 5 — Ø Wartezeit */}
           <TiltCard glowColor="rgba(139,92,246,0.3)" className="p-4">
@@ -220,26 +241,51 @@ export default function DashboardPage() {
               <Timer className="h-3.5 w-3.5 text-violet-400" />
             </div>
             <p className="text-2xl font-bold tabular-nums tracking-tight text-violet-400">
-              {formatWait(today.avg_wait_seconds)}
+              {today ? formatWait(today.avg_wait_seconds) : "–"}
             </p>
             <p className="mt-1 text-xs font-medium text-muted">Ø Wartezeit</p>
           </TiltCard>
 
           {/* 6 — Max. Wartezeit */}
-          <TiltCard glowColor={today.max_wait_seconds > 60 ? "rgba(239,68,68,0.35)" : "rgba(245,158,11,0.3)"} className="p-4">
-            <div className={`absolute inset-x-0 top-0 h-[2px] ${today.max_wait_seconds > 60 ? "bg-red-500" : "bg-amber-500"} opacity-70`} />
-            <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${today.max_wait_seconds > 60 ? "bg-red-500/10" : "bg-amber-500/10"}`}>
-              <Clock className={`h-3.5 w-3.5 ${today.max_wait_seconds > 60 ? "text-red-400" : "text-amber-400"}`} />
+          {(() => { const secs = today?.max_wait_seconds ?? 0; return (
+          <TiltCard glowColor={secs > 60 ? "rgba(239,68,68,0.35)" : "rgba(245,158,11,0.3)"} className="p-4">
+            <div className={`absolute inset-x-0 top-0 h-[2px] ${secs > 60 ? "bg-red-500" : "bg-amber-500"} opacity-70`} />
+            <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${secs > 60 ? "bg-red-500/10" : "bg-amber-500/10"}`}>
+              <Clock className={`h-3.5 w-3.5 ${secs > 60 ? "text-red-400" : "text-amber-400"}`} />
             </div>
-            <p className={`text-2xl font-bold tabular-nums tracking-tight ${today.max_wait_seconds > 60 ? "text-red-400" : "text-amber-400"}`}>
-              {formatWait(today.max_wait_seconds)}
+            <p className={`text-2xl font-bold tabular-nums tracking-tight ${secs > 60 ? "text-red-400" : "text-amber-400"}`}>
+              {today ? formatWait(secs) : "–"}
             </p>
-            <p className="mt-1 text-xs font-medium text-muted truncate" title={today.max_wait_queue || "Max. Wartezeit"}>
-              {today.max_wait_queue ? `Max. · ${today.max_wait_queue.replace(" Zentrale", "").replace(" Abwurf", "↩")}` : "Max. Wartezeit"}
+            <p className="mt-1 text-xs font-medium text-muted truncate" title={today?.max_wait_queue || "Max. Wartezeit"}>
+              {today?.max_wait_queue ? `Max. · ${today.max_wait_queue.replace(" Zentrale", "").replace(" Abwurf", "↩")}` : "Max. Wartezeit"}
             </p>
           </TiltCard>
+          ); })()}
+
+          {/* 7 — Gespräche jetzt (Echtzeit, 5s-Polling) */}
+          <TiltCard glowColor={nowTalking > 0 ? "rgba(245,158,11,0.3)" : "rgba(100,116,139,0.2)"} className="p-4">
+            <div className={`absolute inset-x-0 top-0 h-[2px] ${nowTalking > 0 ? "bg-amber-500" : "bg-slate-600"} opacity-70`} />
+            <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${nowTalking > 0 ? "bg-amber-500/10" : "bg-slate-500/10"}`}>
+              <Phone className={`h-3.5 w-3.5 ${nowTalking > 0 ? "text-amber-400 animate-pulse" : "text-slate-400"}`} />
+            </div>
+            <p className={`text-2xl font-bold tabular-nums tracking-tight ${nowTalking > 0 ? "text-amber-400" : "text-muted"}`}>
+              {nowTalking}
+            </p>
+            <p className="mt-1 text-xs font-medium text-muted">Gespräche jetzt</p>
+          </TiltCard>
+
+          {/* 8 — Wartende Anrufe (Echtzeit, 5s-Polling) */}
+          <TiltCard glowColor={nowWaiting > 0 ? "rgba(239,68,68,0.35)" : "rgba(100,116,139,0.2)"} className="p-4">
+            <div className={`absolute inset-x-0 top-0 h-[2px] ${nowWaiting > 0 ? "bg-red-500" : "bg-slate-600"} opacity-70`} />
+            <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${nowWaiting > 0 ? "bg-red-500/10" : "bg-slate-500/10"}`}>
+              <PhoneIncoming className={`h-3.5 w-3.5 ${nowWaiting > 0 ? "text-red-400 animate-pulse" : "text-slate-400"}`} />
+            </div>
+            <p className={`text-2xl font-bold tabular-nums tracking-tight ${nowWaiting > 0 ? "text-red-400" : "text-muted"}`}>
+              {nowWaiting}
+            </p>
+            <p className="mt-1 text-xs font-medium text-muted">Wartende Anrufe</p>
+          </TiltCard>
         </div>
-      )}
 
       {/* ── Abwurf-Funnel + Stunden-Chart ── */}
       {(today || chartData.length > 0) && (
