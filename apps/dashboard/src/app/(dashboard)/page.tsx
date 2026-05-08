@@ -294,12 +294,12 @@ export default function DashboardPage() {
 
       {/* ── Abwurf-Funnel · KI-Analyse · Stunden-Chart (3 Kacheln) ── */}
       {(today || chartData.length > 0 || aiData) && (
-        <div className="grid items-start gap-4 lg:grid-cols-[4fr_7fr_9fr]">
+        <div className="grid gap-4 lg:grid-cols-[4fr_7fr_9fr]">
 
           {/* 1 — Abwurf-Funnel */}
           {today && (
-            <GlassCard className="p-4">
-              <h2 className="mb-2.5 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted">
+            <GlassCard className="flex flex-col p-4">
+              <h2 className="mb-2.5 flex shrink-0 items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted">
                 <TrendingDown className="h-3.5 w-3.5 text-primary" />
                 Abwurf-Funnel heute
               </h2>
@@ -315,7 +315,7 @@ export default function DashboardPage() {
                   { label: "Abwurf 2", value: ab2, pct: Math.round((ab2 / total) * 100), color: "bg-red-500", textColor: "text-red-400" },
                 ];
                 return (
-                  <div className="space-y-2">
+                  <div className="flex flex-1 flex-col justify-around">
                     {bars.map((b) => (
                       <div key={b.label} className="flex items-center gap-2">
                         <span className="w-14 shrink-0 text-xs text-muted">{b.label}</span>
@@ -380,9 +380,10 @@ export default function DashboardPage() {
 
           {/* 3 — Stunden-Chart */}
           {chartData.length > 0 && (
-            <GlassCard className="p-4">
-              <h2 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-muted">Anrufaufkommen heute</h2>
-              <ResponsiveContainer width="100%" height={120}>
+            <GlassCard className="flex flex-col p-4">
+              <h2 className="mb-2.5 shrink-0 text-xs font-semibold uppercase tracking-wide text-muted">Anrufaufkommen heute</h2>
+              <div className="min-h-0 flex-1">
+              <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 0, right: 0, left: -24, bottom: 0 }}>
                   <XAxis dataKey="hour" tick={{ fontSize: 9, fill: "var(--color-muted, #64748b)" }} tickLine={false} axisLine={false} />
                   <YAxis tick={{ fontSize: 9, fill: "var(--color-muted, #64748b)" }} tickLine={false} axisLine={false} allowDecimals={false} />
@@ -396,6 +397,7 @@ export default function DashboardPage() {
                   <Bar dataKey="Abgebrochen" fill="#f97316" radius={[2, 2, 0, 0]} maxBarSize={20} />
                 </BarChart>
               </ResponsiveContainer>
+              </div>
             </GlassCard>
           )}
 
