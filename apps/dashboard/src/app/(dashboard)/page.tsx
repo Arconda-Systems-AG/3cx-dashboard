@@ -257,7 +257,7 @@ export default function DashboardPage() {
                 const ab2 = today.abwurf2_reached;
                 const total = today.total_incoming || 1;
                 const bars = [
-                  { label: "Direkt angenommen", value: direct, pct: Math.round((direct / total) * 100), color: "bg-emerald-500", textColor: "text-emerald-400" },
+                  { label: "Angenommen (kein Abwurf)", value: direct, pct: Math.round((direct / total) * 100), color: "bg-emerald-500", textColor: "text-emerald-400" },
                   { label: "Abwurf 1 erreicht", value: ab1, pct: Math.round((ab1 / total) * 100), color: "bg-amber-500", textColor: "text-amber-400" },
                   { label: "Abwurf 2 erreicht", value: ab2, pct: Math.round((ab2 / total) * 100), color: "bg-red-500", textColor: "text-red-400" },
                 ];
