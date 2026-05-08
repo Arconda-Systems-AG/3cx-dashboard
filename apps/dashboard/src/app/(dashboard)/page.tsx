@@ -298,8 +298,8 @@ export default function DashboardPage() {
 
           {/* 1 — Abwurf-Funnel */}
           {today && (
-            <GlassCard className="p-4">
-              <h2 className="mb-2.5 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted">
+            <GlassCard className="flex h-full flex-col p-4">
+              <h2 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted">
                 <TrendingDown className="h-3.5 w-3.5 text-primary" />
                 Abwurf-Funnel heute
               </h2>
@@ -315,7 +315,7 @@ export default function DashboardPage() {
                   { label: "Abwurf 2", value: ab2, pct: Math.round((ab2 / total) * 100), color: "bg-red-500", textColor: "text-red-400" },
                 ];
                 return (
-                  <div className="space-y-1.5">
+                  <div className="flex flex-1 flex-col justify-around">
                     {bars.map((b) => (
                       <div key={b.label} className="flex items-center gap-2">
                         <span className="w-14 shrink-0 text-xs text-muted">{b.label}</span>
@@ -347,16 +347,16 @@ export default function DashboardPage() {
             ];
             if (!aiData?.zusammenfassung) {
               return (
-                <GlassCard className="flex items-center justify-center p-4">
+                <GlassCard className="flex h-full items-center justify-center p-4">
                   <span className="text-xs text-muted">Noch keine KI-Analyse vorhanden.</span>
                 </GlassCard>
               );
             }
             const cfg = statusCfg[aiData.status as keyof typeof statusCfg] ?? statusCfg.warnung;
             return (
-              <GlassCard className="flex flex-col gap-2 p-4 overflow-hidden">
+              <GlassCard className="flex h-full flex-col p-4 overflow-hidden">
                 {/* Header */}
-                <div className="flex items-center gap-2">
+                <div className="mb-2 flex shrink-0 items-center gap-2">
                   <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
                   <span className="text-xs font-semibold uppercase tracking-wide text-muted">KI-Analyse</span>
                   <span className={`ml-auto flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${cfg.bg} ${cfg.border} ${cfg.text}`}>
@@ -364,11 +364,11 @@ export default function DashboardPage() {
                     {cfg.label}
                   </span>
                 </div>
-                {/* Erkenntnisse als farbige Chips — je eine Zeile */}
+                {/* Erkenntnisse — 2 Zeilen je Chip, füllen die verfügbare Höhe */}
                 {aiData.erkenntnisse && aiData.erkenntnisse.length > 0 && (
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-1 flex-col gap-1.5">
                     {aiData.erkenntnisse.slice(0, 3).map((e, i) => (
-                      <span key={i} className={`w-full rounded-md border px-2 py-1 text-xs font-medium line-clamp-1 ${chipColors[i % chipColors.length]}`}>
+                      <span key={i} className={`flex flex-1 items-center rounded-md border px-2 py-1 text-[11px] font-medium leading-snug line-clamp-2 ${chipColors[i % chipColors.length]}`}>
                         {e}
                       </span>
                     ))}
@@ -380,9 +380,10 @@ export default function DashboardPage() {
 
           {/* 3 — Stunden-Chart */}
           {chartData.length > 0 && (
-            <GlassCard className="p-4">
-              <h2 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-muted">Anrufaufkommen heute</h2>
-              <ResponsiveContainer width="100%" height={110}>
+            <GlassCard className="flex h-full flex-col p-4">
+              <h2 className="mb-2 shrink-0 text-xs font-semibold uppercase tracking-wide text-muted">Anrufaufkommen heute</h2>
+              <div className="min-h-0 flex-1">
+              <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 0, right: 0, left: -24, bottom: 0 }}>
                   <XAxis dataKey="hour" tick={{ fontSize: 9, fill: "var(--color-muted, #64748b)" }} tickLine={false} axisLine={false} />
                   <YAxis tick={{ fontSize: 9, fill: "var(--color-muted, #64748b)" }} tickLine={false} axisLine={false} allowDecimals={false} />
@@ -396,6 +397,7 @@ export default function DashboardPage() {
                   <Bar dataKey="Abgebrochen" fill="#f97316" radius={[2, 2, 0, 0]} maxBarSize={20} />
                 </BarChart>
               </ResponsiveContainer>
+              </div>
             </GlassCard>
           )}
 
