@@ -252,13 +252,15 @@ export default function DashboardPage() {
                 Abwurf-Funnel heute
               </h2>
               {(() => {
-                const direct = today.answered;
                 const ab1 = today.abwurf1_reached;
                 const ab2 = today.abwurf2_reached;
                 const total = today.total_incoming || 1;
+                // Non-overlapping segments: each call falls into exactly one bucket
+                const noOverflow = total - ab1;        // handled in Queue 1, no overflow
+                const ab1Only = ab1 - ab2;             // reached Abwurf 1, not Abwurf 2
                 const bars = [
-                  { label: "Angenommen (kein Abwurf)", value: direct, pct: Math.round((direct / total) * 100), color: "bg-emerald-500", textColor: "text-emerald-400" },
-                  { label: "Abwurf 1 erreicht", value: ab1, pct: Math.round((ab1 / total) * 100), color: "bg-amber-500", textColor: "text-amber-400" },
+                  { label: "Erstqueue (kein Abwurf)", value: noOverflow, pct: Math.round((noOverflow / total) * 100), color: "bg-emerald-500", textColor: "text-emerald-400" },
+                  { label: "Abwurf 1 erreicht", value: ab1Only, pct: Math.round((ab1Only / total) * 100), color: "bg-amber-500", textColor: "text-amber-400" },
                   { label: "Abwurf 2 erreicht", value: ab2, pct: Math.round((ab2 / total) * 100), color: "bg-red-500", textColor: "text-red-400" },
                 ];
                 return (
