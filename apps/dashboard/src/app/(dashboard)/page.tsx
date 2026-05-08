@@ -337,35 +337,52 @@ export default function DashboardPage() {
             </GlassCard>
           )}
 
-          {/* 2 — KI-Analyse */}
-          {aiData && aiData.zusammenfassung ? (
-            <GlassCard className="p-4">
-              <div className="mb-2.5 flex items-center gap-2">
-                <Sparkles className="h-3.5 w-3.5 text-primary" />
-                <span className="text-xs font-semibold uppercase tracking-wide text-muted">KI-Analyse</span>
-                {aiData.status && (
-                  <span className={`ml-auto text-xs font-semibold ${statusColors[aiData.status] ?? "text-muted"}`}>
-                    {aiData.status === "gut" ? "✓ Gut" : aiData.status === "warnung" ? "⚠ Warnung" : "✕ Kritisch"}
+          {/* 2 — KI-Analyse (kompakt, feste Höhe) */}
+          {(() => {
+            const statusCfg = {
+              gut:      { bg: "bg-emerald-500/15", border: "border-emerald-500/30", text: "text-emerald-400", dot: "bg-emerald-400", label: "Gut" },
+              warnung:  { bg: "bg-amber-500/15",   border: "border-amber-500/30",   text: "text-amber-400",  dot: "bg-amber-400",  label: "Warnung" },
+              kritisch: { bg: "bg-red-500/15",      border: "border-red-500/30",     text: "text-red-400",    dot: "bg-red-400",    label: "Kritisch" },
+            };
+            const chipColors = [
+              "bg-blue-500/15 text-blue-300 border-blue-500/25",
+              "bg-violet-500/15 text-violet-300 border-violet-500/25",
+              "bg-cyan-500/15 text-cyan-300 border-cyan-500/25",
+            ];
+            if (!aiData?.zusammenfassung) {
+              return (
+                <GlassCard className="flex items-center justify-center p-4">
+                  <span className="text-xs text-muted">Noch keine KI-Analyse vorhanden.</span>
+                </GlassCard>
+              );
+            }
+            const cfg = statusCfg[aiData.status as keyof typeof statusCfg] ?? statusCfg.warnung;
+            return (
+              <GlassCard className="flex flex-col gap-2.5 p-4 overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted">KI-Analyse</span>
+                  <span className={`ml-auto flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${cfg.bg} ${cfg.border} ${cfg.text}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+                    {cfg.label}
                   </span>
+                </div>
+                {/* Zusammenfassung — 3 Zeilen max */}
+                <p className="line-clamp-3 text-xs leading-relaxed text-muted">{aiData.zusammenfassung}</p>
+                {/* Erkenntnisse als farbige Chips */}
+                {aiData.erkenntnisse && aiData.erkenntnisse.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 overflow-hidden">
+                    {aiData.erkenntnisse.slice(0, 3).map((e, i) => (
+                      <span key={i} className={`inline-block max-w-full truncate rounded-full border px-2 py-0.5 text-xs font-medium ${chipColors[i % chipColors.length]}`}>
+                        {e.length > 55 ? e.slice(0, 52) + "…" : e}
+                      </span>
+                    ))}
+                  </div>
                 )}
-              </div>
-              <p className="text-xs leading-relaxed text-muted">{aiData.zusammenfassung}</p>
-              {aiData.erkenntnisse && aiData.erkenntnisse.length > 0 && (
-                <ul className="mt-2 space-y-0.5">
-                  {aiData.erkenntnisse.slice(0, 2).map((e, i) => (
-                    <li key={i} className="flex gap-1.5 text-xs text-muted">
-                      <span className="shrink-0 text-primary">·</span>
-                      <span>{e}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </GlassCard>
-          ) : (
-            <GlassCard className="flex items-center justify-center p-4">
-              <span className="text-xs text-muted">Noch keine KI-Analyse — bitte auf der KI-Seite auslösen.</span>
-            </GlassCard>
-          )}
+              </GlassCard>
+            );
+          })()}
 
           {/* 3 — Stunden-Chart */}
           {chartData.length > 0 && (
