@@ -134,20 +134,40 @@ export async function POST() {
 
   // ─── KI-Prompt ───────────────────────────────────────────────────────────
 
+  // Wochentag Europe/Berlin für Öffnungszeiten-Kontext
+  const berlinDay = new Date().toLocaleDateString("de-DE", { timeZone: "Europe/Berlin", weekday: "long" });
+  const berlinTime = new Date().toLocaleTimeString("de-DE", { timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit" });
+  const openingHours =
+    ["Samstag"].includes(berlinDay) ? "09:00–13:00 Uhr" :
+    ["Sonntag"].includes(berlinDay) ? "geschlossen" :
+    "07:00–18:00 Uhr";
+  const isOpen = berlinDay !== "Sonntag" && (() => {
+    const [h, m] = berlinTime.split(":").map(Number);
+    const mins = h * 60 + m;
+    if (berlinDay === "Samstag") return mins >= 9 * 60 && mins < 13 * 60;
+    return mins >= 7 * 60 && mins < 18 * 60;
+  })();
+
   const systemPrompt =
     "Du bist ein Call-Center-Analyse-Assistent für ein 3CX-Telefonanlage-Dashboard. " +
     "Analysiere Echtzeit- UND Tagesverlaufsdaten. Erkenne Muster, Peaks und Probleme im Tagesverlauf. " +
+    "Bewerte Besetzung und SLA IMMER relativ zu den Öffnungszeiten: " +
+    "Mo–Fr 07:00–18:00 Uhr, Sa 09:00–13:00 Uhr, So geschlossen. " +
+    "Anrufe oder Agenten außerhalb der Öffnungszeiten sind kein Problem. " +
     "Antworte NUR mit validem JSON.";
 
   const userPrompt =
+    `Aktuell: ${berlinDay}, ${berlinTime} Uhr — Betrieb ${isOpen ? "GEÖFFNET" : "GESCHLOSSEN"} (${openingHours})\n` +
     `3CX-Daten:\n${JSON.stringify(currentData)}\n\n` +
     `Hinweise:\n` +
+    `- Öffnungszeiten: Mo–Fr 07:00–18:00, Sa 09:00–13:00, So geschlossen\n` +
+    `- Anrufe/Besetzungsprobleme außerhalb der Öffnungszeiten IGNORIEREN\n` +
     `- 'datenbank_heute': CDR-Daten aus PostgreSQL (alle Anrufe heute, zuverlässig)\n` +
     `- 'datenbank_heute.stundenverteilung': Anrufvolumen pro Stunde ({"08":23,"09":45,...})\n` +
     `- 'datenbank_heute.queues': Pro-Queue-Statistik mit nicht_in_20s und avg_wartezeit_s\n` +
     `- 'verlauf_heute': Echtzeit-Snapshots (Agenten-Besetzung über den Tag)\n` +
     `- 'warteschlangen': aktueller Live-Status\n\n` +
-    `Erkenne: Stoßzeiten, SLA-Probleme (nicht_in_20s), Queue-Unterbesetzung, Abwurf-Kaskaden.\n\n` +
+    `Erkenne NUR innerhalb der Öffnungszeiten: Stoßzeiten, SLA-Probleme (nicht_in_20s), Queue-Unterbesetzung, Abwurf-Kaskaden.\n\n` +
     `JSON mit: status ("gut"|"warnung"|"kritisch"), ` +
     `zusammenfassung (1-2 Sätze), ` +
     `erkenntnisse (max. 3: Aufkommen/SLA/Besetzung), ` +
