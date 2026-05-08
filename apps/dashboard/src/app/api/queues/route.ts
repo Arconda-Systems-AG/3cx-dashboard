@@ -68,8 +68,8 @@ export async function GET() {
       // Aktive Anrufe IN dieser Queue: Callee beginnt mit der Queue-Nummer
       const queueCalls = callsData.value.filter((c) => parseCallDn(c.Callee) === queue.Number);
       const activeCallCount = queueCalls.length;
-      // Wartende (klingende) Calls: in Queue aber noch nicht angenommen
-      const waitingCallCount = queueCalls.filter((c) => !c.EstablishedAt).length;
+      // Wartende (klingende) Calls: Status "Rerouting" = 3CX verteilt gerade an Agenten
+      const waitingCallCount = queueCalls.filter((c) => c.Status === "Rerouting").length;
 
       return { ...queue, Agents: enrichedAgents, LoggedInAgents: loggedInCount, ActiveCallCount: activeCallCount, WaitingCallCount: waitingCallCount };
     });

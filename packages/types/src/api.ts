@@ -46,7 +46,7 @@ export interface ActiveCall {
   Id: number;
   Caller: string;    // Format: "Number DisplayName" z.B. "11 Lukas Kunze"
   Callee: string;    // Format: "Number DisplayName" z.B. "20 Tadeus Birsgal"
-  Status: "Talking" | "Ringing" | "Held";
+  Status: "Talking" | "Ringing" | "Held" | "Rerouting" | "Routing";
   EstablishedAt?: string; // ISO 8601 – Zeitpunkt der Verbindung
   LastChangeStatus?: string; // ISO 8601 – letzter Statuswechsel
   ServerNow?: string;
