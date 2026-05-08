@@ -354,7 +354,7 @@ export default function DashboardPage() {
             }
             const cfg = statusCfg[aiData.status as keyof typeof statusCfg] ?? statusCfg.warnung;
             return (
-              <GlassCard className="flex flex-col gap-2.5 p-4 overflow-hidden">
+              <GlassCard className="flex flex-col gap-2 p-4 overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
@@ -364,13 +364,11 @@ export default function DashboardPage() {
                     {cfg.label}
                   </span>
                 </div>
-                {/* Zusammenfassung — 3 Zeilen max */}
-                <p className="line-clamp-3 text-xs leading-relaxed text-muted">{aiData.zusammenfassung}</p>
-                {/* Erkenntnisse als farbige Chips */}
+                {/* Erkenntnisse als farbige Chips — je eine Zeile */}
                 {aiData.erkenntnisse && aiData.erkenntnisse.length > 0 && (
                   <div className="flex flex-col gap-1">
                     {aiData.erkenntnisse.slice(0, 3).map((e, i) => (
-                      <span key={i} className={`w-full rounded-md border px-2 py-0.5 text-xs font-medium leading-snug ${chipColors[i % chipColors.length]}`}>
+                      <span key={i} className={`w-full rounded-md border px-2 py-1 text-xs font-medium line-clamp-1 ${chipColors[i % chipColors.length]}`}>
                         {e}
                       </span>
                     ))}
