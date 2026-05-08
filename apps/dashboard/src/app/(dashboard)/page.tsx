@@ -296,14 +296,15 @@ export default function DashboardPage() {
           </TiltCard>
         </div>
 
-      {/* ── Abwurf-Funnel + Stunden-Chart ── */}
-      {(today || chartData.length > 0) && (
-        <div className="grid gap-4 lg:grid-cols-5">
-          {/* Abwurf-Funnel + KI-Zusammenfassung */}
+      {/* ── Abwurf-Funnel · KI-Analyse · Stunden-Chart (3 Kacheln) ── */}
+      {(today || chartData.length > 0 || aiData) && (
+        <div className="grid gap-4 lg:grid-cols-3">
+
+          {/* 1 — Abwurf-Funnel */}
           {today && (
-            <GlassCard className="p-5 lg:col-span-2">
-              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-heading">
-                <TrendingDown className="h-4 w-4 text-primary" />
+            <GlassCard className="p-4">
+              <h2 className="mb-2.5 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted">
+                <TrendingDown className="h-3.5 w-3.5 text-primary" />
                 Abwurf-Funnel heute
               </h2>
               {(() => {
@@ -321,14 +322,11 @@ export default function DashboardPage() {
                   <div className="space-y-1.5">
                     {bars.map((b) => (
                       <div key={b.label} className="flex items-center gap-2">
-                        <span className="w-16 shrink-0 text-xs text-muted">{b.label}</span>
+                        <span className="w-14 shrink-0 text-xs text-muted">{b.label}</span>
                         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-muted">
-                          <div
-                            className={`h-full rounded-full transition-all duration-700 ${b.color}`}
-                            style={{ width: `${b.pct}%` }}
-                          />
+                          <div className={`h-full rounded-full transition-all duration-700 ${b.color}`} style={{ width: `${b.pct}%` }} />
                         </div>
-                        <span className={`w-14 shrink-0 text-right text-xs tabular-nums ${b.textColor}`}>
+                        <span className={`w-16 shrink-0 text-right text-xs tabular-nums ${b.textColor}`}>
                           {b.value} <span className="text-muted font-normal">({b.pct}%)</span>
                         </span>
                       </div>
@@ -336,65 +334,60 @@ export default function DashboardPage() {
                   </div>
                 );
               })()}
-
-              {/* KI-Zusammenfassung */}
-              {aiData && aiData.zusammenfassung && (
-                <div className="mt-4 border-t border-white/5 pt-3">
-                  <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted">
-                    <Sparkles className="h-3 w-3 text-primary" />
-                    KI-Analyse
-                    {aiData.status && (
-                      <span className={`ml-auto text-xs font-semibold ${statusColors[aiData.status] ?? "text-muted"}`}>
-                        {aiData.status === "gut" ? "✓ Gut" : aiData.status === "warnung" ? "⚠ Warnung" : "✕ Kritisch"}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs leading-relaxed text-muted">{aiData.zusammenfassung}</p>
-                  {aiData.erkenntnisse && aiData.erkenntnisse.length > 0 && (
-                    <ul className="mt-2 space-y-0.5">
-                      {aiData.erkenntnisse.slice(0, 2).map((e, i) => (
-                        <li key={i} className="flex gap-1.5 text-xs text-muted">
-                          <span className="shrink-0 text-primary">·</span>
-                          <span>{e}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              )}
             </GlassCard>
           )}
 
-          {/* Stunden-Chart */}
+          {/* 2 — KI-Analyse */}
+          {aiData && aiData.zusammenfassung ? (
+            <GlassCard className="p-4">
+              <div className="mb-2.5 flex items-center gap-2">
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted">KI-Analyse</span>
+                {aiData.status && (
+                  <span className={`ml-auto text-xs font-semibold ${statusColors[aiData.status] ?? "text-muted"}`}>
+                    {aiData.status === "gut" ? "✓ Gut" : aiData.status === "warnung" ? "⚠ Warnung" : "✕ Kritisch"}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs leading-relaxed text-muted">{aiData.zusammenfassung}</p>
+              {aiData.erkenntnisse && aiData.erkenntnisse.length > 0 && (
+                <ul className="mt-2 space-y-0.5">
+                  {aiData.erkenntnisse.slice(0, 2).map((e, i) => (
+                    <li key={i} className="flex gap-1.5 text-xs text-muted">
+                      <span className="shrink-0 text-primary">·</span>
+                      <span>{e}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </GlassCard>
+          ) : (
+            <GlassCard className="flex items-center justify-center p-4">
+              <span className="text-xs text-muted">Noch keine KI-Analyse — bitte auf der KI-Seite auslösen.</span>
+            </GlassCard>
+          )}
+
+          {/* 3 — Stunden-Chart */}
           {chartData.length > 0 && (
-            <GlassCard className="p-5 lg:col-span-3">
-              <h2 className="mb-4 text-sm font-semibold text-heading">Anrufaufkommen heute (stündlich)</h2>
-              <ResponsiveContainer width="100%" height={160}>
-                <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                  <XAxis
-                    dataKey="hour"
-                    tick={{ fontSize: 10, fill: "var(--color-muted, #64748b)" }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 10, fill: "var(--color-muted, #64748b)" }}
-                    tickLine={false}
-                    axisLine={false}
-                    allowDecimals={false}
-                  />
+            <GlassCard className="p-4">
+              <h2 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-muted">Anrufaufkommen heute</h2>
+              <ResponsiveContainer width="100%" height={110}>
+                <BarChart data={chartData} margin={{ top: 0, right: 0, left: -24, bottom: 0 }}>
+                  <XAxis dataKey="hour" tick={{ fontSize: 9, fill: "var(--color-muted, #64748b)" }} tickLine={false} axisLine={false} />
+                  <YAxis tick={{ fontSize: 9, fill: "var(--color-muted, #64748b)" }} tickLine={false} axisLine={false} allowDecimals={false} />
                   <Tooltip
-                    contentStyle={{ background: "#0f1f35", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", fontSize: "12px" }}
+                    contentStyle={{ background: "#0f1f35", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", fontSize: "11px" }}
                     labelStyle={{ color: "#e2e8f0" }}
                     itemStyle={{ color: "#94a3b8" }}
                   />
-                  <Bar dataKey="Eingehend" fill="#3b82f6" radius={[3, 3, 0, 0]} maxBarSize={28} />
-                  <Bar dataKey="Angenommen" fill="#10b981" radius={[3, 3, 0, 0]} maxBarSize={28} />
-                  <Bar dataKey="Abgebrochen" fill="#f97316" radius={[3, 3, 0, 0]} maxBarSize={28} />
+                  <Bar dataKey="Eingehend" fill="#3b82f6" radius={[2, 2, 0, 0]} maxBarSize={20} />
+                  <Bar dataKey="Angenommen" fill="#10b981" radius={[2, 2, 0, 0]} maxBarSize={20} />
+                  <Bar dataKey="Abgebrochen" fill="#f97316" radius={[2, 2, 0, 0]} maxBarSize={20} />
                 </BarChart>
               </ResponsiveContainer>
             </GlassCard>
           )}
+
         </div>
       )}
 
