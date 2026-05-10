@@ -66,13 +66,10 @@ export function TiltCard({
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       onMouseEnter={handleMouseEnter}
-      style={{ ...externalStyle, ...cardStyle, transformStyle: "preserve-3d" }}
+      style={{ ...externalStyle, ...cardStyle }}
       className={`relative rounded-3xl border border-glass bg-surface-glass backdrop-blur-xl overflow-hidden ${className}`}
     >
-      {/* Content liegt "oben" im 3D-Raum */}
-      <div style={{ transform: "translateZ(20px)" }}>
-        {children}
-      </div>
+      {children}
     </div>
   );
 }
