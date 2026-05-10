@@ -21,55 +21,51 @@ export function TiltCard({
   style: externalStyle,
 }: TiltCardProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const [cardStyle, setCardStyle] = useState<CSSProperties>({
+  const [outerStyle, setOuterStyle] = useState<CSSProperties>({
     transform: "perspective(800px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)",
     transition: "transform 0.4s ease, box-shadow 0.4s ease",
   });
-  const [isHovered, setIsHovered] = useState(false);
 
   function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
     const el = ref.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;  // 0..1
-    const y = (e.clientY - rect.top) / rect.height;   // 0..1
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
 
-    const rx = (y - 0.5) * -maxTilt;  // oben: +, unten: -
-    const ry = (x - 0.5) * maxTilt;   // links: -, rechts: +
+    const rx = (y - 0.5) * -maxTilt;
+    const ry = (x - 0.5) * maxTilt;
 
-    setCardStyle({
+    setOuterStyle({
       transform: `perspective(800px) rotateX(${rx}deg) rotateY(${ry}deg) scale3d(1.03, 1.03, 1.03)`,
       transition: "transform 0.08s ease",
-      boxShadow: `
-        0 20px 60px rgba(0,0,0,0.4),
-        0 0 40px ${glowColor}
-      `,
+      boxShadow: `0 20px 60px rgba(0,0,0,0.4), 0 0 40px ${glowColor}`,
+      zIndex: 10,
     });
   }
 
   function handleMouseLeave() {
-    setCardStyle({
+    setOuterStyle({
       transform: "perspective(800px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)",
       transition: "transform 0.5s cubic-bezier(0.23,1,0.32,1), box-shadow 0.5s ease",
       boxShadow: "",
+      zIndex: undefined,
     });
-    setIsHovered(false);
-  }
-
-  function handleMouseEnter() {
-    setIsHovered(true);
   }
 
   return (
+    // Outer: nur Transform + Schatten — kein overflow-hidden (verhindert Kanten-Artefakte)
     <div
       ref={ref}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      onMouseEnter={handleMouseEnter}
-      style={{ ...externalStyle, ...cardStyle }}
-      className={`relative rounded-3xl border border-glass bg-surface-glass backdrop-blur-xl overflow-hidden ${className}`}
+      style={{ ...externalStyle, ...outerStyle, willChange: "transform" }}
+      className="relative rounded-3xl"
     >
-      {children}
+      {/* Inner: Clipping, Border, Hintergrund — getrennt vom Transform-Element */}
+      <div className={`relative rounded-3xl border border-glass bg-surface-glass backdrop-blur-xl overflow-hidden w-full h-full ${className}`}>
+        {children}
+      </div>
     </div>
   );
 }
