@@ -54,16 +54,17 @@ export function TiltCard({
   }
 
   return (
-    // Outer: nur Transform + Schatten — kein overflow-hidden (verhindert Kanten-Artefakte)
+    // Outer: nur Transform — kein border-radius, kein overflow-hidden, kein border
+    // isolation:isolate verhindert GPU-Layer-Seam zu Nachbarkarten
     <div
       ref={ref}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      style={{ ...externalStyle, ...outerStyle, willChange: "transform" }}
-      className="relative rounded-3xl"
+      style={{ ...externalStyle, ...outerStyle, willChange: "transform", isolation: "isolate" }}
+      className="relative"
     >
-      {/* Inner: Clipping, Border, Hintergrund — getrennt vom Transform-Element */}
-      <div className={`relative rounded-3xl border border-glass bg-surface-glass backdrop-blur-xl overflow-hidden w-full h-full ${className}`}>
+      {/* Inner: alle visuellen Styles — border-radius + overflow-hidden getrennt vom Transform */}
+      <div className={`relative rounded-3xl border border-glass bg-surface-glass backdrop-blur-xl overflow-hidden ${className}`}>
         {children}
       </div>
     </div>
