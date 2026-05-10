@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import { GlassCard, LedIndicator } from "@3cx-dash/ui";
-import { useSettings, updateSettings, useSystems } from "@/hooks/use-data";
+import { useSettings, updateSettings, useSystems, useGroups } from "@/hooks/use-data";
 import { useHealth } from "@/hooks/use-data";
 import {
-  Save, Plus, Trash2, CheckCircle, Wifi, Edit2, X, ChevronDown, ChevronUp, Database, Upload, ImageOff, Mail, Send, Brain, Clock,
+  Save, Plus, Trash2, CheckCircle, Wifi, Edit2, X, ChevronDown, ChevronUp, Database, Upload, ImageOff, Mail, Send, Brain, Clock, FileText,
 } from "lucide-react";
-import type { AppSettings, ThreeCXSystem, AuthMethod, AiSchedule, ReportSchedule } from "@3cx-dash/types";
+import type { AppSettings, ThreeCXSystem, AuthMethod, AiSchedule, ReportSchedule, ReportProfile } from "@3cx-dash/types";
 
 // ─── System Form ────────────────────────────────────────────
 interface SystemFormData {
@@ -909,6 +909,364 @@ function AutomatisierungSection({ settings }: { settings: AppSettings | undefine
   );
 }
 
+// ─── Report Profiles Section ─────────────────────────────────
+const EMPTY_PROFILE: Omit<ReportProfile, "id"> = {
+  name: "",
+  recipients: "",
+  departmentId: undefined,
+  departmentName: undefined,
+  enabled: true,
+  days: [1, 2, 3, 4, 5],
+  sendTime: "17:30",
+};
+
+function ReportProfilesSection({ settings }: { settings: AppSettings | undefined }) {
+  const { data: groupsData } = useGroups();
+  const groups = groupsData?.groups ?? [];
+
+  const profiles: ReportProfile[] = settings?.reportProfiles ?? [];
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [formData, setFormData] = useState<Omit<ReportProfile, "id">>(EMPTY_PROFILE);
+  const [saving, setSaving] = useState(false);
+  const [sending, setSending] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  function openAdd() {
+    setAdding(true);
+    setEditingId(null);
+    setFormData(EMPTY_PROFILE);
+    setMessage(null);
+  }
+
+  function openEdit(profile: ReportProfile) {
+    setEditingId(profile.id);
+    setAdding(false);
+    setFormData({
+      name: profile.name,
+      recipients: profile.recipients,
+      departmentId: profile.departmentId,
+      departmentName: profile.departmentName,
+      enabled: profile.enabled,
+      days: profile.days,
+      sendTime: profile.sendTime,
+    });
+    setMessage(null);
+  }
+
+  function cancelForm() {
+    setAdding(false);
+    setEditingId(null);
+    setMessage(null);
+  }
+
+  function setField<K extends keyof Omit<ReportProfile, "id">>(key: K, val: Omit<ReportProfile, "id">[K]) {
+    setFormData((f) => ({ ...f, [key]: val }));
+  }
+
+  function handleDeptChange(val: string) {
+    if (val === "") {
+      setField("departmentId", undefined);
+      setField("departmentName", undefined);
+    } else {
+      const id = Number(val);
+      const grp = groups.find((g) => g.id === id);
+      setField("departmentId", id);
+      setField("departmentName", grp?.name);
+    }
+  }
+
+  async function handleSaveProfile(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setMessage(null);
+    try {
+      let updated: ReportProfile[];
+      if (editingId) {
+        updated = profiles.map((p) =>
+          p.id === editingId ? { ...formData, id: editingId } : p
+        );
+      } else {
+        const newProfile: ReportProfile = { ...formData, id: crypto.randomUUID() };
+        updated = [...profiles, newProfile];
+      }
+      await updateSettings({ reportProfiles: updated });
+      setMessage(editingId ? "Profil aktualisiert" : "Profil hinzugefügt");
+      cancelForm();
+    } catch (err) {
+      setMessage(`Fehler: ${err}`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("Profil löschen?")) return;
+    try {
+      const updated = profiles.filter((p) => p.id !== id);
+      await updateSettings({ reportProfiles: updated });
+    } catch (err) {
+      setMessage(`Fehler: ${err}`);
+    }
+  }
+
+  async function handleToggleEnabled(profile: ReportProfile) {
+    try {
+      const updated = profiles.map((p) =>
+        p.id === profile.id ? { ...p, enabled: !p.enabled } : p
+      );
+      await updateSettings({ reportProfiles: updated });
+    } catch (err) {
+      setMessage(`Fehler: ${err}`);
+    }
+  }
+
+  async function handleSendNow(profileId: string) {
+    setSending(profileId);
+    setMessage(null);
+    try {
+      const res = await fetch(`/api/reports/daily?profileId=${profileId}`, { method: "POST" });
+      const data = await res.json() as { ok?: boolean; error?: string; recipients?: string };
+      if (!res.ok) throw new Error(data.error ?? "Unbekannter Fehler");
+      setMessage(`Bericht gesendet an: ${data.recipients}`);
+    } catch (err) {
+      setMessage(`Fehler: ${err}`);
+    } finally {
+      setSending(null);
+    }
+  }
+
+  const inputCls = "w-full rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30";
+
+  const DAY_LABELS: Record<number, string> = { 1: "Mo", 2: "Di", 3: "Mi", 4: "Do", 5: "Fr", 6: "Sa", 0: "So" };
+
+  return (
+    <div className="p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted">
+          <FileText className="h-3.5 w-3.5 text-primary" />
+          Berichtsprofile
+        </h3>
+        <button
+          onClick={openAdd}
+          className="flex items-center gap-1.5 rounded-lg border border-glass px-3 py-1.5 text-xs text-secondary hover:text-heading"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Neues Profil
+        </button>
+      </div>
+
+      {message && (
+        <p className={`mb-3 text-xs ${message.startsWith("Fehler") ? "text-red-400" : "text-emerald-400"}`}>
+          {message}
+        </p>
+      )}
+
+      {/* Profile list */}
+      <div className="space-y-2">
+        {profiles.length === 0 && !adding && (
+          <p className="text-xs text-muted">Noch keine Berichtsprofile konfiguriert.</p>
+        )}
+
+        {profiles.map((profile) => {
+          const isEditing = editingId === profile.id;
+          const daysLabel = profile.days
+            .slice()
+            .sort((a, b) => (a === 0 ? 7 : a) - (b === 0 ? 7 : b))
+            .map((d) => DAY_LABELS[d] ?? d)
+            .join(", ");
+
+          return (
+            <div
+              key={profile.id}
+              className={`rounded-xl border transition-all ${profile.enabled ? "border-primary/30 bg-primary/5" : "border-glass bg-surface-subtle"}`}
+            >
+              <div className="flex items-start gap-3 p-3">
+                <div className="flex-1 min-w-0 space-y-0.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-medium text-heading">{profile.name}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${profile.enabled ? "bg-primary/20 text-primary" : "bg-surface-muted text-muted"}`}>
+                      {profile.enabled ? "Aktiv" : "Inaktiv"}
+                    </span>
+                    {profile.departmentName && (
+                      <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[10px] text-muted">
+                        {profile.departmentName}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted truncate">{profile.recipients}</p>
+                  <p className="text-xs text-muted">{daysLabel} · {profile.sendTime} Uhr</p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => handleSendNow(profile.id)}
+                    disabled={sending === profile.id}
+                    title="Bericht jetzt senden"
+                    className="flex items-center gap-1.5 rounded-lg border border-glass px-2 py-1.5 text-xs text-secondary hover:text-heading disabled:opacity-50"
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                    {sending === profile.id ? "..." : "Senden"}
+                  </button>
+                  <button
+                    onClick={() => handleToggleEnabled(profile)}
+                    title={profile.enabled ? "Deaktivieren" : "Aktivieren"}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-glass text-secondary hover:text-heading"
+                  >
+                    <div className={`h-2.5 w-2.5 rounded-full ${profile.enabled ? "bg-emerald-400" : "bg-surface-muted"}`} />
+                  </button>
+                  <button
+                    onClick={() => isEditing ? cancelForm() : openEdit(profile)}
+                    title="Bearbeiten"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-glass text-secondary hover:text-heading"
+                  >
+                    {isEditing ? <ChevronUp className="h-3.5 w-3.5" /> : <Edit2 className="h-3.5 w-3.5" />}
+                  </button>
+                  <button
+                    onClick={() => handleDelete(profile.id)}
+                    title="Löschen"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-glass text-secondary hover:text-red-400"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {isEditing && (
+                <div className="border-t border-glass p-4">
+                  <ProfileForm
+                    formData={formData}
+                    groups={groups}
+                    saving={saving}
+                    onSubmit={handleSaveProfile}
+                    onCancel={cancelForm}
+                    setField={setField}
+                    handleDeptChange={handleDeptChange}
+                    inputCls={inputCls}
+                    isNew={false}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {adding && (
+          <div className="rounded-xl border border-glass bg-surface-subtle p-4">
+            <p className="mb-3 text-sm font-medium text-heading">Neues Berichtsprofil</p>
+            <ProfileForm
+              formData={formData}
+              groups={groups}
+              saving={saving}
+              onSubmit={handleSaveProfile}
+              onCancel={cancelForm}
+              setField={setField}
+              handleDeptChange={handleDeptChange}
+              inputCls={inputCls}
+              isNew
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface ProfileFormProps {
+  formData: Omit<ReportProfile, "id">;
+  groups: Array<{ id: number; name: string; memberNumbers: string[] }>;
+  saving: boolean;
+  isNew: boolean;
+  inputCls: string;
+  onSubmit: (e: React.FormEvent) => void;
+  onCancel: () => void;
+  setField: <K extends keyof Omit<ReportProfile, "id">>(key: K, val: Omit<ReportProfile, "id">[K]) => void;
+  handleDeptChange: (val: string) => void;
+}
+
+function ProfileForm({ formData, groups, saving, isNew, inputCls, onSubmit, onCancel, setField, handleDeptChange }: ProfileFormProps) {
+  return (
+    <form onSubmit={onSubmit} className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-secondary">Profilname *</label>
+          <input
+            required
+            value={formData.name}
+            onChange={(e) => setField("name", e.target.value)}
+            placeholder="z.B. Serviceleiter Kiel"
+            className={inputCls}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-secondary">Abteilung</label>
+          <select
+            value={formData.departmentId != null ? String(formData.departmentId) : ""}
+            onChange={(e) => handleDeptChange(e.target.value)}
+            className={inputCls}
+          >
+            <option value="">Alle Standorte</option>
+            {groups.map((g) => (
+              <option key={g.id} value={String(g.id)}>{g.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="sm:col-span-2">
+          <label className="mb-1 block text-xs font-medium text-secondary">Empfänger (kommagetrennt) *</label>
+          <input
+            required
+            type="text"
+            value={formData.recipients}
+            onChange={(e) => setField("recipients", e.target.value)}
+            placeholder="leiter@firma.de, chef@firma.de"
+            className={inputCls}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-secondary">Uhrzeit (HH:MM)</label>
+          <input
+            type="time"
+            value={formData.sendTime}
+            onChange={(e) => setField("sendTime", e.target.value)}
+            className={inputCls}
+          />
+        </div>
+        <div className="flex flex-col justify-end">
+          <label className="mb-1 block text-xs font-medium text-secondary">Aktiv</label>
+          <div
+            onClick={() => setField("enabled", !formData.enabled)}
+            className={`relative h-5 w-9 cursor-pointer rounded-full transition-colors ${formData.enabled ? "bg-primary" : "bg-surface-muted"}`}
+          >
+            <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${formData.enabled ? "left-4" : "left-0.5"}`} />
+          </div>
+        </div>
+      </div>
+      <div>
+        <p className="mb-1.5 text-xs font-medium text-secondary">Wochentage</p>
+        <DayPicker value={formData.days} onChange={(v) => setField("days", v)} />
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          type="submit"
+          disabled={saving}
+          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50 hover:bg-primary-hover"
+        >
+          <Save className="h-4 w-4" />
+          {saving ? "Speichert..." : isNew ? "Hinzufügen" : "Speichern"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex items-center gap-2 rounded-lg border border-glass px-3 py-2 text-sm text-secondary hover:text-heading"
+        >
+          <X className="h-4 w-4" />
+          Abbrechen
+        </button>
+      </div>
+    </form>
+  );
+}
+
 // ─── Main Page ───────────────────────────────────────────────
 export default function SettingsPage() {
   const { data: settingsData, mutate: mutateSystems } = useSystems();
@@ -1075,6 +1433,13 @@ export default function SettingsPage() {
                       onSave={() => { setEditingId(null); mutateSystems(); }}
                       onCancel={() => setEditingId(null)}
                     />
+                  </div>
+                )}
+
+                {/* Berichtsprofile — nur für aktive Anlage */}
+                {isActive && (
+                  <div className="border-t border-glass">
+                    <ReportProfilesSection settings={settings} />
                   </div>
                 )}
               </div>

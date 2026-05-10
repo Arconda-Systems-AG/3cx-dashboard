@@ -259,6 +259,7 @@ export interface AppSettings {
   // Automatisierung
   aiSchedule?: AiSchedule;
   reportSchedule?: ReportSchedule;
+  reportProfiles?: ReportProfile[];
 }
 
 export interface AiSchedule {
@@ -273,6 +274,17 @@ export interface ReportSchedule {
   enabled: boolean;
   days: number[];
   sendTime: string;       // "HH:MM" in Europe/Berlin
+}
+
+export interface ReportProfile {
+  id: string;
+  name: string;
+  recipients: string;        // komma-getrennte E-Mails
+  departmentId?: number;     // undefined = alle Queues
+  departmentName?: string;
+  enabled: boolean;
+  days: number[];            // 0=So, 1=Mo, ..., 6=Sa
+  sendTime: string;          // "HH:MM" Europe/Berlin
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -295,6 +307,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   aiModel: "",
   aiSchedule: { enabled: false, days: [1, 2, 3, 4, 5], fromHour: 7, toHour: 18, intervalMinutes: 30 },
   reportSchedule: { enabled: false, days: [1, 2, 3, 4, 5], sendTime: "17:30" },
+  reportProfiles: [],
 };
 
 // ─────────────────────────────────────────────

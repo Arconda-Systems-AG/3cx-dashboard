@@ -24,14 +24,19 @@ function getTodayRange(): { today: Date; now: Date } {
   };
 }
 
-export async function collectFullDayStats(): Promise<FullDayStats | null> {
+export async function collectFullDayStats(queueFilter?: string[]): Promise<FullDayStats | null> {
   const pool = await createPool();
   if (!pool) return null;
 
   const client = await pool.connect();
   try {
     const { today, now } = getTodayRange();
-    const p = [today.toISOString(), now.toISOString()];
+    const hasFilter = queueFilter && queueFilter.length > 0;
+    const p: (string | string[])[] = [today.toISOString(), now.toISOString()];
+    if (hasFilter) p.push(queueFilter);
+
+    const filterClause = hasFilter ? " AND q.destination_dn_number = ANY($3::text[])" : "";
+    const filterClauseSimple = hasFilter ? " AND destination_dn_number = ANY($3::text[])" : "";
 
     // ── KPI (identisch zu /api/stats/today) ──────────────────────────────────
     const kpiSql = `
@@ -44,7 +49,7 @@ export async function collectFullDayStats(): Promise<FullDayStats | null> {
         WHERE q.destination_dn_type = 'queue'
           AND q.source_participant_is_incoming = true
           AND q.cdr_started_at >= $1 AND q.cdr_started_at < $2
-          AND q.source_entity_type != 'queue'
+          AND q.source_entity_type != 'queue'${filterClause}
         ORDER BY q.main_call_history_id, q.cdr_started_at
       ),
       answered AS (
@@ -67,7 +72,7 @@ export async function collectFullDayStats(): Promise<FullDayStats | null> {
           EXTRACT(EPOCH FROM (cdr_ended_at - cdr_started_at)) AS secs
         FROM public.cdroutput
         WHERE destination_dn_type = 'queue' AND source_participant_is_incoming = true
-          AND cdr_started_at >= $1 AND cdr_started_at < $2
+          AND cdr_started_at >= $1 AND cdr_started_at < $2${filterClauseSimple}
         ORDER BY secs DESC LIMIT 1
       )
       SELECT
@@ -92,7 +97,7 @@ export async function collectFullDayStats(): Promise<FullDayStats | null> {
       WHERE destination_dn_type = 'queue'
         AND source_participant_is_incoming = true
         AND source_entity_type != 'queue'
-        AND cdr_started_at >= $1 AND cdr_started_at < $2
+        AND cdr_started_at >= $1 AND cdr_started_at < $2${filterClauseSimple}
       GROUP BY 1 ORDER BY 1
     `;
 
@@ -106,7 +111,7 @@ export async function collectFullDayStats(): Promise<FullDayStats | null> {
         WHERE q.destination_dn_type = 'queue'
           AND q.source_participant_is_incoming = true
           AND q.source_entity_type != 'queue'
-          AND q.cdr_started_at >= $1 AND q.cdr_started_at < $2
+          AND q.cdr_started_at >= $1 AND q.cdr_started_at < $2${filterClause}
         ORDER BY q.main_call_history_id, q.cdr_started_at
       ),
       answered AS (

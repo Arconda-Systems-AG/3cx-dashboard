@@ -1,10 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
 import nodemailer from "nodemailer";
-import type { AppSettings, AiAnalysis } from "@3cx-dash/types";
+import type { AppSettings, AiAnalysis, ReportProfile } from "@3cx-dash/types";
 import { DEFAULT_SETTINGS } from "@3cx-dash/types";
 import { collectFullDayStats } from "@/lib/db-stats";
+import { xapiFetch } from "@/lib/threecx-client";
 
 function getSettingsPath(): string {
   return process.env.SETTINGS_PATH ?? path.join(process.cwd(), "data", "settings.json");
@@ -312,7 +313,114 @@ function buildText(
   return text;
 }
 
-export async function POST(request: Request) {
+async function runScopedAiAnalysis(
+  settings: AppSettings,
+  stats: Awaited<ReturnType<typeof collectFullDayStats>>,
+  departmentLabel: string,
+): Promise<AiAnalysis | null> {
+  if (!settings.aiUrl || !settings.aiModel || !stats) return null;
+
+  const systemPrompt =
+    "Du bist ein Call-Center-Analyse-Assistent für ein 3CX-Telefonanlage-Dashboard. " +
+    "Analysiere die Tagesstatistiken der angegebenen Abteilung/Queue. " +
+    "Bewerte SLA und Anrufaufkommen objektiv. " +
+    "Antworte NUR mit validem JSON.";
+
+  const userPrompt =
+    `Abteilung/Filter: ${departmentLabel}\n` +
+    `Tagesstatistiken:\n${JSON.stringify({
+      gesamt: stats.today.total_incoming,
+      angenommen: stats.today.answered,
+      abgebrochen: stats.today.abandoned,
+      nicht_in_20s: stats.today.not_in_20s,
+      avg_wartezeit_s: stats.today.avg_wait_seconds,
+      max_wartezeit_s: stats.today.max_wait_seconds,
+      max_wartezeit_queue: stats.today.max_wait_queue,
+      abwurf1: stats.today.abwurf1_reached,
+      abwurf2: stats.today.abwurf2_reached,
+      stundenverteilung: stats.stundenverteilung,
+      queues: stats.queues,
+    })}\n\n` +
+    `JSON mit: status ("gut"|"warnung"|"kritisch"), ` +
+    `zusammenfassung (1-2 Sätze), ` +
+    `erkenntnisse (max. 3: Aufkommen/SLA/Besetzung), ` +
+    `empfehlungen (max. 2 konkrete Maßnahmen), ` +
+    `anomalien (auffällige Queue, Stunde, Muster — leer wenn unauffällig).`;
+
+  try {
+    const aiResponse = await fetch(`${settings.aiUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(settings.aiApiKey ? { Authorization: `Bearer ${settings.aiApiKey}` } : {}),
+      },
+      body: JSON.stringify({
+        model: settings.aiModel,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.2,
+        max_tokens: 600,
+        chat_template_kwargs: { enable_thinking: false },
+      }),
+      signal: AbortSignal.timeout(60_000),
+    });
+
+    if (!aiResponse.ok) return null;
+
+    const aiData = await aiResponse.json() as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const rawContent = aiData.choices?.[0]?.message?.content ?? "";
+
+    const jsonMatch = rawContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/) ??
+      rawContent.match(/(\{[\s\S]*\})/);
+    const jsonStr = jsonMatch ? jsonMatch[1] : rawContent;
+    const parsed = JSON.parse(jsonStr) as Partial<AiAnalysis>;
+
+    return {
+      timestamp: new Date().toISOString(),
+      status: (parsed.status as AiAnalysis["status"]) ?? "warnung",
+      zusammenfassung: parsed.zusammenfassung ?? "",
+      erkenntnisse: Array.isArray(parsed.erkenntnisse) ? parsed.erkenntnisse : [],
+      empfehlungen: Array.isArray(parsed.empfehlungen) ? parsed.empfehlungen : [],
+      anomalien: Array.isArray(parsed.anomalien) ? parsed.anomalien : [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function resolveQueueNumbersForDepartment(departmentId: number): Promise<string[]> {
+  try {
+    const groupData = await xapiFetch<{
+      value: Array<{ Id: number; Members?: Array<{ Number?: string }> }>;
+    }>(`Groups?$filter=Id eq ${departmentId}&$expand=Members($select=Number)`);
+
+    const memberNums = new Set(
+      (groupData.value[0]?.Members ?? [])
+        .map((m) => m.Number)
+        .filter((n): n is string => Boolean(n))
+    );
+
+    const queuesData = await xapiFetch<{
+      value: Array<{ Number?: string; Agents?: Array<{ Number?: string }> }>;
+    }>("Queues?$expand=Agents($select=Number)");
+
+    return (queuesData.value ?? [])
+      .filter((q) => (q.Agents ?? []).some((a) => a.Number && memberNums.has(a.Number)))
+      .map((q) => q.Number)
+      .filter((n): n is string => Boolean(n));
+  } catch {
+    return [];
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const profileId = searchParams.get("profileId");
+
   const body = await request.json().catch(() => ({})) as { test?: boolean };
   const isTest = body.test === true;
 
@@ -322,6 +430,55 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "SMTP nicht konfiguriert." }, { status: 400 });
   }
 
+  // ── Profil-Modus ──────────────────────────────────────────────────────────
+  if (profileId) {
+    const profile = (settings.reportProfiles ?? []).find((p: ReportProfile) => p.id === profileId);
+    if (!profile) {
+      return NextResponse.json({ error: `Profil ${profileId} nicht gefunden.` }, { status: 404 });
+    }
+    if (!profile.recipients) {
+      return NextResponse.json({ error: "Profil hat keine Empfänger." }, { status: 400 });
+    }
+
+    // Queue-Filter für diese Abteilung auflösen
+    let queueNumbers: string[] | undefined;
+    if (profile.departmentId != null) {
+      const resolved = await resolveQueueNumbersForDepartment(profile.departmentId);
+      queueNumbers = resolved.length > 0 ? resolved : undefined;
+    }
+
+    const stats = await collectFullDayStats(queueNumbers).catch(() => null);
+    const departmentLabel = profile.departmentName ?? profile.name;
+    const ai = await runScopedAiAnalysis(settings, stats, departmentLabel);
+
+    const now = new Date();
+    const dateStr = fmt(now, { day: "2-digit", month: "2-digit", year: "numeric" });
+    const generatedAt = `${fmt(now, { day: "2-digit", month: "2-digit", year: "numeric" })} ${fmt(now, { hour: "2-digit", minute: "2-digit" })}`;
+    const activeSystem = settings.systems?.find((s) => s.id === settings.activeSystemId);
+    const customerName = activeSystem?.customerName ?? settings.customerName ?? "Hansa Nord";
+
+    const subject = `[3CX] Tagesbericht ${dateStr} — ${customerName} · ${profile.departmentName ?? profile.name}`;
+    const html = buildHtml(stats, ai, dateStr, generatedAt, `${customerName} · ${departmentLabel}`, false);
+    const text = buildText(stats, ai, dateStr, generatedAt, `${customerName} · ${departmentLabel}`, false);
+
+    try {
+      const transporter = nodemailer.createTransport({
+        host: settings.smtpHost,
+        port: settings.smtpPort ?? 587,
+        secure: (settings.smtpPort ?? 587) === 465,
+        auth: settings.smtpUser ? { user: settings.smtpUser, pass: settings.smtpPassword ?? "" } : undefined,
+        tls: { rejectUnauthorized: false },
+        connectionTimeout: 10_000,
+      });
+
+      await transporter.sendMail({ from: settings.smtpFrom, to: profile.recipients, subject, html, text });
+      return NextResponse.json({ ok: true, recipients: profile.recipients, subject });
+    } catch (error) {
+      return NextResponse.json({ error: String(error) }, { status: 500 });
+    }
+  }
+
+  // ── Standard-Modus (alle Queues) ─────────────────────────────────────────
   const recipients = isTest
     ? (settings.smtpFrom ?? "")
     : (settings.reportRecipients ?? settings.smtpFrom ?? "");

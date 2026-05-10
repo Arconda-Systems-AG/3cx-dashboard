@@ -22,6 +22,7 @@ async function loadSettings(): Promise<AppSettings> {
 interface CronState {
   lastAiRun?: string;
   lastReportSent?: string;
+  profileLastSent?: Record<string, string>;  // profileId → ISO timestamp
 }
 
 async function loadCronState(): Promise<CronState> {
@@ -92,6 +93,27 @@ export async function GET(request: NextRequest) {
         actions.push("report-sent");
       } catch (err) {
         actions.push(`report-failed: ${String(err)}`);
+      }
+    }
+  }
+
+  // ─── Profil-Berichte ─────────────────────────────────────────────
+  for (const profile of (settings.reportProfiles ?? [])) {
+    if (!profile.enabled || !settings.smtpHost) continue;
+    const inDay = profile.days.includes(dow);
+    const [sendH, sendM] = profile.sendTime.split(":").map(Number);
+    const inWindow = hour === sendH && Math.abs(minute - sendM) <= 2;
+    const lastSentStr = state.profileLastSent?.[profile.id];
+    const lastSent = lastSentStr ? new Date(lastSentStr) : null;
+    const hoursSince = lastSent ? (now.getTime() - lastSent.getTime()) / 3_600_000 : Infinity;
+    if (inDay && inWindow && hoursSince > 23) {
+      try {
+        await fetch(`${base}/api/reports/daily?profileId=${profile.id}`, { method: "POST", signal: AbortSignal.timeout(120_000) });
+        if (!state.profileLastSent) state.profileLastSent = {};
+        state.profileLastSent[profile.id] = now.toISOString();
+        actions.push(`report-profile-${profile.id}`);
+      } catch (err) {
+        actions.push(`report-profile-failed-${profile.id}: ${String(err)}`);
       }
     }
   }
