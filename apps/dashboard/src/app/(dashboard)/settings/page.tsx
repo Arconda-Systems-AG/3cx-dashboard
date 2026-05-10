@@ -977,23 +977,38 @@ function ReportProfilesSection({ settings }: { settings: AppSettings | undefined
     }
   }
 
-  async function handleSaveProfile(e: React.FormEvent) {
+  async function handleSaveProfile(e: React.FormEvent, sendAfter = false) {
     e.preventDefault();
     setSaving(true);
     setMessage(null);
     try {
+      let savedId: string;
       let updated: ReportProfile[];
       if (editingId) {
-        updated = profiles.map((p) =>
-          p.id === editingId ? { ...formData, id: editingId } : p
-        );
+        savedId = editingId;
+        updated = profiles.map((p) => p.id === editingId ? { ...formData, id: editingId } : p);
       } else {
-        const newProfile: ReportProfile = { ...formData, id: crypto.randomUUID() };
+        savedId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+        const newProfile: ReportProfile = { ...formData, id: savedId };
         updated = [...profiles, newProfile];
       }
       await updateSettings({ reportProfiles: updated });
-      setMessage(editingId ? "Profil aktualisiert" : "Profil hinzugefügt");
       cancelForm();
+      if (sendAfter) {
+        setSending(savedId);
+        try {
+          const res = await fetch(`/api/reports/daily?profileId=${savedId}`, { method: "POST" });
+          const data = await res.json() as { ok?: boolean; error?: string; recipients?: string };
+          if (!res.ok) throw new Error(data.error ?? "Unbekannter Fehler");
+          setMessage(`Testbericht gesendet an: ${data.recipients}`);
+        } catch (err) {
+          setMessage(`Fehler beim Senden: ${err}`);
+        } finally {
+          setSending(null);
+        }
+      } else {
+        setMessage(editingId ? "Profil aktualisiert" : "Profil hinzugefügt");
+      }
     } catch (err) {
       setMessage(`Fehler: ${err}`);
     } finally {
@@ -1138,6 +1153,7 @@ function ReportProfilesSection({ settings }: { settings: AppSettings | undefined
                     formData={formData}
                     groups={groups}
                     saving={saving}
+                    sending={sending === profile.id}
                     onSubmit={handleSaveProfile}
                     onCancel={cancelForm}
                     setField={setField}
@@ -1158,6 +1174,7 @@ function ReportProfilesSection({ settings }: { settings: AppSettings | undefined
               formData={formData}
               groups={groups}
               saving={saving}
+              sending={sending !== null}
               onSubmit={handleSaveProfile}
               onCancel={cancelForm}
               setField={setField}
@@ -1176,15 +1193,16 @@ interface ProfileFormProps {
   formData: Omit<ReportProfile, "id">;
   groups: Array<{ id: number; name: string; memberNumbers: string[] }>;
   saving: boolean;
+  sending: boolean;
   isNew: boolean;
   inputCls: string;
-  onSubmit: (e: React.FormEvent) => void;
+  onSubmit: (e: React.FormEvent, sendAfter?: boolean) => void;
   onCancel: () => void;
   setField: <K extends keyof Omit<ReportProfile, "id">>(key: K, val: Omit<ReportProfile, "id">[K]) => void;
   handleDeptChange: (val: string) => void;
 }
 
-function ProfileForm({ formData, groups, saving, isNew, inputCls, onSubmit, onCancel, setField, handleDeptChange }: ProfileFormProps) {
+function ProfileForm({ formData, groups, saving, sending, isNew, inputCls, onSubmit, onCancel, setField, handleDeptChange }: ProfileFormProps) {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2">
@@ -1245,14 +1263,23 @@ function ProfileForm({ formData, groups, saving, isNew, inputCls, onSubmit, onCa
         <p className="mb-1.5 text-xs font-medium text-secondary">Wochentage</p>
         <DayPicker value={formData.days} onChange={(v) => setField("days", v)} />
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <button
           type="submit"
-          disabled={saving}
+          disabled={saving || sending}
           className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50 hover:bg-primary-hover"
         >
           <Save className="h-4 w-4" />
           {saving ? "Speichert..." : isNew ? "Hinzufügen" : "Speichern"}
+        </button>
+        <button
+          type="button"
+          disabled={saving || sending}
+          onClick={(e) => { e.preventDefault(); onSubmit(e as unknown as React.FormEvent, true); }}
+          className="flex items-center gap-2 rounded-lg border border-primary/40 px-4 py-2 text-sm font-medium text-primary disabled:opacity-50 hover:bg-primary/10"
+        >
+          <Send className="h-4 w-4" />
+          {sending ? "Sendet..." : "Speichern & Testbericht"}
         </button>
         <button
           type="button"
