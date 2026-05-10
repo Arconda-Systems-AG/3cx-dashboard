@@ -326,7 +326,7 @@ export default function DashboardPage() {
                     {cfg.label}
                   </span>
                 </div>
-                {aiData.erkenntnisse && aiData.erkenntnisse.length > 0 && (
+                {aiData.erkenntnisse && aiData.erkenntnisse.length > 0 ? (
                   <div className="flex flex-col gap-1.5">
                     {aiData.erkenntnisse.slice(0, 3).map((e, i) => (
                       <span key={i} className={`w-full rounded-md border px-2 py-1 text-[11px] font-medium leading-snug line-clamp-2 ${chipColors[i % chipColors.length]}`}>
@@ -334,6 +334,8 @@ export default function DashboardPage() {
                       </span>
                     ))}
                   </div>
+                ) : (
+                  <p className="text-[11px] leading-snug text-body line-clamp-4">{aiData.zusammenfassung}</p>
                 )}
               </GlassCard>
             );
