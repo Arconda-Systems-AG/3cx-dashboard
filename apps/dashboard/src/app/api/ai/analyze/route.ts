@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
 import type { AppSettings, AiAnalysis } from "@3cx-dash/types";
@@ -6,15 +6,42 @@ import { DEFAULT_SETTINGS } from "@3cx-dash/types";
 import { fetchEnrichedQueues } from "@/lib/queue-data";
 import { appendSnapshot, buildAiTrendContext, type QueueSnapshot } from "@/lib/snapshots";
 import { collectFullDayStats } from "@/lib/db-stats";
+import { xapiFetch } from "@/lib/threecx-client";
 
 function getSettingsPath(): string {
   return process.env.SETTINGS_PATH ?? path.join(process.cwd(), "data", "settings.json");
 }
 
-function getAnalysisPath(): string {
+function getAnalysisPath(departmentId?: string): string {
+  const filename = departmentId ? `ai-analysis-dept-${departmentId}.json` : "ai-analysis.json";
   return process.env.SETTINGS_PATH
-    ? path.join(path.dirname(process.env.SETTINGS_PATH), "ai-analysis.json")
-    : path.join(process.cwd(), "data", "ai-analysis.json");
+    ? path.join(path.dirname(process.env.SETTINGS_PATH), filename)
+    : path.join(process.cwd(), "data", filename);
+}
+
+async function resolveQueueNumbersForDepartment(departmentId: number): Promise<string[]> {
+  try {
+    const groupData = await xapiFetch<{
+      value: Array<{ Id: number; Members?: Array<{ Number?: string }> }>;
+    }>(`Groups?$filter=Id eq ${departmentId}&$expand=Members($select=Number)`);
+
+    const memberNums = new Set(
+      (groupData.value[0]?.Members ?? [])
+        .map((m) => m.Number)
+        .filter((n): n is string => Boolean(n))
+    );
+
+    const queuesData = await xapiFetch<{
+      value: Array<{ Number?: string; Agents?: Array<{ Number?: string }> }>;
+    }>("Queues?$expand=Agents($select=Number)");
+
+    return (queuesData.value ?? [])
+      .filter((q) => (q.Agents ?? []).some((a) => a.Number && memberNums.has(a.Number)))
+      .map((q) => q.Number)
+      .filter((n): n is string => Boolean(n));
+  } catch {
+    return [];
+  }
 }
 
 async function loadSettings(): Promise<AppSettings> {
@@ -28,9 +55,11 @@ async function loadSettings(): Promise<AppSettings> {
 
 // ─── GET: letzte gespeicherte Analyse zurückgeben ─────────────────────────────
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const departmentId = searchParams.get("departmentId") ?? undefined;
   try {
-    const analysisPath = getAnalysisPath();
+    const analysisPath = getAnalysisPath(departmentId);
     const content = await fs.readFile(analysisPath, "utf-8");
     const analysis: AiAnalysis = JSON.parse(content);
     return NextResponse.json(analysis);
@@ -41,8 +70,11 @@ export async function GET() {
 
 // ─── POST: neue Analyse triggern ──────────────────────────────────────────────
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   const startTime = Date.now();
+
+  const body = await request.json().catch(() => ({})) as { departmentId?: string | number };
+  const departmentId = body.departmentId != null ? String(body.departmentId) : undefined;
 
   const settings = await loadSettings();
 
@@ -61,12 +93,22 @@ export async function POST() {
 
   // ─── Daten parallel sammeln ────────────────────────────────────────────────
 
+  // Wenn Abteilungsfilter: Queue-Nummern auflösen
+  let queueFilter: string[] | undefined;
+  if (departmentId) {
+    const resolved = await resolveQueueNumbersForDepartment(Number(departmentId));
+    queueFilter = resolved.length > 0 ? resolved : undefined;
+  }
+
   const [queueData, dbStats] = await Promise.all([
     fetchEnrichedQueues().catch(() => null),
-    collectFullDayStats(),
+    collectFullDayStats(queueFilter),
   ]);
 
-  const queues = queueData?.queues ?? [];
+  const allQueues = queueData?.queues ?? [];
+  const queues = queueFilter
+    ? allQueues.filter((q) => queueFilter!.includes(String(q.Number)))
+    : allQueues;
   const activeCalls = queueData?.activeCalls ?? [];
   const activeDns = queueData?.activeDns ?? new Set<string>();
 
@@ -247,7 +289,7 @@ export async function POST() {
 
   // ─── Analyse speichern ────────────────────────────────────────────────────
 
-  const analysisPath = getAnalysisPath();
+  const analysisPath = getAnalysisPath(departmentId);
   await fs.mkdir(path.dirname(analysisPath), { recursive: true });
   await fs.writeFile(analysisPath, JSON.stringify(analysis, null, 2), "utf-8");
 

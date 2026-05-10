@@ -137,9 +137,10 @@ export function useCustomerLogo() {
   return useSWR<{ logoUrl: string | null }>("/api/settings/logo", fetcher, { revalidateOnFocus: false });
 }
 
-// KI-Analyse (letzte gespeicherte)
-export function useAiAnalysis() {
-  return useSWR<import("@3cx-dash/types").AiAnalysis | null>("/api/ai/analyze", fetcher, { refreshInterval: 120_000 });
+// KI-Analyse (letzte gespeicherte, optional nach Abteilung gefiltert)
+export function useAiAnalysis(departmentId?: string | number) {
+  const key = departmentId ? `/api/ai/analyze?departmentId=${departmentId}` : "/api/ai/analyze";
+  return useSWR<import("@3cx-dash/types").AiAnalysis | null>(key, fetcher, { refreshInterval: 120_000 });
 }
 
 // Systems (Telefonanlagen)

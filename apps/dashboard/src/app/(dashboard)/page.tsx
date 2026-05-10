@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { GlassCard, LedIndicator } from "@3cx-dash/ui";
 import {
   useHealth,
@@ -72,8 +72,9 @@ export default function DashboardPage() {
   const { data: queuesData } = useQueues();
   const { data: deptData } = useDepartments();
   const { data: logoData } = useCustomerLogo();
-  const { data: aiData } = useAiAnalysis();
   const [selectedDeptId, setSelectedDeptId] = useState<string>("");
+  const { data: aiData, mutate: mutateAi } = useAiAnalysis(selectedDeptId || undefined);
+  const [aiRefreshing, setAiRefreshing] = useState(false);
   const [expandedQueues, setExpandedQueues] = useState<Set<number>>(new Set());
 
   const activeCalls = callsData?.value ?? [];
@@ -94,6 +95,17 @@ export default function DashboardPage() {
 
   const { data: todayData } = useToday(filteredQueueNumbers.length > 0 ? filteredQueueNumbers : undefined);
   const { data: hourlyData } = useHourly(undefined, undefined, filteredQueueNumbers.length > 0 ? filteredQueueNumbers : undefined);
+
+  const triggerAiAnalysis = useCallback(async () => {
+    setAiRefreshing(true);
+    try {
+      const body = selectedDeptId ? { departmentId: selectedDeptId } : {};
+      await fetch("/api/ai/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      await mutateAi();
+    } finally {
+      setAiRefreshing(false);
+    }
+  }, [selectedDeptId, mutateAi]);
 
   function toggleExpand(id: number) {
     setExpandedQueues((prev) => {
@@ -308,10 +320,27 @@ export default function DashboardPage() {
               "bg-violet-500/15 text-violet-300 border-violet-500/25",
               "bg-cyan-500/15 text-cyan-300 border-cyan-500/25",
             ];
+            const deptLabel = selectedDept?.name;
             if (!aiData?.zusammenfassung) {
               return (
-                <GlassCard className="flex h-full items-center justify-center p-4">
-                  <span className="text-xs text-muted">Noch keine KI-Analyse vorhanden.</span>
+                <GlassCard className="flex h-full flex-col items-center justify-center gap-3 p-4">
+                  <div className="flex items-center gap-2 self-start">
+                    <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted">KI-Analyse</span>
+                    {deptLabel && (
+                      <span className="rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">{deptLabel}</span>
+                    )}
+                  </div>
+                  <span className="text-xs text-muted">
+                    {deptLabel ? `Noch keine Analyse für ${deptLabel}.` : "Noch keine KI-Analyse vorhanden."}
+                  </span>
+                  <button
+                    onClick={triggerAiAnalysis}
+                    disabled={aiRefreshing}
+                    className="rounded-lg bg-primary/20 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/30 transition-colors disabled:opacity-50"
+                  >
+                    {aiRefreshing ? "Analysiere…" : "Jetzt analysieren"}
+                  </button>
                 </GlassCard>
               );
             }
@@ -321,6 +350,9 @@ export default function DashboardPage() {
                 <div className="mb-2.5 flex items-center gap-2">
                   <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
                   <span className="text-xs font-semibold uppercase tracking-wide text-muted">KI-Analyse</span>
+                  {deptLabel && (
+                    <span className="rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">{deptLabel}</span>
+                  )}
                   <span className={`ml-auto flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${cfg.bg} ${cfg.border} ${cfg.text}`}>
                     <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
                     {cfg.label}
