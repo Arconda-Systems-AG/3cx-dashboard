@@ -256,6 +256,23 @@ export interface AppSettings {
   aiUrl?: string;              // OpenAI-compatible API URL z.B. http://10.1.70.145:8000/v1
   aiApiKey?: string;           // API-Key (Klartext in settings.json, bei GET als "••••••••" zurück)
   aiModel?: string;            // Modell-Name z.B. "llama3", "gpt-3.5-turbo"
+  // Automatisierung
+  aiSchedule?: AiSchedule;
+  reportSchedule?: ReportSchedule;
+}
+
+export interface AiSchedule {
+  enabled: boolean;
+  days: number[];         // 0=So, 1=Mo, 2=Di, 3=Mi, 4=Do, 5=Fr, 6=Sa
+  fromHour: number;       // Stunde ab der Analyse läuft (inkl.)
+  toHour: number;         // Stunde bis zu der Analyse läuft (exkl.)
+  intervalMinutes: number;
+}
+
+export interface ReportSchedule {
+  enabled: boolean;
+  days: number[];
+  sendTime: string;       // "HH:MM" in Europe/Berlin
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -276,6 +293,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   aiUrl: "",
   aiApiKey: "",
   aiModel: "",
+  aiSchedule: { enabled: false, days: [1, 2, 3, 4, 5], fromHour: 7, toHour: 18, intervalMinutes: 30 },
+  reportSchedule: { enabled: false, days: [1, 2, 3, 4, 5], sendTime: "17:30" },
 };
 
 // ─────────────────────────────────────────────

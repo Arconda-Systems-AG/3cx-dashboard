@@ -188,7 +188,7 @@ export default function AiPage() {
             KI-Auswertung
           </h1>
           <p className="mt-1 text-sm text-muted">
-            Automatische Analyse alle 10 Minuten &middot; Powered by{" "}
+            Zeitgesteuerte Analyse (konfigurierbar in Einstellungen) &middot; Powered by{" "}
             <span className="font-medium text-secondary">Arconda.AI</span>
           </p>
         </div>

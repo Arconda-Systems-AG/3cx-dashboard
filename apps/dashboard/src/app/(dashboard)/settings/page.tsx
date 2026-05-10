@@ -5,9 +5,9 @@ import { GlassCard, LedIndicator } from "@3cx-dash/ui";
 import { useSettings, updateSettings, useSystems } from "@/hooks/use-data";
 import { useHealth } from "@/hooks/use-data";
 import {
-  Save, Plus, Trash2, CheckCircle, Wifi, Edit2, X, ChevronDown, ChevronUp, Database, Upload, ImageOff, Mail, Send, Brain,
+  Save, Plus, Trash2, CheckCircle, Wifi, Edit2, X, ChevronDown, ChevronUp, Database, Upload, ImageOff, Mail, Send, Brain, Clock,
 } from "lucide-react";
-import type { AppSettings, ThreeCXSystem, AuthMethod } from "@3cx-dash/types";
+import type { AppSettings, ThreeCXSystem, AuthMethod, AiSchedule, ReportSchedule } from "@3cx-dash/types";
 
 // ─── System Form ────────────────────────────────────────────
 interface SystemFormData {
@@ -694,7 +694,7 @@ function AiSettingsSection({ settings }: { settings: AppSettings | undefined }) 
             <label className="mb-1 block text-xs font-medium text-secondary">API URL</label>
             <input
               type="text"
-              placeholder="http://10.1.70.145:8000/v1"
+              placeholder="http://ki-server:8000/v1"
               value={form.aiUrl}
               onChange={(e) => set("aiUrl", e.target.value)}
               className="w-full rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -722,6 +722,172 @@ function AiSettingsSection({ settings }: { settings: AppSettings | undefined }) 
               className="w-full rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
           </div>
+        </div>
+
+        {message && (
+          <p className={`text-sm ${message.startsWith("Fehler") ? "text-red-400" : "text-emerald-400"}`}>
+            {message}
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={saving}
+          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50 hover:bg-primary-hover"
+        >
+          <Save className="h-4 w-4" />
+          {saving ? "Speichert..." : "Speichern"}
+        </button>
+      </form>
+    </GlassCard>
+  );
+}
+
+// ─── Automatisierung ─────────────────────────────────────────
+const DAYS = [
+  { label: "Mo", val: 1 }, { label: "Di", val: 2 }, { label: "Mi", val: 3 },
+  { label: "Do", val: 4 }, { label: "Fr", val: 5 }, { label: "Sa", val: 6 }, { label: "So", val: 0 },
+];
+
+function DayPicker({ value, onChange }: { value: number[]; onChange: (v: number[]) => void }) {
+  return (
+    <div className="flex gap-1">
+      {DAYS.map((d) => {
+        const active = value.includes(d.val);
+        return (
+          <button
+            key={d.val}
+            type="button"
+            onClick={() => onChange(active ? value.filter((v) => v !== d.val) : [...value, d.val])}
+            className={`h-7 w-8 rounded text-xs font-semibold transition-colors ${active ? "bg-primary text-white" : "bg-surface-muted text-muted hover:text-heading"}`}
+          >
+            {d.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function AutomatisierungSection({ settings }: { settings: AppSettings | undefined }) {
+  const defaultAi: AiSchedule = { enabled: false, days: [1,2,3,4,5], fromHour: 7, toHour: 18, intervalMinutes: 30 };
+  const defaultRep: ReportSchedule = { enabled: false, days: [1,2,3,4,5], sendTime: "17:30" };
+
+  const [ai, setAi] = useState<AiSchedule>(settings?.aiSchedule ?? defaultAi);
+  const [rep, setRep] = useState<ReportSchedule>(settings?.reportSchedule ?? defaultRep);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (settings) {
+      setAi(settings.aiSchedule ?? defaultAi);
+      setRep(settings.reportSchedule ?? defaultRep);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings]);
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setMessage(null);
+    try {
+      await updateSettings({ aiSchedule: ai, reportSchedule: rep } as Partial<AppSettings>);
+      setMessage("Zeitplan gespeichert");
+    } catch (err) {
+      setMessage(`Fehler: ${err}`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const inputCls = "w-full rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30";
+
+  return (
+    <GlassCard className="p-5">
+      <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-heading">
+        <Clock className="h-4 w-4 text-primary" />
+        Automatisierung
+      </h2>
+      <form onSubmit={handleSave} className="space-y-6">
+
+        {/* ── KI-Analyse ── */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wide text-secondary">KI-Analyse</p>
+            <label className="flex cursor-pointer items-center gap-2">
+              <span className="text-xs text-muted">{ai.enabled ? "Aktiv" : "Inaktiv"}</span>
+              <div
+                onClick={() => setAi((s) => ({ ...s, enabled: !s.enabled }))}
+                className={`relative h-5 w-9 rounded-full transition-colors ${ai.enabled ? "bg-primary" : "bg-surface-muted"}`}
+              >
+                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${ai.enabled ? "left-4" : "left-0.5"}`} />
+              </div>
+            </label>
+          </div>
+          {ai.enabled && (
+            <div className="space-y-3 pl-0">
+              <div>
+                <p className="mb-1.5 text-xs text-muted">Wochentage</p>
+                <DayPicker value={ai.days} onChange={(v) => setAi((s) => ({ ...s, days: v }))} />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs text-muted">Von (Stunde)</label>
+                  <input type="number" min={0} max={23} value={ai.fromHour}
+                    onChange={(e) => setAi((s) => ({ ...s, fromHour: Number(e.target.value) }))}
+                    className={inputCls} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted">Bis (Stunde)</label>
+                  <input type="number" min={0} max={23} value={ai.toHour}
+                    onChange={(e) => setAi((s) => ({ ...s, toHour: Number(e.target.value) }))}
+                    className={inputCls} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted">Intervall (Min.)</label>
+                  <select value={ai.intervalMinutes}
+                    onChange={(e) => setAi((s) => ({ ...s, intervalMinutes: Number(e.target.value) }))}
+                    className={inputCls}>
+                    {[10, 15, 20, 30, 60, 120].map((v) => (
+                      <option key={v} value={v}>{v} Min.</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-glass" />
+
+        {/* ── E-Mail-Tagesbericht ── */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wide text-secondary">E-Mail-Tagesbericht</p>
+            <label className="flex cursor-pointer items-center gap-2">
+              <span className="text-xs text-muted">{rep.enabled ? "Aktiv" : "Inaktiv"}</span>
+              <div
+                onClick={() => setRep((s) => ({ ...s, enabled: !s.enabled }))}
+                className={`relative h-5 w-9 rounded-full transition-colors ${rep.enabled ? "bg-primary" : "bg-surface-muted"}`}
+              >
+                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${rep.enabled ? "left-4" : "left-0.5"}`} />
+              </div>
+            </label>
+          </div>
+          {rep.enabled && (
+            <div className="space-y-3">
+              <div>
+                <p className="mb-1.5 text-xs text-muted">Wochentage</p>
+                <DayPicker value={rep.days} onChange={(v) => setRep((s) => ({ ...s, days: v }))} />
+              </div>
+              <div className="w-40">
+                <label className="mb-1 block text-xs text-muted">Uhrzeit (HH:MM)</label>
+                <input type="time" value={rep.sendTime}
+                  onChange={(e) => setRep((s) => ({ ...s, sendTime: e.target.value }))}
+                  className={inputCls} />
+              </div>
+            </div>
+          )}
         </div>
 
         {message && (
@@ -1003,6 +1169,9 @@ export default function SettingsPage() {
 
       {/* ── KI-Analyse ── */}
       <AiSettingsSection settings={settings} />
+
+      {/* ── Automatisierung ── */}
+      <AutomatisierungSection settings={settings} />
     </div>
   );
 }
