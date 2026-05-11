@@ -166,22 +166,36 @@ export async function POST(request: NextRequest) {
       wartende_anrufe: q.WaitingCallCount ?? 0,
     }));
 
-  // ─── Snapshot speichern (ganztägiger Rolling Buffer) ──────────────────────
+  // ─── Snapshot speichern (nur bei globaler Analyse) ───────────────────────
+  // Dept-Analysen dürfen den globalen Snapshot-Buffer nicht mit Partial-Daten überschreiben
 
-  const snap: QueueSnapshot = {
-    t: new Date().toISOString(),
-    queues: queuesSummary.map((q) => ({
-      name: q.name,
-      loggedIn: q.agenten_angemeldet,
-      total: q.agenten_gesamt,
-      inCall: q.agenten_im_gespraech,
-      waiting: q.wartende_anrufe,
-    })),
-    calls: activeCalls.length,
-    talking: activeCalls.filter((c) => c.Status === "Talking").length,
-  };
-  const allSnapshots = await appendSnapshot(snap);
-  const trend = buildAiTrendContext(allSnapshots);
+  let trend: ReturnType<typeof buildAiTrendContext> = null;
+  if (!departmentId) {
+    const snap: QueueSnapshot = {
+      t: new Date().toISOString(),
+      queues: queuesSummary.map((q) => ({
+        name: q.name,
+        loggedIn: q.agenten_angemeldet,
+        total: q.agenten_gesamt,
+        inCall: q.agenten_im_gespraech,
+        waiting: q.wartende_anrufe,
+      })),
+      calls: activeCalls.length,
+      talking: activeCalls.filter((c) => c.Status === "Talking").length,
+    };
+    const allSnapshots = await appendSnapshot(snap);
+    trend = buildAiTrendContext(allSnapshots);
+  } else {
+    // Dept-Analyse: globale Snapshots laden und auf Dept-Queues filtern
+    const { loadTodaySnapshots } = await import("@/lib/snapshots");
+    const globalSnapshots = await loadTodaySnapshots();
+    const deptQueueNames = new Set(queuesSummary.map((q) => q.name));
+    const filteredSnapshots = globalSnapshots.map((snap) => ({
+      ...snap,
+      queues: snap.queues.filter((q) => deptQueueNames.has(q.name)),
+    }));
+    trend = buildAiTrendContext(filteredSnapshots);
+  }
 
   // ─── currentData für KI-Prompt ────────────────────────────────────────────
 
