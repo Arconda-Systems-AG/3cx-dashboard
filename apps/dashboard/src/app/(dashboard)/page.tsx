@@ -27,6 +27,10 @@ import {
   Timer,
   TrendingDown,
   Sparkles,
+  X,
+  Lightbulb,
+  AlertTriangle,
+  Zap,
 } from "lucide-react";
 import {
   BarChart,
@@ -77,6 +81,7 @@ export default function DashboardPage() {
   const [selectedDeptId, setSelectedDeptId] = useState<string>("");
   const { data: aiData, mutate: mutateAi } = useAiAnalysis(selectedDeptId || undefined);
   const [aiRefreshing, setAiRefreshing] = useState(false);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
   const autoTriggeredRef = useRef<string>("");
   const [expandedQueues, setExpandedQueues] = useState<Set<number>>(new Set());
 
@@ -191,6 +196,7 @@ export default function DashboardPage() {
   }));
 
   return (
+    <>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
@@ -370,7 +376,10 @@ export default function DashboardPage() {
             }
             const cfg = statusCfg[aiData.status as keyof typeof statusCfg] ?? statusCfg.warnung;
             return (
-              <GlassCard className="p-4 overflow-hidden">
+              <GlassCard
+                className="p-4 overflow-hidden cursor-pointer hover:border-primary/40 transition-colors"
+                onClick={() => setAiModalOpen(true)}
+              >
                 <div className="mb-2.5 flex items-center gap-2">
                   <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
                   <span className="text-xs font-semibold uppercase tracking-wide text-muted">KI-Analyse</span>
@@ -393,6 +402,7 @@ export default function DashboardPage() {
                 ) : (
                   <p className="text-[11px] leading-snug text-body line-clamp-4">{aiData.zusammenfassung}</p>
                 )}
+                <p className="mt-2 text-[10px] text-muted/60">Klicken für vollständige Analyse</p>
               </GlassCard>
             );
           })()}
@@ -625,5 +635,118 @@ export default function DashboardPage() {
         </div>
       )}
     </div>
+
+      {/* ── KI-Analyse Modal ── */}
+      {aiModalOpen && aiData && (() => {
+        const statusCfg = {
+          gut:      { bg: "bg-emerald-500/15", border: "border-emerald-500/30", text: "text-emerald-400", dot: "bg-emerald-400", label: "Gut" },
+          warnung:  { bg: "bg-amber-500/15",   border: "border-amber-500/30",   text: "text-amber-400",  dot: "bg-amber-400",  label: "Warnung" },
+          kritisch: { bg: "bg-red-500/15",      border: "border-red-500/30",     text: "text-red-400",    dot: "bg-red-400",    label: "Kritisch" },
+        };
+        const cfg = statusCfg[aiData.status as keyof typeof statusCfg] ?? statusCfg.warnung;
+        const deptLabel = selectedDept?.name;
+        const ts = aiData.timestamp ? new Date(aiData.timestamp).toLocaleString("de-DE", { timeZone: "Europe/Berlin", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : null;
+
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            onClick={() => setAiModalOpen(false)}
+          >
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+
+            {/* Panel */}
+            <div
+              className="relative z-10 w-full max-w-lg rounded-2xl border border-glass bg-surface-glass backdrop-blur-xl shadow-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center gap-3 border-b border-glass px-5 py-4">
+                <Sparkles className="h-4 w-4 shrink-0 text-primary" />
+                <span className="font-semibold text-heading">KI-Analyse</span>
+                {deptLabel && (
+                  <span className="rounded bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">{deptLabel}</span>
+                )}
+                <span className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${cfg.bg} ${cfg.border} ${cfg.text}`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+                  {cfg.label}
+                </span>
+                <button
+                  onClick={() => setAiModalOpen(false)}
+                  className="ml-auto rounded-lg p-1 text-muted hover:text-heading hover:bg-surface-muted transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="max-h-[70vh] overflow-y-auto p-5 space-y-4">
+                {/* Zusammenfassung */}
+                {aiData.zusammenfassung && (
+                  <p className="text-sm leading-relaxed text-body">{aiData.zusammenfassung}</p>
+                )}
+
+                {/* Erkenntnisse */}
+                {aiData.erkenntnisse && aiData.erkenntnisse.length > 0 && (
+                  <div>
+                    <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+                      <Lightbulb className="h-3.5 w-3.5 text-amber-400" />
+                      Erkenntnisse
+                    </div>
+                    <div className="space-y-2">
+                      {aiData.erkenntnisse.map((e, i) => (
+                        <div key={i} className="rounded-lg border border-blue-500/20 bg-blue-500/10 px-3 py-2 text-sm text-blue-200 leading-snug">
+                          {e}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Empfehlungen */}
+                {aiData.empfehlungen && aiData.empfehlungen.length > 0 && (
+                  <div>
+                    <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+                      <Zap className="h-3.5 w-3.5 text-emerald-400" />
+                      Empfehlungen
+                    </div>
+                    <div className="space-y-2">
+                      {aiData.empfehlungen.map((e, i) => (
+                        <div key={i} className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200 leading-snug">
+                          {e}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Anomalien */}
+                {aiData.anomalien && aiData.anomalien.length > 0 && (
+                  <div>
+                    <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+                      <AlertTriangle className="h-3.5 w-3.5 text-red-400" />
+                      Anomalien
+                    </div>
+                    <div className="space-y-2">
+                      {aiData.anomalien.map((a, i) => (
+                        <div key={i} className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-200 leading-snug">
+                          {a}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Footer */}
+                {ts && (
+                  <p className="text-[11px] text-muted/60 pt-1">
+                    Analyse erstellt: {ts}{aiData.dauer_ms ? ` · ${(aiData.dauer_ms / 1000).toFixed(1)}s` : ""}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+    </>
   );
 }
