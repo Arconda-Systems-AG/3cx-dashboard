@@ -22,7 +22,8 @@ async function loadSettings(): Promise<AppSettings> {
 interface CronState {
   lastAiRun?: string;
   lastReportSent?: string;
-  profileLastSent?: Record<string, string>;  // profileId → ISO timestamp
+  profileLastSent?: Record<string, string>;   // profileId → ISO timestamp
+  deptAiLastRun?: Record<string, string>;     // departmentId → ISO timestamp
 }
 
 async function loadCronState(): Promise<CronState> {
@@ -73,6 +74,35 @@ export async function GET(request: NextRequest) {
         actions.push("ai-analyze");
       } catch (err) {
         actions.push(`ai-analyze-failed: ${String(err)}`);
+      }
+
+      // ─── Abteilungs-spezifische KI-Analysen ──────────────────────────────
+      // Alle Departments aus aktiven Berichtsprofilen die eine departmentId haben
+      const deptIds = [
+        ...new Set(
+          (settings.reportProfiles ?? [])
+            .filter((p) => p.enabled && p.departmentId != null)
+            .map((p) => String(p.departmentId))
+        ),
+      ];
+      if (!state.deptAiLastRun) state.deptAiLastRun = {};
+      for (const deptId of deptIds) {
+        const lastDeptRun = state.deptAiLastRun[deptId] ? new Date(state.deptAiLastRun[deptId]) : null;
+        const deptMinSince = lastDeptRun ? (now.getTime() - lastDeptRun.getTime()) / 60_000 : Infinity;
+        if (deptMinSince >= aiSched.intervalMinutes) {
+          try {
+            await fetch(`${base}/api/ai/analyze`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ departmentId: deptId }),
+              signal: AbortSignal.timeout(90_000),
+            });
+            state.deptAiLastRun[deptId] = now.toISOString();
+            actions.push(`ai-analyze-dept-${deptId}`);
+          } catch (err) {
+            actions.push(`ai-analyze-dept-failed-${deptId}: ${String(err)}`);
+          }
+        }
       }
     }
   }
