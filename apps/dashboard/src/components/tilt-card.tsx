@@ -31,20 +31,16 @@ export function TiltCard({
     const y = (e.clientY - rect.top) / rect.height;
 
     setHoverStyle({
-      transform: "scale3d(1.025, 1.025, 1.025) translateY(-2px)",
-      transition: "transform 0.08s ease, box-shadow 0.08s ease",
-      boxShadow: `0 20px 60px rgba(0,0,0,0.4), 0 0 40px ${glowColor}`,
-      zIndex: 10,
+      boxShadow: `0 8px 32px rgba(0,0,0,0.35), 0 0 32px ${glowColor}`,
+      transition: "box-shadow 0.1s ease",
     });
     setHighlight({ x: x * 100, y: y * 100, active: true });
   }
 
   function handleMouseLeave() {
     setHoverStyle({
-      transform: "",
-      transition: "transform 0.5s cubic-bezier(0.23,1,0.32,1), box-shadow 0.5s ease",
       boxShadow: "",
-      zIndex: undefined,
+      transition: "box-shadow 0.5s ease",
     });
     setHighlight({ x: 50, y: 50, active: false });
   }
@@ -54,7 +50,7 @@ export function TiltCard({
       ref={ref}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      style={{ ...externalStyle, ...hoverStyle, willChange: "transform" }}
+      style={{ ...externalStyle, ...hoverStyle }}
       className={`relative rounded-3xl border border-glass bg-surface-glass backdrop-blur-xl overflow-hidden ${className}`}
     >
       {/* Shimmer-Highlight folgt der Mausposition */}
