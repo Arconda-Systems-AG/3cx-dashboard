@@ -99,7 +99,9 @@ export default function DashboardPage() {
   const triggerAiAnalysis = useCallback(async () => {
     setAiRefreshing(true);
     try {
-      const body = selectedDeptId ? { departmentId: selectedDeptId } : {};
+      // Global: all=true → analysiert global + alle Abteilungen aus Berichtsprofilen
+      // Dept-spezifisch: nur diese Abteilung
+      const body = selectedDeptId ? { departmentId: selectedDeptId } : { all: true };
       await fetch("/api/ai/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       await mutateAi();
     } finally {

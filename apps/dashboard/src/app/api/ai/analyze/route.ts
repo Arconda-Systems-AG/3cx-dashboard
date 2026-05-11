@@ -73,7 +73,49 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
-  const body = await request.json().catch(() => ({})) as { departmentId?: string | number };
+  const body = await request.json().catch(() => ({})) as { departmentId?: string | number; all?: boolean };
+
+  // ─── all=true: global + alle Dept-Analysen aus Berichtsprofilen ──────────
+  if (body.all) {
+    const settings = await loadSettings();
+    const proto = request.headers.get("x-forwarded-proto") ?? "http";
+    const host = request.headers.get("host") ?? "localhost:3000";
+    const base = `${proto}://${host}`;
+
+    // Globale Analyse
+    const globalRes = await fetch(`${base}/api/ai/analyze`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+      signal: AbortSignal.timeout(90_000),
+    });
+    const globalData = await globalRes.json().catch(() => null);
+
+    // Dept-Analysen für alle aktiven Profile mit departmentId
+    const deptIds = [
+      ...new Set(
+        (settings.reportProfiles ?? [])
+          .filter((p) => p.enabled && p.departmentId != null)
+          .map((p) => String(p.departmentId))
+      ),
+    ];
+    const deptResults: Record<string, unknown> = {};
+    for (const deptId of deptIds) {
+      try {
+        const res = await fetch(`${base}/api/ai/analyze`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ departmentId: deptId }),
+          signal: AbortSignal.timeout(90_000),
+        });
+        deptResults[deptId] = await res.json().catch(() => null);
+      } catch (err) {
+        deptResults[deptId] = { error: String(err) };
+      }
+    }
+
+    return NextResponse.json({ global: globalData, departments: deptResults });
+  }
   const departmentId = body.departmentId != null ? String(body.departmentId) : undefined;
 
   const settings = await loadSettings();
