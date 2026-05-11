@@ -243,15 +243,28 @@ export async function POST(request: NextRequest) {
   const userPrompt =
     `Aktuell: ${berlinDay}, ${berlinTime} Uhr — Betrieb ${isOpen ? "GEÖFFNET" : "GESCHLOSSEN"} (${openingHours})\n` +
     `3CX-Daten:\n${JSON.stringify(currentData)}\n\n` +
+    `Felderklärungen:\n` +
+    `- 'aktive_anrufe_gesamt': Anzahl aktiver Gespräche/Anrufe im System gerade\n` +
+    `- 'warteschlangen': Liste der Warteschlangen (Queues) — jede Queue hat folgende Felder:\n` +
+    `    name: Name der Queue\n` +
+    `    agenten_angemeldet: Anzahl eingeloggter Agenten in dieser Queue\n` +
+    `    agenten_gesamt: Gesamtzahl zugewiesener Agenten dieser Queue\n` +
+    `    agenten_im_gespraech: Agenten die gerade aktiv telefonieren\n` +
+    `    wartende_anrufe: Anzahl Anrufe die GERADE in dieser Queue warten (0 = niemand wartet aktuell, NICHT: 0 Queues vorhanden)\n` +
+    `- 'datenbank_heute': CDR-Daten aus PostgreSQL (historische Anrufe heute, zuverlässig)\n` +
+    `    gesamt: Gesamtzahl eingehender Anrufe heute\n` +
+    `    angenommen: Davon angenommene Anrufe\n` +
+    `    abgebrochen: Vom Anrufer aufgelegte Anrufe\n` +
+    `    nicht_in_20s: Anrufe die länger als 20 Sekunden gewartet haben (SLA-Verletzung)\n` +
+    `    avg_wartezeit_s / max_wartezeit_s: Durchschnittliche/maximale Wartezeit in Sekunden\n` +
+    `    abwurf1/abwurf2: Anrufe die zur 1./2. Overflow-Queue weitergeleitet wurden\n` +
+    `- 'datenbank_heute.stundenverteilung': Anrufvolumen pro Stunde ({"08":23,"09":45,...})\n` +
+    `- 'datenbank_heute.queues': Pro-Queue-Statistik mit nicht_in_20s und avg_wartezeit_s\n` +
+    `- 'verlauf_heute': Echtzeit-Snapshots der Agenten-Besetzung über den heutigen Tag\n\n` +
     `Hinweise:\n` +
     `- Öffnungszeiten: Mo–Fr 07:00–18:00, Sa 09:00–13:00, So geschlossen\n` +
     `- Anrufe/Besetzungsprobleme außerhalb der Öffnungszeiten IGNORIEREN\n` +
-    `- 'datenbank_heute': CDR-Daten aus PostgreSQL (alle Anrufe heute, zuverlässig)\n` +
-    `- 'datenbank_heute.stundenverteilung': Anrufvolumen pro Stunde ({"08":23,"09":45,...})\n` +
-    `- 'datenbank_heute.queues': Pro-Queue-Statistik mit nicht_in_20s und avg_wartezeit_s\n` +
-    `- 'verlauf_heute': Echtzeit-Snapshots (Agenten-Besetzung über den Tag)\n` +
-    `- 'warteschlangen': aktueller Live-Status\n\n` +
-    `Erkenne NUR innerhalb der Öffnungszeiten: Stoßzeiten, SLA-Probleme (nicht_in_20s), Queue-Unterbesetzung, Abwurf-Kaskaden.\n\n` +
+    `- Erkenne NUR innerhalb der Öffnungszeiten: Stoßzeiten, SLA-Probleme (nicht_in_20s), Queue-Unterbesetzung, Abwurf-Kaskaden\n\n` +
     `JSON mit: status ("gut"|"warnung"|"kritisch"), ` +
     `zusammenfassung (1-2 Sätze), ` +
     `erkenntnisse (max. 3: Aufkommen/SLA/Besetzung), ` +
