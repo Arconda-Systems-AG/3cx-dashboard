@@ -244,7 +244,10 @@ export async function POST(request: NextRequest) {
     `Aktuell: ${berlinDay}, ${berlinTime} Uhr — Betrieb ${isOpen ? "GEÖFFNET" : "GESCHLOSSEN"} (${openingHours})\n` +
     `3CX-Daten:\n${JSON.stringify(currentData)}\n\n` +
     `Felderklärungen:\n` +
-    `- 'aktive_anrufe_gesamt': Anzahl aktiver Gespräche/Anrufe im System gerade\n` +
+    `- 'aktive_anrufe_gesamt': Anzahl aktiver Gespräche/Anrufe im System gerade (systemweit, nicht gefiltert)\n` +
+    `- 'aktive_anrufe_status.talking': Davon aktive Gespräche (Teilnehmer verbunden)\n` +
+    `- 'aktive_anrufe_status.ringing': Davon klingelnd (noch nicht angenommen)\n` +
+    `- 'aktive_anrufe_status.held': Davon in der Warteschleife gehalten\n` +
     `- 'warteschlangen': Liste der Warteschlangen (Queues) — jede Queue hat folgende Felder:\n` +
     `    name: Name der Queue\n` +
     `    agenten_angemeldet: Anzahl eingeloggter Agenten in dieser Queue\n` +
