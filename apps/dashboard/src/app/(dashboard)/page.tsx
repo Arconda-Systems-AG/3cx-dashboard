@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { GlassCard, LedIndicator } from "@3cx-dash/ui";
 import {
   useHealth,
@@ -12,6 +12,7 @@ import {
   useHourly,
   useCustomerLogo,
   useAiAnalysis,
+  useSettings,
 } from "@/hooks/use-data";
 import {
   Phone,
@@ -72,9 +73,11 @@ export default function DashboardPage() {
   const { data: queuesData } = useQueues();
   const { data: deptData } = useDepartments();
   const { data: logoData } = useCustomerLogo();
+  const { data: appSettings } = useSettings();
   const [selectedDeptId, setSelectedDeptId] = useState<string>("");
   const { data: aiData, mutate: mutateAi } = useAiAnalysis(selectedDeptId || undefined);
   const [aiRefreshing, setAiRefreshing] = useState(false);
+  const autoTriggeredRef = useRef<string>("");
   const [expandedQueues, setExpandedQueues] = useState<Set<number>>(new Set());
 
   const activeCalls = callsData?.value ?? [];
@@ -99,8 +102,6 @@ export default function DashboardPage() {
   const triggerAiAnalysis = useCallback(async () => {
     setAiRefreshing(true);
     try {
-      // Global: all=true → analysiert global + alle Abteilungen aus Berichtsprofilen
-      // Dept-spezifisch: nur diese Abteilung
       const body = selectedDeptId ? { departmentId: selectedDeptId } : { all: true };
       await fetch("/api/ai/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       await mutateAi();
@@ -108,6 +109,27 @@ export default function DashboardPage() {
       setAiRefreshing(false);
     }
   }, [selectedDeptId, mutateAi]);
+
+  // Auto-Trigger: wenn Dept ausgewählt und Analyse älter als konfiguriertes Intervall
+  useEffect(() => {
+    if (!selectedDeptId || aiRefreshing) return;
+    const intervalMin = appSettings?.aiSchedule?.intervalMinutes ?? 30;
+    const key = `${selectedDeptId}-${intervalMin}`;
+    if (autoTriggeredRef.current === key) return;
+
+    if (!aiData) {
+      autoTriggeredRef.current = key;
+      triggerAiAnalysis();
+      return;
+    }
+    if (aiData.timestamp) {
+      const ageMin = (Date.now() - new Date(aiData.timestamp).getTime()) / 60_000;
+      if (ageMin > intervalMin) {
+        autoTriggeredRef.current = key;
+        triggerAiAnalysis();
+      }
+    }
+  }, [selectedDeptId, aiData, appSettings?.aiSchedule?.intervalMinutes, aiRefreshing, triggerAiAnalysis]);
 
   function toggleExpand(id: number) {
     setExpandedQueues((prev) => {
