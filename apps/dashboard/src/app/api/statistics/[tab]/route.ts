@@ -104,20 +104,25 @@ export async function GET(
           const sqlParams: unknown[] = [fromDate.toISOString(), toDate.toISOString()];
 
           if (groupId && deptConfig) {
-            // Gruppen-Filter: immer agents-basiert (unabhängig von deptConfig.filter)
-            sql = injectDeptFilter(sql, "agents", deptConfig.alias);
-            sqlParams.push(agentNumbers); // $3 = array
-          } else if (queueNumber && deptConfig) {
-            sql = injectDeptFilter(sql, deptConfig.filter, deptConfig.alias);
-
-            if (deptConfig.filter === "queue_dn") {
-              sqlParams.push(queueNumber); // $3
-            } else if (deptConfig.filter === "agents") {
+            // Gruppen-Filter: immer agents-basiert
+            const injected = injectDeptFilter(sql, "agents", deptConfig.alias);
+            if (injected !== sql) {
+              sql = injected;
               sqlParams.push(agentNumbers); // $3 = array
-            } else {
-              // 'both'
-              sqlParams.push(queueNumber); // $3
-              sqlParams.push(agentNumbers); // $4 = array
+            }
+          } else if (queueNumber && deptConfig) {
+            const injected = injectDeptFilter(sql, deptConfig.filter, deptConfig.alias);
+            if (injected !== sql) {
+              sql = injected;
+              if (deptConfig.filter === "queue_dn") {
+                sqlParams.push(queueNumber); // $3
+              } else if (deptConfig.filter === "agents") {
+                sqlParams.push(agentNumbers); // $3 = array
+              } else {
+                // 'both'
+                sqlParams.push(queueNumber); // $3
+                sqlParams.push(agentNumbers); // $4 = array
+              }
             }
           }
 

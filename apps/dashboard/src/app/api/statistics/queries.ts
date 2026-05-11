@@ -2608,22 +2608,22 @@ FROM incoming;`,
   ROUND(AVG(wait_seconds)::numeric, 1)                                                AS avg_wait_seconds
 FROM (
   SELECT
-    c.destination_dn_number,
-    c.destination_dn_name,
-    EXTRACT(EPOCH FROM (c.cdr_ended_at - c.cdr_started_at)) AS wait_seconds,
+    q.destination_dn_number,
+    q.destination_dn_name,
+    EXTRACT(EPOCH FROM (q.cdr_ended_at - q.cdr_started_at)) AS wait_seconds,
     ext.main_call_history_id AS reached_ext
-  FROM public.cdroutput c
+  FROM public.cdroutput q
   LEFT JOIN (
     SELECT DISTINCT main_call_history_id
     FROM public.cdroutput
     WHERE destination_dn_type = 'extension'
-  ) ext ON ext.main_call_history_id = c.main_call_history_id
-  WHERE c.destination_dn_type = 'queue'
-    AND c.source_participant_is_incoming = true
-    AND c.source_entity_type != 'queue'
-    AND c.cdr_started_at >= $1
-    AND c.cdr_started_at <= $2
-) q
+  ) ext ON ext.main_call_history_id = q.main_call_history_id
+  WHERE q.destination_dn_type = 'queue'
+    AND q.source_participant_is_incoming = true
+    AND q.source_entity_type != 'queue'
+    AND q.cdr_started_at >= $1
+    AND q.cdr_started_at <= $2
+) stats
 GROUP BY 1, 2
 ORDER BY total DESC;`,
     },
@@ -2686,19 +2686,19 @@ SELECT 'Verpasst', (
   COUNT(CASE WHEN sub.reached_ext IS NULL THEN 1 END)::int           AS abandoned
 FROM (
   SELECT
-    c.main_call_history_id,
-    MIN(c.cdr_started_at)                                                           AS first_start,
+    q.main_call_history_id,
+    MIN(q.cdr_started_at)                                                           AS first_start,
     MAX(CASE WHEN ext.destination_dn_type = 'extension' THEN 1 ELSE NULL END)      AS reached_ext
-  FROM public.cdroutput c
+  FROM public.cdroutput q
   LEFT JOIN public.cdroutput ext
-    ON ext.main_call_history_id = c.main_call_history_id
+    ON ext.main_call_history_id = q.main_call_history_id
     AND ext.destination_dn_type = 'extension'
-  WHERE c.destination_dn_type = 'queue'
-    AND c.source_participant_is_incoming = true
-    AND c.source_entity_type != 'queue'
-    AND c.cdr_started_at >= $1
-    AND c.cdr_started_at <= $2
-  GROUP BY c.main_call_history_id
+  WHERE q.destination_dn_type = 'queue'
+    AND q.source_participant_is_incoming = true
+    AND q.source_entity_type != 'queue'
+    AND q.cdr_started_at >= $1
+    AND q.cdr_started_at <= $2
+  GROUP BY q.main_call_history_id
 ) sub
 GROUP BY 1
 ORDER BY 1;`,
