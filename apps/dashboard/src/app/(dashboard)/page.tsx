@@ -417,7 +417,14 @@ export default function DashboardPage() {
               {(() => {
                 const ab1 = today.abwurf1_reached;
                 const ab2 = today.abwurf2_reached;
-                const total = today.total_incoming || 1;
+                const total = today.total_incoming;
+                if (total === 0) {
+                  return (
+                    <div className="flex flex-1 items-center justify-center text-xs text-muted">
+                      Noch keine Anrufe heute
+                    </div>
+                  );
+                }
                 const noOverflow = total - ab1;
                 const ab1Only = ab1 - ab2;
                 const bars = [
