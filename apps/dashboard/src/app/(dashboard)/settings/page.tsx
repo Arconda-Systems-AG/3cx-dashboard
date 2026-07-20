@@ -85,6 +85,7 @@ function SystemForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          systemId,
           host: form.pgHost,
           port: form.pgPort,
           database: form.pgDatabase,
