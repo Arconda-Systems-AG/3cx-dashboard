@@ -1540,6 +1540,51 @@ export default function SettingsPage() {
             </div>
           </div>
 
+          <div className="border-t border-glass pt-4">
+            <h3 className="mb-1 text-xs font-semibold text-heading">Live-Probleme — Schwellwerte</h3>
+            <p className="mb-3 text-[11px] text-muted">
+              Gilt für diesen Mandanten. Eine Warteschlange wird als Problem angezeigt, wenn eine Bedingung verletzt ist.
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-secondary">Überlastung ab (wartende Anrufer)</label>
+                <input
+                  type="number" min={1} max={999}
+                  value={current.qpMaxWaiting ?? 5}
+                  onChange={(e) => setForm({ ...form, qpMaxWaiting: Number(e.target.value) })}
+                  className="w-full rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-secondary">Wartezeit-Schwelle (Sekunden)</label>
+                <input
+                  type="number" min={1} max={3600}
+                  value={current.qpWaitSeconds ?? 20}
+                  onChange={(e) => setForm({ ...form, qpWaitSeconds: Number(e.target.value) })}
+                  className="w-full rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-secondary">SLA-Ziel (%) — darunter = Sorgenkind</label>
+                <input
+                  type="number" min={1} max={100}
+                  value={current.qpSlaTarget ?? 40}
+                  onChange={(e) => setForm({ ...form, qpSlaTarget: Number(e.target.value) })}
+                  className="w-full rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-secondary">Mindest-Anrufe heute (für SLA-Anzeige)</label>
+                <input
+                  type="number" min={1} max={9999}
+                  value={current.qpSlaMinCalls ?? 10}
+                  onChange={(e) => setForm({ ...form, qpSlaMinCalls: Number(e.target.value) })}
+                  className="w-full rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+            </div>
+          </div>
+
           {message && (
             <p className={`text-sm ${message.startsWith("Fehler") ? "text-red-400" : "text-emerald-400"}`}>
               {message}

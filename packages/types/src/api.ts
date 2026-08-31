@@ -260,6 +260,11 @@ export interface AppSettings {
   aiSchedule?: AiSchedule;
   reportSchedule?: ReportSchedule;
   reportProfiles?: ReportProfile[];
+  // Live-Probleme-Schwellwerte (pro Dashboard/Mandant)
+  qpMaxWaiting?: number;    // Überlastung: mehr wartende Anrufer als …
+  qpWaitSeconds?: number;   // Wartezeit-Schwelle (s); Fallback wenn Queue-SLATime=0
+  qpSlaTarget?: number;     // SLA-Tagesquote-Schwelle (%) für Sorgenkinder
+  qpSlaMinCalls?: number;   // Mindest-Anrufe heute, damit SLA-% aussagekräftig ist
 }
 
 export interface AiSchedule {
@@ -308,6 +313,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
   aiSchedule: { enabled: false, days: [1, 2, 3, 4, 5], fromHour: 7, toHour: 18, intervalMinutes: 30 },
   reportSchedule: { enabled: false, days: [1, 2, 3, 4, 5], sendTime: "17:30" },
   reportProfiles: [],
+  qpMaxWaiting: 5,
+  qpWaitSeconds: 20,
+  qpSlaTarget: 40,
+  qpSlaMinCalls: 10,
 };
 
 // ─────────────────────────────────────────────
