@@ -23,10 +23,13 @@ async function writeSettings(settings: AppSettings): Promise<void> {
   await fs.writeFile(p, JSON.stringify(settings, null, 2), "utf-8");
 }
 
-/** GET /api/settings/logo — gibt customerLogoUrl als Data-URL zurück */
+/** GET /api/settings/logo — gibt customerLogoUrl als Data-URL zurück
+ *  Aktives System hat Vorrang; Fallback auf Top-Level (Multi-Tenant). */
 export async function GET() {
   const settings = await readSettings();
-  return NextResponse.json({ logoUrl: settings.customerLogoUrl ?? null });
+  const activeSystem = settings.systems?.find((s) => s.id === settings.activeSystemId);
+  const logoUrl = activeSystem?.customerLogoUrl ?? settings.customerLogoUrl ?? null;
+  return NextResponse.json({ logoUrl });
 }
 
 /** POST /api/settings/logo — multipart/form-data mit Feld "logo" (File) */
