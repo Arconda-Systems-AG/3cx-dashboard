@@ -30,8 +30,10 @@ export function TiltCard({
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
 
+    // Inset-Glow statt Outer-Shadow: bleibt innerhalb der Kachel und legt
+    // keine Schatten/Linien auf benachbarte Kacheln.
     setHoverStyle({
-      boxShadow: `0 8px 32px rgba(0,0,0,0.35), 0 0 32px ${glowColor}`,
+      boxShadow: `inset 0 0 24px ${glowColor}`,
       transition: "box-shadow 0.1s ease",
     });
     setHighlight({ x: x * 100, y: y * 100, active: true });
