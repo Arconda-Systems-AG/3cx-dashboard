@@ -3,7 +3,6 @@ import { promises as fs } from "fs";
 import path from "path";
 import { xapiFetch } from "@/lib/threecx-client";
 import { fetchEnrichedQueues } from "@/lib/queue-data";
-import { createPool } from "@/lib/pg";
 import type { ODataList } from "@3cx-dash/types";
 import { DEFAULT_SETTINGS } from "@3cx-dash/types";
 import type { AppSettings } from "@3cx-dash/types";
@@ -23,9 +22,8 @@ interface ActiveCallLive {
 }
 
 interface QueueThresholds {
-  maxWaiting: number;      // Überlastung: mehr Wartende als …
-  waitSeconds: number;     // Fallback-Wartezeit-Schwelle, wenn Queue-SLATime = 0
-  slaTargetPct: number;    // SLA-Tagesziel in %
+  maxWaiting: number;   // Überlastung: mehr Wartende als …
+  waitSeconds: number;  // Fallback-Wartezeit-Schwelle, wenn Queue-SLATime = 0
 }
 
 function getSettingsPath(): string {
@@ -52,10 +50,9 @@ export async function GET() {
     const t: QueueThresholds = {
       maxWaiting: (activeSystem as any)?.qpMaxWaiting ?? (settings as any).qpMaxWaiting ?? 5,
       waitSeconds: (activeSystem as any)?.qpWaitSeconds ?? (settings as any).qpWaitSeconds ?? 20,
-      slaTargetPct: (activeSystem as any)?.qpSlaTarget ?? (settings as any).qpSlaTarget ?? 80,
     };
 
-    // 1) Angereicherte Queues (Wartende, eingeloggte Agenten, SLATime, MaxCallersInQueue)
+    // 1) Angereicherte Queues (Wartende, eingeloggte Agenten, SLATime)
     const { queues } = await fetchEnrichedQueues();
 
     // 2) Live-Wartezeit pro Queue aus ActiveCalls (LastChangeStatus)
@@ -73,34 +70,9 @@ export async function GET() {
       if (secs > (longestWaitByQueue.get(q) ?? -1)) longestWaitByQueue.set(q, secs);
     }
 
-    // 3) SLA-Tagesquote pro Queue aus der CDR-DB (heute, Europe/Berlin)
-    const slaTodayByQueue = new Map<string, number>();
-    try {
-      const pool = await createPool();
-      if (pool) {
-        const res = await pool.query(
-          `SELECT stats.q AS queue,
-                  ROUND(100.0 * COUNT(*) FILTER (WHERE stats.wait <= $1) / NULLIF(COUNT(*),0), 1) AS sla_pct
-             FROM (
-               SELECT q.destination_dn_number AS q,
-                      EXTRACT(EPOCH FROM (q.cdr_ended_at - q.cdr_started_at)) AS wait
-                 FROM public.cdroutput q
-                WHERE q.destination_dn_type = 'queue'
-                  AND q.source_participant_is_incoming = true
-                  AND q.source_entity_type != 'queue'
-                  AND q.cdr_started_at >= date_trunc('day', now() AT TIME ZONE 'Europe/Berlin')
-             ) stats
-            GROUP BY 1`,
-          [t.waitSeconds]
-        );
-        for (const row of res.rows) slaTodayByQueue.set(String(row.queue), Number(row.sla_pct));
-        await pool.end();
-      }
-    } catch {
-      // CDR-DB optional — ohne sie fehlt nur die SLA-Tagesquote-Bedingung
-    }
-
-    // 4) Bedingungen prüfen — nur Queues mit mindestens einem Problem ausgeben
+    // 3) Akute Live-Probleme prüfen — nur Queues mit mindestens einem Problem ausgeben.
+    //    (SLA-Tagesquote bewusst NICHT hier — die lebt im Statistik-Tab, weil sie den
+    //     ganzen Tag akkumuliert und keine akute Live-Aussage ist.)
     const problemQueues = queues
       .map((q: any) => {
         const number = String(q.Number);
@@ -108,17 +80,13 @@ export async function GET() {
         const active = q.ActiveCallCount ?? 0;
         const loggedIn = q.LoggedInAgents ?? 0;
         const longestWait = longestWaitByQueue.get(number) ?? 0;
-        // Schwelle: gepflegte Queue-SLATime hat Vorrang, sonst Fallback
         const waitLimit = q.SLATime && q.SLATime > 0 ? q.SLATime : t.waitSeconds;
-        const slaToday = slaTodayByQueue.has(number) ? slaTodayByQueue.get(number)! : null;
 
         const problems: string[] = [];
         if (waiting > t.maxWaiting) problems.push(`Überlastung: ${waiting} wartende Anrufer`);
         if (longestWait > waitLimit) problems.push(`Wartezeit ${longestWait}s > ${waitLimit}s`);
         if (loggedIn === 0 && (waiting > 0 || active > 0))
           problems.push(`Kein Agent eingeloggt bei ${waiting + active} Anruf(en)`);
-        if (slaToday !== null && slaToday < t.slaTargetPct)
-          problems.push(`SLA heute ${slaToday}% < ${t.slaTargetPct}%`);
 
         return {
           number,
@@ -129,7 +97,6 @@ export async function GET() {
           totalAgents: (q.Agents ?? []).length,
           longestWaitSeconds: longestWait,
           waitLimit,
-          slaTodayPct: slaToday,
           problems,
         };
       })

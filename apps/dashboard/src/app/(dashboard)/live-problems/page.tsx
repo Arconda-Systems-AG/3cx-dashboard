@@ -1,7 +1,7 @@
 "use client";
 
 import { useLiveProblems, type LiveProblemQueue } from "@/hooks/use-data";
-import { AlertTriangle, CheckCircle2, Clock, Users, PhoneCall, TrendingDown } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, Users, PhoneCall } from "lucide-react";
 
 function fmtWait(s: number): string {
   if (s < 60) return `${s}s`;
@@ -31,7 +31,7 @@ function ProblemCard({ q }: { q: LiveProblemQueue }) {
       </ul>
 
       {/* Kennzahlen */}
-      <div className="grid grid-cols-4 gap-2 text-center">
+      <div className="grid grid-cols-3 gap-2 text-center">
         <div className="rounded-lg bg-surface-subtle py-1.5">
           <PhoneCall className="mx-auto h-3.5 w-3.5 text-muted" />
           <p className="mt-0.5 text-sm font-semibold text-body">{q.waiting}</p>
@@ -48,13 +48,6 @@ function ProblemCard({ q }: { q: LiveProblemQueue }) {
             {q.loggedInAgents}/{q.totalAgents}
           </p>
           <p className="text-[10px] text-muted">Agenten</p>
-        </div>
-        <div className="rounded-lg bg-surface-subtle py-1.5">
-          <TrendingDown className="mx-auto h-3.5 w-3.5 text-muted" />
-          <p className="mt-0.5 text-sm font-semibold text-body">
-            {q.slaTodayPct !== null ? `${q.slaTodayPct}%` : "—"}
-          </p>
-          <p className="text-[10px] text-muted">SLA heute</p>
         </div>
       </div>
     </div>
@@ -87,7 +80,7 @@ export default function LiveProblemsPage() {
               </span>{" "}
               von {data.totalQueues} betroffen
             </p>
-            <p>Schwellen: &gt;{data.thresholds.maxWaiting} wartend · &gt;{data.thresholds.waitSeconds}s · SLA &lt;{data.thresholds.slaTargetPct}%</p>
+            <p>Schwellen: &gt;{data.thresholds.maxWaiting} wartend · Wartezeit &gt;{data.thresholds.waitSeconds}s · 0 Agenten</p>
           </div>
         )}
       </div>

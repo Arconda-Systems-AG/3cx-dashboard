@@ -44,12 +44,11 @@ export interface LiveProblemQueue {
   totalAgents: number;
   longestWaitSeconds: number;
   waitLimit: number;
-  slaTodayPct: number | null;
   problems: string[];
 }
 export interface LiveProblemsResponse {
   generatedAt: string;
-  thresholds: { maxWaiting: number; waitSeconds: number; slaTargetPct: number };
+  thresholds: { maxWaiting: number; waitSeconds: number };
   totalQueues: number;
   problemCount: number;
   queues: LiveProblemQueue[];
