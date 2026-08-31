@@ -35,6 +35,32 @@ export function useQueues() {
   return useSWR<ODataList<Queue>>("/api/queues", fetcher, { refreshInterval: 10_000 });
 }
 
+export interface LiveProblemQueue {
+  number: string;
+  name: string;
+  waiting: number;
+  active: number;
+  loggedInAgents: number;
+  totalAgents: number;
+  longestWaitSeconds: number;
+  waitLimit: number;
+  slaTodayPct: number | null;
+  problems: string[];
+}
+export interface LiveProblemsResponse {
+  generatedAt: string;
+  thresholds: { maxWaiting: number; waitSeconds: number; slaTargetPct: number };
+  totalQueues: number;
+  problemCount: number;
+  queues: LiveProblemQueue[];
+  error?: string;
+}
+export function useLiveProblems() {
+  return useSWR<LiveProblemsResponse>("/api/queues/live-problems", fetcher, {
+    refreshInterval: 5_000,
+  });
+}
+
 export function usePhoneDevices() {
   return useSWR<ODataList<PhoneDevice>>("/api/devices", fetcher, { refreshInterval: 30_000 });
 }
