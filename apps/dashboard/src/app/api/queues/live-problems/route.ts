@@ -75,26 +75,47 @@ export async function GET() {
       if (secs > (longestWaitByQueue.get(q) ?? -1)) longestWaitByQueue.set(q, secs);
     }
 
-    // 3) SLA-Tagesquote pro Queue aus der CDR-DB (heute, Europe/Berlin) — nur mit genug Volumen
+    // 3) SLA-Tagesquote pro EINGANGS-Queue aus der CDR-DB (heute, Europe/Berlin).
+    //    End-to-end über Overflow-Kaskaden: ein Anruf (main_call_history_id) zählt zur
+    //    ersten Queue, in die er kam; Wartezeit = bis zur ersten echten Agenten-Annahme
+    //    (Extension mit cdr_answered_at). Overflow-Ziel-Queues (z.B. Kiel 20/40) tauchen
+    //    dadurch NICHT als eigene Sorgenkinder auf, der Verursacher (Eingang) schon.
     const slaTodayByQueue = new Map<string, { pct: number; calls: number; within: number }>();
     try {
       const pool = await createPool();
       if (pool) {
         const res = await pool.query(
-          `SELECT stats.q AS queue,
+          `WITH calls AS (
+             SELECT main_call_history_id
+               FROM public.cdroutput
+              WHERE destination_dn_type = 'queue'
+                AND cdr_started_at >= date_trunc('day', now() AT TIME ZONE 'Europe/Berlin')
+              GROUP BY main_call_history_id
+           ),
+           agg AS (
+             SELECT
+               (array_agg(c.destination_dn_number ORDER BY c.cdr_started_at)
+                  FILTER (WHERE c.destination_dn_type = 'queue'))[1] AS entry_queue,
+               min(c.cdr_started_at) FILTER (WHERE c.destination_dn_type = 'queue') AS arrival_ts,
+               min(c.cdr_answered_at) FILTER (WHERE c.destination_dn_type = 'extension'
+                                                AND c.cdr_answered_at IS NOT NULL) AS answer_ts
+               FROM public.cdroutput c
+               JOIN calls USING (main_call_history_id)
+              GROUP BY c.main_call_history_id
+           )
+           SELECT entry_queue AS queue,
                   COUNT(*) AS calls,
-                  COUNT(*) FILTER (WHERE stats.wait <= $1) AS within_sla,
-                  ROUND(100.0 * COUNT(*) FILTER (WHERE stats.wait <= $1) / NULLIF(COUNT(*),0), 1) AS sla_pct
-             FROM (
-               SELECT q.destination_dn_number AS q,
-                      EXTRACT(EPOCH FROM (q.cdr_ended_at - q.cdr_started_at)) AS wait
-                 FROM public.cdroutput q
-                WHERE q.destination_dn_type = 'queue'
-                  AND q.source_participant_is_incoming = true
-                  AND q.source_entity_type != 'queue'
-                  AND q.cdr_started_at >= date_trunc('day', now() AT TIME ZONE 'Europe/Berlin')
-             ) stats
-            GROUP BY 1`,
+                  COUNT(*) FILTER (
+                    WHERE answer_ts IS NOT NULL AND answer_ts >= arrival_ts
+                      AND extract(epoch FROM (answer_ts - arrival_ts)) <= $1
+                  ) AS within_sla,
+                  ROUND(100.0 * COUNT(*) FILTER (
+                    WHERE answer_ts IS NOT NULL AND answer_ts >= arrival_ts
+                      AND extract(epoch FROM (answer_ts - arrival_ts)) <= $1
+                  ) / NULLIF(COUNT(*),0), 1) AS sla_pct
+             FROM agg
+            WHERE entry_queue IS NOT NULL
+            GROUP BY entry_queue`,
           [t.waitSeconds]
         );
         for (const row of res.rows)

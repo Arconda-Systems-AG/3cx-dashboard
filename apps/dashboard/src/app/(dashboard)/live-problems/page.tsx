@@ -79,8 +79,8 @@ function ProblemCard({ q, variant }: { q: LiveProblemQueue; variant: Variant }) 
         {variant === "sla" ? (
           <>
             <Stat icon={PhoneCall} value={q.slaTodayCalls ?? "—"} label="Anrufe" />
-            <Stat icon={CheckCircle2} value={q.slaTodayWithin ?? "—"} label={`≤${q.waitLimit}s`} />
-            <Stat icon={Clock} value={q.slaTodayOver ?? "—"} label={`>${q.waitLimit}s`} alert={(q.slaTodayOver ?? 0) > 0} />
+            <Stat icon={CheckCircle2} value={q.slaTodayWithin ?? "—"} label="in SLA" />
+            <Stat icon={Clock} value={q.slaTodayOver ?? "—"} label="verfehlt" alert={(q.slaTodayOver ?? 0) > 0} />
             <Stat icon={Users} value={`${q.freeAgents} frei`} label={`${q.loggedInAgents} eingel.`} alert={q.freeAgents === 0} />
           </>
         ) : (
