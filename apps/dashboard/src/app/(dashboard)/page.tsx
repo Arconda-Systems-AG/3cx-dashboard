@@ -41,6 +41,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { TiltCard } from "@/components/tilt-card";
+import { SearchableSelect } from "@/components/searchable-select";
 
 function parseDn(field: string): string {
   return (field ?? "").split(" ")[0];
@@ -204,19 +205,14 @@ export default function DashboardPage() {
         {logoData?.logoUrl && (
           <img src={logoData.logoUrl} alt="Kunden-Logo" className="h-8 w-auto object-contain" />
         )}
-        <div className="relative ml-auto">
-          <select
-            value={selectedDeptId}
-            onChange={(e) => setSelectedDeptId(e.target.value)}
-            className="appearance-none rounded-lg border border-primary/30 bg-surface-solid px-3 py-1.5 pr-8 text-sm text-heading focus:outline-none focus:ring-2 focus:ring-primary/30 hover:border-primary/50 transition-colors cursor-pointer"
-          >
-            <option value="" className="bg-surface-solid text-heading">Alle Abteilungen</option>
-            {departments.map((d) => (
-              <option key={d.id} value={String(d.id)} className="bg-surface-solid text-heading">{d.name}</option>
-            ))}
-          </select>
-          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-        </div>
+        <SearchableSelect
+          value={selectedDeptId}
+          onChange={setSelectedDeptId}
+          options={departments.map((d) => ({ value: String(d.id), label: d.name }))}
+          allLabel="Alle Abteilungen"
+          placeholder="Abteilung suchen…"
+          className="ml-auto w-64"
+        />
       </div>
 
       {/* Verbindungsstatus-Banner */}

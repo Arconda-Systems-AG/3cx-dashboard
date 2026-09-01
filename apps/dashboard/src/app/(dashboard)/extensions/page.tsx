@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { GlassCard, StatusChip, ExtensionAvatar } from "@3cx-dash/ui";
 import { useExtensions, useQueues } from "@/hooks/use-data";
+import { SearchableSelect } from "@/components/searchable-select";
 import { Search, Building2 } from "lucide-react";
 
 export default function ExtensionsPage() {
@@ -79,19 +80,14 @@ export default function ExtensionsPage() {
           {queues.length > 0 && (
             <div className="flex items-center gap-1.5">
               <Building2 className="h-4 w-4 text-muted flex-shrink-0" />
-              <select
+              <SearchableSelect
                 value={selectedQueue}
-                onChange={(e) => setSelectedQueue(e.target.value)}
-                className="rounded-lg border border-glass bg-input px-2 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30 hover:border-primary/40 transition-colors cursor-pointer"
-                title="Nach Abteilung (Warteschlange) filtern"
-              >
-                <option value="">Alle Abteilungen</option>
-                {queues.map((q) => (
-                  <option key={q.Id} value={String(q.Id)}>
-                    {q.Name}
-                  </option>
-                ))}
-              </select>
+                onChange={setSelectedQueue}
+                options={queues.map((q) => ({ value: String(q.Id), label: q.Name }))}
+                allLabel="Alle Abteilungen"
+                placeholder="Abteilung suchen…"
+                className="w-56"
+              />
             </div>
           )}
 
