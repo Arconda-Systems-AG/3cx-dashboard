@@ -46,6 +46,8 @@ export interface LiveProblemQueue {
   waitLimit: number;
   slaTodayPct: number | null;
   slaTodayCalls: number | null;
+  slaTodayWithin: number | null;
+  slaTodayOver: number | null;
   acute: boolean;
   problems: string[];
 }

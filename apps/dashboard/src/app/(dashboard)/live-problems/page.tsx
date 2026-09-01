@@ -1,12 +1,22 @@
 "use client";
 
 import { useLiveProblems, type LiveProblemQueue } from "@/hooks/use-data";
-import { AlertTriangle, CheckCircle2, Clock, Users, PhoneCall, TrendingDown } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, Users, PhoneCall, TrendingDown, type LucideIcon } from "lucide-react";
 
 function fmtWait(s: number): string {
   if (s < 60) return `${s}s`;
   const m = Math.floor(s / 60);
   return `${m}:${String(s % 60).padStart(2, "0")} min`;
+}
+
+function Stat({ icon: Icon, value, label, alert }: { icon: LucideIcon; value: string | number; label: string; alert?: boolean }) {
+  return (
+    <div className="rounded-lg bg-surface-subtle py-1.5">
+      <Icon className={`mx-auto h-3.5 w-3.5 ${alert ? "text-red-400" : "text-muted"}`} />
+      <p className={`mt-0.5 text-sm font-semibold ${alert ? "text-red-400" : "text-body"}`}>{value}</p>
+      <p className="text-[10px] text-muted">{label}</p>
+    </div>
+  );
 }
 
 function ProblemCard({ q }: { q: LiveProblemQueue }) {
@@ -36,31 +46,23 @@ function ProblemCard({ q }: { q: LiveProblemQueue }) {
         ))}
       </ul>
 
+      {/* Rot (akut) = Live-Kennzahlen · Orange (SLA) = Tageszahlen */}
       <div className="grid grid-cols-4 gap-2 text-center">
-        <div className="rounded-lg bg-surface-subtle py-1.5">
-          <PhoneCall className="mx-auto h-3.5 w-3.5 text-muted" />
-          <p className="mt-0.5 text-sm font-semibold text-body">{q.waiting}</p>
-          <p className="text-[10px] text-muted">wartend</p>
-        </div>
-        <div className="rounded-lg bg-surface-subtle py-1.5">
-          <Clock className="mx-auto h-3.5 w-3.5 text-muted" />
-          <p className="mt-0.5 text-sm font-semibold text-body">{fmtWait(q.longestWaitSeconds)}</p>
-          <p className="text-[10px] text-muted">längste</p>
-        </div>
-        <div className="rounded-lg bg-surface-subtle py-1.5">
-          <Users className={`mx-auto h-3.5 w-3.5 ${q.loggedInAgents === 0 ? "text-red-400" : "text-muted"}`} />
-          <p className={`mt-0.5 text-sm font-semibold ${q.loggedInAgents === 0 ? "text-red-400" : "text-body"}`}>
-            {q.loggedInAgents}/{q.totalAgents}
-          </p>
-          <p className="text-[10px] text-muted">Agenten</p>
-        </div>
-        <div className="rounded-lg bg-surface-subtle py-1.5">
-          <TrendingDown className="mx-auto h-3.5 w-3.5 text-muted" />
-          <p className="mt-0.5 text-sm font-semibold text-body">
-            {q.slaTodayPct !== null ? `${q.slaTodayPct}%` : "—"}
-          </p>
-          <p className="text-[10px] text-muted">SLA heute</p>
-        </div>
+        {q.acute ? (
+          <>
+            <Stat icon={PhoneCall} value={q.waiting} label="wartend" />
+            <Stat icon={Clock} value={fmtWait(q.longestWaitSeconds)} label="längste" />
+            <Stat icon={Users} value={`${q.loggedInAgents}/${q.totalAgents}`} label="Agenten" alert={q.loggedInAgents === 0} />
+            <Stat icon={TrendingDown} value={q.slaTodayPct !== null ? `${q.slaTodayPct}%` : "—"} label="SLA heute" />
+          </>
+        ) : (
+          <>
+            <Stat icon={PhoneCall} value={q.slaTodayCalls ?? "—"} label="Anrufe" />
+            <Stat icon={CheckCircle2} value={q.slaTodayWithin ?? "—"} label={`≤${q.waitLimit}s`} />
+            <Stat icon={Clock} value={q.slaTodayOver ?? "—"} label={`>${q.waitLimit}s`} alert={(q.slaTodayOver ?? 0) > 0} />
+            <Stat icon={Users} value={`${q.loggedInAgents}/${q.totalAgents}`} label="Agenten" alert={q.loggedInAgents === 0} />
+          </>
+        )}
       </div>
     </div>
   );

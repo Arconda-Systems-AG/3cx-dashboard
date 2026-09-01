@@ -76,13 +76,14 @@ export async function GET() {
     }
 
     // 3) SLA-Tagesquote pro Queue aus der CDR-DB (heute, Europe/Berlin) — nur mit genug Volumen
-    const slaTodayByQueue = new Map<string, { pct: number; calls: number }>();
+    const slaTodayByQueue = new Map<string, { pct: number; calls: number; within: number }>();
     try {
       const pool = await createPool();
       if (pool) {
         const res = await pool.query(
           `SELECT stats.q AS queue,
                   COUNT(*) AS calls,
+                  COUNT(*) FILTER (WHERE stats.wait <= $1) AS within_sla,
                   ROUND(100.0 * COUNT(*) FILTER (WHERE stats.wait <= $1) / NULLIF(COUNT(*),0), 1) AS sla_pct
              FROM (
                SELECT q.destination_dn_number AS q,
@@ -97,7 +98,11 @@ export async function GET() {
           [t.waitSeconds]
         );
         for (const row of res.rows)
-          slaTodayByQueue.set(String(row.queue), { pct: Number(row.sla_pct), calls: Number(row.calls) });
+          slaTodayByQueue.set(String(row.queue), {
+            pct: Number(row.sla_pct),
+            calls: Number(row.calls),
+            within: Number(row.within_sla),
+          });
         await pool.end();
       }
     } catch {
@@ -139,6 +144,8 @@ export async function GET() {
           waitLimit,
           slaTodayPct: sla ? sla.pct : null,
           slaTodayCalls: sla ? sla.calls : null,
+          slaTodayWithin: sla ? sla.within : null,
+          slaTodayOver: sla ? sla.calls - sla.within : null,
           acute: acuteProblems.length > 0,
           problems,
         };
