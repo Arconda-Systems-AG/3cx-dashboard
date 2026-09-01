@@ -2597,33 +2597,45 @@ FROM incoming;`,
       key: "sla_by_queue",
       title: "SLA nach Warteschlange",
       type: "table",
-      sql: `SELECT
-  stats.destination_dn_number                                                          AS queue_number,
-  stats.destination_dn_name                                                            AS queue_name,
-  COUNT(*)::int                                                                         AS total,
-  COUNT(*) FILTER (WHERE reached_ext IS NOT NULL)::int                                AS answered,
-  (COUNT(*) - COUNT(*) FILTER (WHERE reached_ext IS NOT NULL))::int                   AS abandoned,
-  COUNT(*) FILTER (WHERE wait_seconds > 20)::int                                      AS over_20s,
-  ROUND(100.0 * COUNT(*) FILTER (WHERE wait_seconds > 20) / NULLIF(COUNT(*), 0), 1)  AS over_20s_pct,
-  ROUND(AVG(wait_seconds)::numeric, 1)                                                AS avg_wait_seconds
-FROM (
-  SELECT
-    q.destination_dn_number,
-    q.destination_dn_name,
-    EXTRACT(EPOCH FROM (q.cdr_ended_at - q.cdr_started_at)) AS wait_seconds,
-    ext.main_call_history_id AS reached_ext
+      // End-to-end pro EINGANGS-Queue: Wartezeit = Eintritt in die erste Queue bis
+      // zur ersten echten Agenten-Annahme (cdr_answered_at), über Overflow-Kaskaden
+      // hinweg. Overflow-Ziel-Queues erscheinen nicht als eigene Zeilen.
+      sql: `WITH incoming AS (
+  SELECT DISTINCT ON (q.main_call_history_id)
+    q.main_call_history_id, q.destination_dn_number, q.destination_dn_name, q.cdr_started_at
   FROM public.cdroutput q
-  LEFT JOIN (
-    SELECT DISTINCT main_call_history_id
-    FROM public.cdroutput
-    WHERE destination_dn_type = 'extension'
-  ) ext ON ext.main_call_history_id = q.main_call_history_id
   WHERE q.destination_dn_type = 'queue'
     AND q.source_participant_is_incoming = true
     AND q.source_entity_type != 'queue'
     AND q.cdr_started_at >= $1
     AND q.cdr_started_at <= $2
-) stats
+  ORDER BY q.main_call_history_id, q.cdr_started_at
+),
+answers AS (
+  SELECT ext.main_call_history_id, MIN(ext.cdr_answered_at) AS answer_ts
+  FROM public.cdroutput ext
+  JOIN incoming i USING (main_call_history_id)
+  WHERE ext.destination_dn_type = 'extension'
+    AND ext.cdr_answered_at IS NOT NULL
+  GROUP BY ext.main_call_history_id
+),
+waits AS (
+  SELECT i.destination_dn_number, i.destination_dn_name, a.answer_ts,
+         CASE WHEN a.answer_ts IS NOT NULL AND a.answer_ts >= i.cdr_started_at
+              THEN EXTRACT(EPOCH FROM (a.answer_ts - i.cdr_started_at)) END AS wait_seconds
+  FROM incoming i
+  LEFT JOIN answers a USING (main_call_history_id)
+)
+SELECT
+  destination_dn_number                                                               AS queue_number,
+  destination_dn_name                                                                 AS queue_name,
+  COUNT(*)::int                                                                        AS total,
+  COUNT(answer_ts)::int                                                                AS answered,
+  (COUNT(*) - COUNT(answer_ts))::int                                                   AS abandoned,
+  (COUNT(*) - COUNT(*) FILTER (WHERE wait_seconds <= 20))::int                         AS over_20s,
+  ROUND(100.0 * (COUNT(*) - COUNT(*) FILTER (WHERE wait_seconds <= 20)) / NULLIF(COUNT(*), 0), 1) AS over_20s_pct,
+  ROUND(AVG(wait_seconds)::numeric, 1)                                                 AS avg_wait_seconds
+FROM waits
 GROUP BY 1, 2
 ORDER BY total DESC;`,
     },

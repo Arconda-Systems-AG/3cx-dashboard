@@ -199,6 +199,13 @@ export async function POST(request: NextRequest) {
 
   // ─── currentData für KI-Prompt ────────────────────────────────────────────
 
+  // Warter = Callee ist eine Queue-DN (bei Agenten-Annahme wechselt der Callee
+  // zur Extension — live-verifiziert). Status allein ist kein Warte-Indikator.
+  const queueNums = new Set(allQueues.map((q) => String(q.Number)));
+  const waitingInQueue = activeCalls.filter((c) =>
+    queueNums.has(String(c.Callee ?? "").split(" ")[0])
+  ).length;
+
   const currentData: Record<string, unknown> = {
     zeitpunkt: new Date().toISOString(),
     aktive_anrufe_gesamt: activeCalls.length,
@@ -206,6 +213,7 @@ export async function POST(request: NextRequest) {
       talking: activeCalls.filter((c) => c.Status === "Talking").length,
       ringing: activeCalls.filter((c) => c.Status === "Ringing").length,
       held: activeCalls.filter((c) => c.Status === "Held").length,
+      wartend_in_queue: waitingInQueue,
     },
     warteschlangen: queuesSummary,
   };
@@ -268,13 +276,15 @@ export async function POST(request: NextRequest) {
     `    agenten_gesamt: Gesamtzahl zugewiesener Agenten dieser Queue\n` +
     `    agenten_im_gespraech: Agenten die gerade aktiv telefonieren\n` +
     `    wartende_anrufe: Anzahl Anrufe die GERADE in dieser Queue warten (0 = niemand wartet aktuell, NICHT: 0 Queues vorhanden)\n` +
+    `- 'aktive_anrufe_status.wartend_in_queue': Anrufer die GERADE in einer Warteschlange warten (noch kein Agent verbunden)\n` +
     `- 'datenbank_heute': CDR-Daten aus PostgreSQL (historische Anrufe heute, zuverlässig)\n` +
     `    gesamt: Gesamtzahl eingehender Anrufe heute\n` +
-    `    angenommen: Davon angenommene Anrufe\n` +
-    `    abgebrochen: Vom Anrufer aufgelegte Anrufe\n` +
-    `    nicht_in_20s: Anrufe die länger als 20 Sekunden gewartet haben (SLA-Verletzung)\n` +
-    `    avg_wartezeit_s / max_wartezeit_s: Durchschnittliche/maximale Wartezeit in Sekunden\n` +
+    `    angenommen: Anrufe die tatsächlich von einem Agenten angenommen wurden\n` +
+    `    abgebrochen: Anrufe die NIE ein Agent angenommen hat\n` +
+    `    nicht_in_20s: Anrufe die NICHT innerhalb 20s von einem Agenten angenommen wurden (SLA-Verletzung; end-to-end gemessen: vom Eintritt in die ERSTE Queue bis zur Agenten-Annahme, über Overflow-Weiterleitungen hinweg)\n` +
+    `    avg_wartezeit_s / max_wartezeit_s: Durchschnittliche/maximale Wartezeit bis zur Annahme in Sekunden (end-to-end)\n` +
     `    abwurf1/abwurf2: Anrufe die zur 1./2. Overflow-Queue weitergeleitet wurden\n` +
+    `    WICHTIG: Alle Werte sind der EINGANGS-Queue zugeordnet (erste Queue des Anrufs). Overflow-Ziel-Queues (Namen mit Suffix wie " 20", " 40", "Abwurf", "(alle)") erscheinen NICHT separat — sie sind nur Weiterleitungsziele. Bei SLA-Problemen ist IMMER die Eingangs-Queue der Verursacher, NIE die Overflow-Queue.\n` +
     `- 'datenbank_heute.stundenverteilung': Anrufvolumen pro Stunde ({"08":23,"09":45,...})\n` +
     `- 'datenbank_heute.queues': Pro-Queue-Statistik mit nicht_in_20s und avg_wartezeit_s\n` +
     `- 'verlauf_heute': Echtzeit-Snapshots der Agenten-Besetzung über den heutigen Tag\n\n` +

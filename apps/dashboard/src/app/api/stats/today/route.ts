@@ -29,10 +29,11 @@ export async function GET(request: Request) {
     const queueWhere = queueFilter.length > 0
       ? `AND q.destination_dn_number = ANY($${params.push(queueFilter)})`
       : "";
-    const queueWhereGlobal = queueFilter.length > 0
-      ? `AND destination_dn_number = ANY($3)`
-      : "";
 
+    // End-to-end über Overflow-Kaskaden: Wartezeit = Eingang in die erste Queue bis
+    // zur ersten ECHTEN Agenten-Annahme (Extension mit cdr_answered_at). Die alte
+    // per-Segment-Messung zählte 0,1s-Overflow-Segmente als "in 20s" und Klingel-Legs
+    // ohne Annahme als "angenommen".
     const sql = `
       WITH incoming_queue_calls AS (
         -- Ein Eintrag pro echtem Anruf (DISTINCT ON main_call_history_id = frühester Hop)
@@ -40,10 +41,8 @@ export async function GET(request: Request) {
           q.main_call_history_id,
           q.cdr_id,
           q.cdr_started_at,
-          q.cdr_ended_at,
-          q.termination_reason,
-          q.continued_in_cdr_id,
-          EXTRACT(EPOCH FROM (q.cdr_ended_at - q.cdr_started_at)) AS wait_seconds
+          q.destination_dn_name,
+          q.continued_in_cdr_id
         FROM public.cdroutput q
         WHERE q.destination_dn_type = 'queue'
           AND q.source_participant_is_incoming = true
@@ -53,12 +52,25 @@ export async function GET(request: Request) {
           ${queueWhere}
         ORDER BY q.main_call_history_id, q.cdr_started_at
       ),
-      -- Angenommen = irgendein CDR im Anrufverlauf erreichte eine Extension
-      answered AS (
-        SELECT DISTINCT iqc.main_call_history_id
+      -- Erste echte Agenten-Annahme (Extension-Segment MIT cdr_answered_at;
+      -- Klingel-Legs haben answered_at = NULL)
+      answers AS (
+        SELECT ext.main_call_history_id, MIN(ext.cdr_answered_at) AS answer_ts
+        FROM public.cdroutput ext
+        JOIN incoming_queue_calls iqc USING (main_call_history_id)
+        WHERE ext.destination_dn_type = 'extension'
+          AND ext.cdr_answered_at IS NOT NULL
+        GROUP BY ext.main_call_history_id
+      ),
+      waits AS (
+        SELECT iqc.main_call_history_id,
+               iqc.destination_dn_name,
+               iqc.continued_in_cdr_id,
+               a.answer_ts,
+               CASE WHEN a.answer_ts IS NOT NULL AND a.answer_ts >= iqc.cdr_started_at
+                    THEN EXTRACT(EPOCH FROM (a.answer_ts - iqc.cdr_started_at)) END AS wait_seconds
         FROM incoming_queue_calls iqc
-        JOIN public.cdroutput ext ON ext.main_call_history_id = iqc.main_call_history_id
-          AND ext.destination_dn_type = 'extension'
+        LEFT JOIN answers a USING (main_call_history_id)
       ),
       abwurf1 AS (
         SELECT DISTINCT iqc.main_call_history_id
@@ -75,28 +87,23 @@ export async function GET(request: Request) {
           AND q3.destination_dn_type = 'queue'
       ),
       max_wait AS (
-        SELECT destination_dn_name,
-          EXTRACT(EPOCH FROM (cdr_ended_at - cdr_started_at)) AS secs
-        FROM public.cdroutput
-        WHERE destination_dn_type = 'queue'
-          AND source_participant_is_incoming = true
-          AND cdr_started_at >= $1
-          AND cdr_started_at < $2
-          ${queueWhereGlobal}
-        ORDER BY secs DESC
+        SELECT destination_dn_name, wait_seconds
+        FROM waits
+        WHERE wait_seconds IS NOT NULL
+        ORDER BY wait_seconds DESC
         LIMIT 1
       )
       SELECT
-        COUNT(*)::int                                                                                              AS total_incoming,
-        (SELECT COUNT(*)::int FROM answered)                                                                       AS answered,
-        (COUNT(*) - (SELECT COUNT(*) FROM answered))::int                                                        AS abandoned,
-        COUNT(*) FILTER (WHERE wait_seconds > 20)::int                                    AS not_in_20s,
-        ROUND(AVG(wait_seconds)::numeric, 0)::int                                         AS avg_wait_seconds,
-        (SELECT ROUND(secs::numeric, 0)::int FROM max_wait)                               AS max_wait_seconds,
+        COUNT(*)::int                                                                     AS total_incoming,
+        COUNT(answer_ts)::int                                                             AS answered,
+        (COUNT(*) - COUNT(answer_ts))::int                                                AS abandoned,
+        (COUNT(*) - COUNT(*) FILTER (WHERE wait_seconds <= 20))::int                      AS not_in_20s,
+        COALESCE(ROUND(AVG(wait_seconds)::numeric, 0), 0)::int                            AS avg_wait_seconds,
+        (SELECT ROUND(wait_seconds::numeric, 0)::int FROM max_wait)                       AS max_wait_seconds,
         (SELECT destination_dn_name FROM max_wait)                                        AS max_wait_queue,
-        (SELECT COUNT(*)::int FROM abwurf1)                                                AS abwurf1_reached,
-        (SELECT COUNT(*)::int FROM abwurf2)                                                AS abwurf2_reached
-      FROM incoming_queue_calls;
+        (SELECT COUNT(*)::int FROM abwurf1)                                               AS abwurf1_reached,
+        (SELECT COUNT(*)::int FROM abwurf2)                                               AS abwurf2_reached
+      FROM waits;
     `;
 
     const res = await client.query(sql, params);
