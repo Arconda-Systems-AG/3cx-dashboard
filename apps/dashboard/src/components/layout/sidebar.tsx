@@ -8,7 +8,6 @@ import {
   Users,
   PhoneCall,
   History,
-  ListOrdered,
   Settings,
   BarChart2,
   ChevronLeft,
@@ -23,7 +22,6 @@ import { useState } from "react";
 const navItems = [
   { label: "Übersicht", href: "/", icon: LayoutDashboard },
   { label: "Live-Probleme", href: "/live-problems", icon: AlertTriangle },
-  { label: "Warteschlangen", href: "/queues", icon: ListOrdered },
   { label: "Nebenstellen", href: "/extensions", icon: Users },
   { label: "Aktive Anrufe", href: "/calls", icon: PhoneCall },
   { label: "Anrufprotokoll", href: "/calls/history", icon: History },
