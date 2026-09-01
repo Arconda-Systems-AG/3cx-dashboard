@@ -50,14 +50,19 @@ export interface LiveProblemQueue {
   slaTodayWithin: number | null;
   slaTodayOver: number | null;
   acute: boolean;
-  problems: string[];
+  atLimit: boolean;
+  isSlaProblem: boolean;
+  acuteProblems: string[];
+  atLimitText: string | null;
+  slaProblemText: string | null;
 }
 export interface LiveProblemsResponse {
   generatedAt: string;
   thresholds: { maxWaiting: number; waitSeconds: number; slaTargetPct: number; slaMinCalls: number };
   totalQueues: number;
   acuteCount: number;
-  slaOnlyCount: number;
+  atLimitCount: number;
+  slaCount: number;
   problemCount: number;
   queues: LiveProblemQueue[];
   error?: string;

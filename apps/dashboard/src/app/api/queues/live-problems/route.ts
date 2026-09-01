@@ -128,20 +128,26 @@ export async function GET() {
         const acuteProblems: string[] = [];
         if (waiting > t.maxWaiting) acuteProblems.push(`Überlastung: ${waiting} wartende Anrufer`);
         if (longestWait > waitLimit) acuteProblems.push(`Wartezeit ${longestWait}s > ${waitLimit}s`);
-        if (freeAgents === 0 && (waiting > 0 || active > 0))
+        // Akut: kein freier Agent UND jemand wartet (Anrufer hängt fest)
+        if (freeAgents === 0 && waiting > 0)
           acuteProblems.push(
             loggedIn === 0
-              ? `Kein Agent eingeloggt bei ${waiting + active} Anruf(en)`
-              : `Kein freier Agent (${loggedIn} im Gespräch) bei ${waiting + active} Anruf(en)`
+              ? `Kein Agent eingeloggt, ${waiting} warten`
+              : `Kein freier Agent (${loggedIn} im Gespräch), ${waiting} warten`
           );
 
+        // Am Limit (Vorwarnung): kein freier Agent, Gespräche laufen, aber niemand wartet
+        const atLimitText =
+          freeAgents === 0 && waiting === 0 && active > 0
+            ? `Am Limit: ${active} Gespräch(e) · kein freier Agent`
+            : null;
+
         // SLA-Sorgenkind nur mit genug Volumen (sonst rauscht es bei 341 Queues)
-        const slaProblem =
+        const slaProblemText =
           sla && sla.calls >= t.slaMinCalls && sla.pct < t.slaTargetPct
             ? `SLA heute ${sla.pct}% < ${t.slaTargetPct}% (${sla.calls} Anrufe)`
             : null;
 
-        const problems = [...acuteProblems, ...(slaProblem ? [slaProblem] : [])];
         return {
           number,
           name: q.Name,
@@ -157,14 +163,19 @@ export async function GET() {
           slaTodayWithin: sla ? sla.within : null,
           slaTodayOver: sla ? sla.calls - sla.within : null,
           acute: acuteProblems.length > 0,
-          problems,
+          atLimit: atLimitText !== null,
+          isSlaProblem: slaProblemText !== null,
+          acuteProblems,
+          atLimitText,
+          slaProblemText,
         };
       })
-      .filter((q) => q.problems.length > 0)
-      // akute zuerst, dann schlechteste SLA
+      .filter((q) => q.acute || q.atLimit || q.isSlaProblem)
+      // akut zuerst, dann am Limit, dann schlechteste SLA
       .sort(
         (a, b) =>
           Number(b.acute) - Number(a.acute) ||
+          Number(b.atLimit) - Number(a.atLimit) ||
           b.waiting - a.waiting ||
           (a.slaTodayPct ?? 999) - (b.slaTodayPct ?? 999)
       );
@@ -173,8 +184,12 @@ export async function GET() {
       generatedAt: new Date(serverNow).toISOString(),
       thresholds: t,
       totalQueues: queues.length,
-      acuteCount: problemQueues.filter((q) => q.acute).length,
-      slaOnlyCount: problemQueues.filter((q) => !q.acute).length,
+      // Akut-Sektion = reine Live-Probleme (akut, aber SLA ok)
+      acuteCount: problemQueues.filter((q) => q.acute && !q.isSlaProblem).length,
+      // Am-Limit-Sektion = kein freier Agent, alle im Gespräch, niemand wartet (SLA ok, nicht akut)
+      atLimitCount: problemQueues.filter((q) => q.atLimit && !q.acute && !q.isSlaProblem).length,
+      // SLA-Sektion = alle mit schlechter Tages-SLA (stabil), inkl. der gerade akuten
+      slaCount: problemQueues.filter((q) => q.isSlaProblem).length,
       problemCount: problemQueues.length,
       queues: problemQueues,
     });

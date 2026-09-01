@@ -1,7 +1,7 @@
 "use client";
 
 import { useLiveProblems, type LiveProblemQueue } from "@/hooks/use-data";
-import { AlertTriangle, CheckCircle2, Clock, Users, PhoneCall, TrendingDown, type LucideIcon } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, Users, PhoneCall, PhoneOutgoing, type LucideIcon } from "lucide-react";
 
 function fmtWait(s: number): string {
   if (s < 60) return `${s}s`;
@@ -19,49 +19,72 @@ function Stat({ icon: Icon, value, label, alert }: { icon: LucideIcon; value: st
   );
 }
 
-function ProblemCard({ q }: { q: LiveProblemQueue }) {
-  // Akut (Echtzeit) = rot; reines SLA-Tagesproblem = orange
-  const tone = q.acute
-    ? { border: "border-red-500/40", bg: "bg-red-500/5", icon: "text-red-400", text: "text-red-300", dot: "bg-red-400" }
-    : { border: "border-amber-500/40", bg: "bg-amber-500/5", icon: "text-amber-400", text: "text-amber-300", dot: "bg-amber-400" };
+type Variant = "acute" | "limit" | "sla";
+
+function ProblemCard({ q, variant }: { q: LiveProblemQueue; variant: Variant }) {
+  // Rahmenfarbe: rot=akut, gelb=am Limit, orange=SLA. SLA-Karte wird rot bzw. gelb markiert, wenn zusätzlich akut/am Limit.
+  const frame =
+    variant === "acute" || (variant === "sla" && q.acute)
+      ? "border-red-500/40 bg-red-500/5"
+      : variant === "limit" || (variant === "sla" && q.atLimit)
+        ? "border-yellow-500/40 bg-yellow-500/5"
+        : "border-amber-500/40 bg-amber-500/5";
+  const iconColor =
+    variant === "acute" || (variant === "sla" && q.acute) ? "text-red-400"
+      : variant === "limit" || (variant === "sla" && q.atLimit) ? "text-yellow-400"
+        : "text-amber-400";
+  const subtitle =
+    variant === "acute" ? "akut"
+      : variant === "limit" ? "am Limit"
+        : `SLA heute${q.acute ? " · 🔴 jetzt akut" : q.atLimit ? " · 🟡 am Limit" : ""}`;
+
+  const liveStats = (
+    <>
+      <Stat icon={PhoneCall} value={q.waiting} label="wartend" alert={q.waiting > 0} />
+      <Stat icon={Clock} value={fmtWait(q.longestWaitSeconds)} label="längste" />
+      <Stat icon={PhoneOutgoing} value={q.active} label="aktiv" />
+      <Stat icon={Users} value={`${q.freeAgents} frei`} label={`${q.loggedInAgents} eingel.`} alert={q.freeAgents === 0} />
+    </>
+  );
 
   return (
-    <div className={`rounded-2xl border ${tone.border} ${tone.bg} p-4`}>
+    <div className={`rounded-2xl border ${frame} p-4`}>
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate text-base font-semibold text-heading">{q.name}</p>
-          <p className="text-xs text-muted">
-            Warteschlange {q.number} · {q.acute ? "akut" : "SLA heute"}
-          </p>
+          <p className="text-xs text-muted">Warteschlange {q.number} · {subtitle}</p>
         </div>
-        <AlertTriangle className={`h-5 w-5 shrink-0 ${tone.icon}`} />
+        <AlertTriangle className={`h-5 w-5 shrink-0 ${iconColor}`} />
       </div>
 
       <ul className="mb-3 space-y-1">
-        {q.problems.map((p, i) => (
-          <li key={i} className={`flex items-start gap-2 text-sm ${tone.text}`}>
-            <span className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${tone.dot}`} />
-            {p}
+        {q.acute && q.acuteProblems.map((p, i) => (
+          <li key={`a${i}`} className="flex items-start gap-2 text-sm text-red-300">
+            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-red-400" />{p}
           </li>
         ))}
+        {q.atLimit && q.atLimitText && (
+          <li className="flex items-start gap-2 text-sm text-yellow-300">
+            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-yellow-400" />{q.atLimitText}
+          </li>
+        )}
+        {variant === "sla" && q.slaProblemText && (
+          <li className="flex items-start gap-2 text-sm text-amber-300">
+            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" />{q.slaProblemText}
+          </li>
+        )}
       </ul>
 
-      {/* Rot (akut) = Live-Kennzahlen · Orange (SLA) = Tageszahlen */}
       <div className="grid grid-cols-4 gap-2 text-center">
-        {q.acute ? (
-          <>
-            <Stat icon={PhoneCall} value={q.waiting} label="wartend" />
-            <Stat icon={Clock} value={fmtWait(q.longestWaitSeconds)} label="längste" />
-            <Stat icon={Users} value={`${q.freeAgents} frei`} label={`${q.loggedInAgents} eingel.`} alert={q.freeAgents === 0} />
-            <Stat icon={TrendingDown} value={q.slaTodayPct !== null ? `${q.slaTodayPct}%` : "—"} label="SLA heute" />
-          </>
-        ) : (
+        {variant === "sla" ? (
           <>
             <Stat icon={PhoneCall} value={q.slaTodayCalls ?? "—"} label="Anrufe" />
             <Stat icon={CheckCircle2} value={q.slaTodayWithin ?? "—"} label={`≤${q.waitLimit}s`} />
             <Stat icon={Clock} value={q.slaTodayOver ?? "—"} label={`>${q.waitLimit}s`} alert={(q.slaTodayOver ?? 0) > 0} />
             <Stat icon={Users} value={`${q.freeAgents} frei`} label={`${q.loggedInAgents} eingel.`} alert={q.freeAgents === 0} />
           </>
+        ) : (
+          liveStats
         )}
       </div>
     </div>
@@ -71,10 +94,11 @@ function ProblemCard({ q }: { q: LiveProblemQueue }) {
 export default function LiveProblemsPage() {
   const { data, error, isLoading } = useLiveProblems();
 
-  const problems = data?.queues ?? [];
-  const acute = problems.filter((q) => q.acute);
-  const slaOnly = problems.filter((q) => !q.acute);
-  const allClear = !error && !data?.error && problems.length === 0 && !isLoading;
+  const all = data?.queues ?? [];
+  const acuteCards = all.filter((q) => q.acute && !q.isSlaProblem);
+  const limitCards = all.filter((q) => q.atLimit && !q.acute && !q.isSlaProblem);
+  const slaCards = all.filter((q) => q.isSlaProblem);
+  const allClear = !error && !data?.error && all.length === 0 && !isLoading;
 
   return (
     <div className="space-y-5">
@@ -85,16 +109,19 @@ export default function LiveProblemsPage() {
             Live-Probleme
           </h1>
           <p className="text-sm text-muted">
-            <span className="text-red-400">rot = akut jetzt</span> ·{" "}
-            <span className="text-amber-400">orange = SLA heute</span> · aktualisiert alle 5&nbsp;s
+            <span className="text-red-400">rot = akut</span> ·{" "}
+            <span className="text-yellow-400">gelb = am Limit</span> ·{" "}
+            <span className="text-amber-400">orange = SLA heute</span> · alle 5&nbsp;s
           </p>
         </div>
         {data && (
           <div className="text-right text-xs text-muted">
             <p>
-              <span className={acute.length ? "font-semibold text-red-400" : "text-emerald-400"}>{acute.length} akut</span>
+              <span className={acuteCards.length ? "font-semibold text-red-400" : "text-emerald-400"}>{acuteCards.length} akut</span>
               {" · "}
-              <span className={slaOnly.length ? "font-semibold text-amber-400" : "text-muted"}>{slaOnly.length} SLA</span>
+              <span className={limitCards.length ? "font-semibold text-yellow-400" : "text-muted"}>{limitCards.length} Limit</span>
+              {" · "}
+              <span className={slaCards.length ? "font-semibold text-amber-400" : "text-muted"}>{slaCards.length} SLA</span>
               {" · "}von {data.totalQueues}
             </p>
             <p>&gt;{data.thresholds.maxWaiting} wartend · &gt;{data.thresholds.waitSeconds}s · SLA &lt;{data.thresholds.slaTargetPct}% (ab {data.thresholds.slaMinCalls} Anrufe)</p>
@@ -116,20 +143,29 @@ export default function LiveProblemsPage() {
         </div>
       )}
 
-      {acute.length > 0 && (
+      {acuteCards.length > 0 && (
         <div>
-          <h2 className="mb-2 text-sm font-semibold text-red-400">🔴 Akut jetzt ({acute.length})</h2>
+          <h2 className="mb-2 text-sm font-semibold text-red-400">🔴 Akut jetzt ({acuteCards.length})</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {acute.map((q) => <ProblemCard key={q.number} q={q} />)}
+            {acuteCards.map((q) => <ProblemCard key={q.number} q={q} variant="acute" />)}
           </div>
         </div>
       )}
 
-      {slaOnly.length > 0 && (
+      {limitCards.length > 0 && (
         <div>
-          <h2 className="mb-2 text-sm font-semibold text-amber-400">🟠 SLA-Sorgenkinder heute ({slaOnly.length})</h2>
+          <h2 className="mb-2 text-sm font-semibold text-yellow-400">🟡 Am Limit ({limitCards.length})</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {slaOnly.map((q) => <ProblemCard key={q.number} q={q} />)}
+            {limitCards.map((q) => <ProblemCard key={q.number} q={q} variant="limit" />)}
+          </div>
+        </div>
+      )}
+
+      {slaCards.length > 0 && (
+        <div>
+          <h2 className="mb-2 text-sm font-semibold text-amber-400">🟠 SLA-Sorgenkinder heute ({slaCards.length})</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {slaCards.map((q) => <ProblemCard key={q.number} q={q} variant="sla" />)}
           </div>
         </div>
       )}
