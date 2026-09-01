@@ -1733,16 +1733,26 @@ function AccessEmailsSection() {
   async function save() {
     setSaving(true);
     setMessage(null);
+    // Noch nicht mit Enter bestätigte Eingaben automatisch übernehmen —
+    // sonst geht getippter Text beim Speichern verloren
+    const pendingDomain = newDomain.trim().toLowerCase().replace(/^@/, "");
+    const pendingEmail = newEmail.trim().toLowerCase();
+    const sendDomains =
+      pendingDomain && !domains.includes(pendingDomain) ? [...domains, pendingDomain] : domains;
+    const sendEmails =
+      pendingEmail && !emails.includes(pendingEmail) ? [...emails, pendingEmail] : emails;
     try {
       const res = await fetch("/api/settings/access-emails", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ domains, emails }),
+        body: JSON.stringify({ domains: sendDomains, emails: sendEmails }),
       });
       const d = await res.json();
       if (res.ok) {
         setDomains(d.domains);
         setEmails(d.emails);
+        setNewDomain("");
+        setNewEmail("");
         setMessage("Gespeichert — gilt sofort für neue Anmeldungen");
       } else {
         setMessage(`Fehler: ${d.error}`);
