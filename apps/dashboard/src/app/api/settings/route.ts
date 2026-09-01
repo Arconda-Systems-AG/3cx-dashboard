@@ -3,6 +3,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import type { AppSettings } from "@3cx-dash/types";
 import { DEFAULT_SETTINGS } from "@3cx-dash/types";
+import { isSettingsAuthorized } from "@/lib/settings-auth";
 
 function getSettingsPath(): string {
   return process.env.SETTINGS_PATH ?? path.join(process.cwd(), "data", "settings.json");
@@ -19,6 +20,7 @@ export async function GET() {
     if (settings.smtpPassword) settings.smtpPassword = PW_PLACEHOLDER;
     if (settings.pgPassword) settings.pgPassword = PW_PLACEHOLDER;
     if (settings.aiApiKey) settings.aiApiKey = PW_PLACEHOLDER;
+    delete (settings as unknown as Record<string, unknown>).settingsPasswordHash;
     return NextResponse.json(settings);
   } catch {
     return NextResponse.json(DEFAULT_SETTINGS);
@@ -27,7 +29,12 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    if (!(await isSettingsAuthorized(request))) {
+      return NextResponse.json({ error: "Nicht autorisiert — bitte in den Einstellungen anmelden" }, { status: 401 });
+    }
     const body: Partial<AppSettings> = await request.json();
+    // Passwort-Hash nur über die dedizierte Passwort-Route ändern
+    delete (body as Record<string, unknown>).settingsPasswordHash;
     const settingsPath = getSettingsPath();
 
     // Verzeichnis erstellen falls nicht vorhanden

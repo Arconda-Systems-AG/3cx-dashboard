@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isSettingsAuthorized } from "@/lib/settings-auth";
 import { promises as fs } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
@@ -42,6 +43,9 @@ export async function GET() {
 
 // POST /api/systems – neue Telefonanlage hinzufügen
 export async function POST(request: Request) {
+  if (!(await isSettingsAuthorized(request))) {
+    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  }
   try {
     const body: Omit<ThreeCXSystem, "id"> = await request.json();
 

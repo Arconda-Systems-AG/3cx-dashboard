@@ -1337,6 +1337,75 @@ export default function SettingsPage() {
 
   const current = { ...settings, ...form };
 
+  // ── Passwortschutz der Einstellungen ──
+  const [authState, setAuthState] = useState<"loading" | "locked" | "open">("loading");
+  const [authPw, setAuthPw] = useState("");
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authBusy, setAuthBusy] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/settings/auth")
+      .then((r) => r.json())
+      .then((d) => setAuthState(d.authorized ? "open" : "locked"))
+      .catch(() => setAuthState("locked"));
+  }, []);
+
+  async function handleUnlock(e: React.FormEvent) {
+    e.preventDefault();
+    setAuthBusy(true);
+    setAuthError(null);
+    try {
+      const res = await fetch("/api/settings/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: authPw }),
+      });
+      if (res.ok) {
+        setAuthState("open");
+        setAuthPw("");
+      } else {
+        setAuthError((await res.json()).error ?? "Falsches Passwort");
+      }
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  if (authState !== "open") {
+    return (
+      <div className="space-y-6 max-w-3xl">
+        <div>
+          <h1 className="text-2xl font-bold text-heading">Einstellungen</h1>
+          <p className="text-sm text-muted">Dieser Bereich ist passwortgeschützt</p>
+        </div>
+        {authState === "loading" ? (
+          <p className="text-sm text-muted">Prüfe Anmeldung…</p>
+        ) : (
+          <GlassCard className="max-w-sm p-6">
+            <form onSubmit={handleUnlock} className="space-y-3">
+              <label className="block text-xs text-muted">Einstellungs-Passwort</label>
+              <input
+                type="password"
+                value={authPw}
+                onChange={(e) => setAuthPw(e.target.value)}
+                autoFocus
+                className="w-full rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              {authError && <p className="text-sm text-red-400">{authError}</p>}
+              <button
+                type="submit"
+                disabled={authBusy || !authPw}
+                className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50 hover:bg-primary-hover"
+              >
+                {authBusy ? "Prüfe…" : "Entsperren"}
+              </button>
+            </form>
+          </GlassCard>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 max-w-3xl">
       <div>
@@ -1610,6 +1679,224 @@ export default function SettingsPage() {
 
       {/* ── Automatisierung ── */}
       <AutomatisierungSection settings={settings} />
+
+      {/* ── Externer Zugang (Cloudflare Access) ── */}
+      <AccessEmailsSection />
+
+      {/* ── Sicherheit: Einstellungs-Passwort ── */}
+      <SecuritySection />
     </div>
+  );
+}
+
+// ── Externer Zugang: erlaubte Domains/E-Mails der Cloudflare-Access-Policy ──
+function AccessEmailsSection() {
+  const [state, setState] = useState<"loading" | "unconfigured" | "ready">("loading");
+  const [domains, setDomains] = useState<string[]>([]);
+  const [emails, setEmails] = useState<string[]>([]);
+  const [newDomain, setNewDomain] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/settings/access-emails")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.configured) {
+          setDomains(d.domains ?? []);
+          setEmails(d.emails ?? []);
+          setState("ready");
+        } else {
+          setState("unconfigured");
+        }
+      })
+      .catch(() => setState("unconfigured"));
+  }, []);
+
+  async function save() {
+    setSaving(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/settings/access-emails", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ domains, emails }),
+      });
+      const d = await res.json();
+      if (res.ok) {
+        setDomains(d.domains);
+        setEmails(d.emails);
+        setMessage("Gespeichert — gilt sofort für neue Anmeldungen");
+      } else {
+        setMessage(`Fehler: ${d.error}`);
+      }
+    } catch (e) {
+      setMessage(`Fehler: ${e}`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (state === "unconfigured") return null;
+
+  return (
+    <GlassCard className="p-5">
+      <h2 className="mb-1 text-sm font-semibold text-heading">Externer Zugang</h2>
+      <p className="mb-4 text-xs text-muted">
+        Wer darf sich an der externen URL per E-Mail-Code anmelden (Cloudflare Access).
+        Änderungen gelten sofort.
+      </p>
+      {state === "loading" ? (
+        <p className="text-sm text-muted">Lade…</p>
+      ) : (
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-xs text-muted">Erlaubte Domains (alle Adressen @domain)</label>
+            <div className="flex flex-wrap gap-1.5">
+              {domains.map((d) => (
+                <span key={d} className="flex items-center gap-1 rounded-full bg-surface-subtle border border-glass px-2.5 py-1 text-xs text-body">
+                  @{d}
+                  <button onClick={() => setDomains(domains.filter((x) => x !== d))} className="text-muted hover:text-red-400">✕</button>
+                </span>
+              ))}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const v = newDomain.trim().toLowerCase().replace(/^@/, "");
+                  if (v && !domains.includes(v)) setDomains([...domains, v]);
+                  setNewDomain("");
+                }}
+              >
+                <input
+                  value={newDomain}
+                  onChange={(e) => setNewDomain(e.target.value)}
+                  placeholder="domain.de + Enter"
+                  className="w-40 rounded-lg border border-glass bg-input px-2.5 py-1 text-xs text-body placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </form>
+            </div>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs text-muted">Einzelne E-Mail-Adressen</label>
+            <div className="flex flex-wrap gap-1.5">
+              {emails.map((m) => (
+                <span key={m} className="flex items-center gap-1 rounded-full bg-surface-subtle border border-glass px-2.5 py-1 text-xs text-body">
+                  {m}
+                  <button onClick={() => setEmails(emails.filter((x) => x !== m))} className="text-muted hover:text-red-400">✕</button>
+                </span>
+              ))}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const v = newEmail.trim().toLowerCase();
+                  if (v && !emails.includes(v)) setEmails([...emails, v]);
+                  setNewEmail("");
+                }}
+              >
+                <input
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="name@firma.de + Enter"
+                  className="w-48 rounded-lg border border-glass bg-input px-2.5 py-1 text-xs text-body placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </form>
+            </div>
+          </div>
+          {message && (
+            <p className={`text-sm ${message.startsWith("Fehler") ? "text-red-400" : "text-emerald-400"}`}>{message}</p>
+          )}
+          <button
+            onClick={save}
+            disabled={saving || (domains.length === 0 && emails.length === 0)}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50 hover:bg-primary-hover"
+          >
+            <Save className="h-4 w-4" />
+            {saving ? "Speichert…" : "Zugangsliste speichern"}
+          </button>
+          {domains.length === 0 && emails.length === 0 && (
+            <p className="text-xs text-amber-300">Mindestens ein Eintrag nötig — sonst sperrt ihr euch aus.</p>
+          )}
+        </div>
+      )}
+    </GlassCard>
+  );
+}
+
+// ── Sicherheit: Einstellungs-Passwort ändern ──
+function SecuritySection() {
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [repeat, setRepeat] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  async function change(e: React.FormEvent) {
+    e.preventDefault();
+    if (next !== repeat) {
+      setMessage("Fehler: Passwörter stimmen nicht überein");
+      return;
+    }
+    setSaving(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/settings/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ current, next }),
+      });
+      const d = await res.json();
+      if (res.ok) {
+        setMessage("Passwort geändert");
+        setCurrent(""); setNext(""); setRepeat("");
+      } else {
+        setMessage(`Fehler: ${d.error}`);
+      }
+    } catch (err) {
+      setMessage(`Fehler: ${err}`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <GlassCard className="p-5">
+      <h2 className="mb-1 text-sm font-semibold text-heading">Sicherheit</h2>
+      <p className="mb-4 text-xs text-muted">Passwort für den Zugang zu diesen Einstellungen ändern (mind. 8 Zeichen).</p>
+      <form onSubmit={change} className="space-y-3 max-w-sm">
+        <input
+          type="password"
+          value={current}
+          onChange={(e) => setCurrent(e.target.value)}
+          placeholder="Aktuelles Passwort"
+          className="w-full rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30"
+        />
+        <input
+          type="password"
+          value={next}
+          onChange={(e) => setNext(e.target.value)}
+          placeholder="Neues Passwort"
+          className="w-full rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30"
+        />
+        <input
+          type="password"
+          value={repeat}
+          onChange={(e) => setRepeat(e.target.value)}
+          placeholder="Neues Passwort wiederholen"
+          className="w-full rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30"
+        />
+        {message && (
+          <p className={`text-sm ${message.startsWith("Fehler") ? "text-red-400" : "text-emerald-400"}`}>{message}</p>
+        )}
+        <button
+          type="submit"
+          disabled={saving || !current || next.length < 8}
+          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50 hover:bg-primary-hover"
+        >
+          <Save className="h-4 w-4" />
+          {saving ? "Speichert…" : "Passwort ändern"}
+        </button>
+      </form>
+    </GlassCard>
   );
 }

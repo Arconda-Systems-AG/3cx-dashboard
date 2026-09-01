@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isSettingsAuthorized } from "@/lib/settings-auth";
 import { promises as fs } from "fs";
 import path from "path";
 import type { AppSettings } from "@3cx-dash/types";
@@ -24,7 +25,10 @@ async function writeSettings(settings: AppSettings): Promise<void> {
 }
 
 // POST /api/systems/[id]/activate – Telefonanlage aktivieren
-export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  if (!(await isSettingsAuthorized(request))) {
+    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  }
   try {
     const { id } = await params;
     const settings = await readSettings();

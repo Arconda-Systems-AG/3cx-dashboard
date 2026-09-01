@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isSettingsAuthorized } from "@/lib/settings-auth";
 import { promises as fs } from "fs";
 import path from "path";
 import type { AppSettings, ThreeCXSystem } from "@3cx-dash/types";
@@ -28,6 +29,9 @@ async function writeSettings(settings: AppSettings): Promise<void> {
 
 // PATCH /api/systems/[id] – Telefonanlage bearbeiten
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  if (!(await isSettingsAuthorized(request))) {
+    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  }
   try {
     const { id } = await params;
     const body: Partial<ThreeCXSystem> = await request.json();
@@ -85,7 +89,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 }
 
 // DELETE /api/systems/[id] – Telefonanlage löschen
-export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  if (!(await isSettingsAuthorized(request))) {
+    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  }
   try {
     const { id } = await params;
     const settings = await readSettings();
