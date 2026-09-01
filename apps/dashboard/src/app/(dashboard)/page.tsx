@@ -10,7 +10,6 @@ import {
   useDepartments,
   useToday,
   useHourly,
-  useCustomerLogo,
   useAiAnalysis,
   useSettings,
 } from "@/hooks/use-data";
@@ -77,7 +76,6 @@ export default function DashboardPage() {
   const { data: extensionsData } = useExtensions();
   const { data: queuesData } = useQueues();
   const { data: deptData } = useDepartments();
-  const { data: logoData } = useCustomerLogo();
   const { data: appSettings } = useSettings();
   const [selectedDeptId, setSelectedDeptId] = useState<string>("");
   const { data: aiData, mutate: mutateAi } = useAiAnalysis(selectedDeptId || undefined);
@@ -217,9 +215,6 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex items-center gap-4">
         <h1 className="text-lg font-bold text-heading">Übersicht</h1>
-        {logoData?.logoUrl && (
-          <img src={logoData.logoUrl} alt="Kunden-Logo" className="h-8 w-auto object-contain" />
-        )}
         <SearchableSelect
           value={selectedDeptId}
           onChange={setSelectedDeptId}
