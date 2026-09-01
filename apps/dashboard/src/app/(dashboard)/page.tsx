@@ -91,6 +91,21 @@ export default function DashboardPage() {
   const queues = queuesData?.value ?? [];
   const departments = deptData?.groups ?? [];
 
+  // Deep-Link: /?dept=IT (Abteilungsname, case-insensitive) oder /?dept=<Group-ID>.
+  // Nur einmal beim Laden anwenden, damit spätere manuelle Wechsel nicht vom
+  // SWR-Refresh der Abteilungsliste überschrieben werden.
+  const deptParamAppliedRef = useRef(false);
+  useEffect(() => {
+    if (deptParamAppliedRef.current || departments.length === 0) return;
+    const p = new URLSearchParams(window.location.search).get("dept");
+    if (!p) { deptParamAppliedRef.current = true; return; }
+    const match =
+      departments.find((d) => String(d.id) === p) ??
+      departments.find((d) => d.name.toLowerCase() === p.toLowerCase());
+    if (match) setSelectedDeptId(String(match.id));
+    deptParamAppliedRef.current = true;
+  }, [departments]);
+
   const selectedDept = selectedDeptId
     ? departments.find((d) => String(d.id) === selectedDeptId) ?? null
     : null;
