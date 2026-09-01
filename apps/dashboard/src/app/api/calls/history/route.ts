@@ -46,10 +46,16 @@ export async function GET(request: Request) {
         SELECT c.main_call_history_id,
           min(c.cdr_started_at) AS started_at,
           max(c.cdr_ended_at)   AS ended_at,
-          (array_agg(COALESCE(NULLIF(c.source_participant_name,''), NULLIF(c.source_dn_name,'')) ORDER BY c.cdr_started_at))[1] AS src_name,
-          (array_agg(COALESCE(NULLIF(c.source_participant_phone_number,''), NULLIF(c.source_dn_number,'')) ORDER BY c.cdr_started_at))[1] AS src_number,
-          (array_agg(COALESCE(NULLIF(c.destination_dn_name,''), NULLIF(c.destination_participant_name,'')) ORDER BY c.cdr_started_at))[1] AS dst_name,
-          (array_agg(COALESCE(NULLIF(c.destination_dn_number,''), NULLIF(c.destination_participant_phone_number,'')) ORDER BY c.cdr_started_at))[1] AS dst_number,
+          -- Jeweils das erste NICHT-leere Feld über alle Segmente (das erste
+          -- Segment kann Trunk/unknown ohne Namen sein)
+          (array_agg(COALESCE(NULLIF(c.source_participant_name,''), NULLIF(c.source_dn_name,'')) ORDER BY c.cdr_started_at)
+            FILTER (WHERE COALESCE(NULLIF(c.source_participant_name,''), NULLIF(c.source_dn_name,'')) IS NOT NULL))[1] AS src_name,
+          (array_agg(COALESCE(NULLIF(c.source_participant_phone_number,''), NULLIF(c.source_dn_number,'')) ORDER BY c.cdr_started_at)
+            FILTER (WHERE COALESCE(NULLIF(c.source_participant_phone_number,''), NULLIF(c.source_dn_number,'')) IS NOT NULL))[1] AS src_number,
+          (array_agg(COALESCE(NULLIF(c.destination_dn_name,''), NULLIF(c.destination_participant_name,'')) ORDER BY c.cdr_started_at)
+            FILTER (WHERE COALESCE(NULLIF(c.destination_dn_name,''), NULLIF(c.destination_participant_name,'')) IS NOT NULL))[1] AS dst_name,
+          (array_agg(COALESCE(NULLIF(c.destination_dn_number,''), NULLIF(c.destination_participant_phone_number,'')) ORDER BY c.cdr_started_at)
+            FILTER (WHERE COALESCE(NULLIF(c.destination_dn_number,''), NULLIF(c.destination_participant_phone_number,'')) IS NOT NULL))[1] AS dst_number,
           -- Echte Annahme: extension (intern/eingehend) oder provider (ausgehend
           -- extern). queue/ivr/script "beantworten" automatisch (Ansagen).
           min(c.cdr_answered_at) FILTER (WHERE c.destination_dn_type IN ('extension','provider') AND c.cdr_answered_at IS NOT NULL) AS answer_ts,
