@@ -115,6 +115,14 @@ function ProblemCard({ q, variant }: { q: LiveProblemQueue; variant: Variant }) 
             <Stat icon={Clock} value={q.slaTodayOver ?? "—"} label="verfehlt" alert={(q.slaTodayOver ?? 0) > 0} alertClass="text-violet-300" />
             <Stat icon={Users} value={`${q.freeAgents} frei`} label={`${q.loggedInAgents} eingel.`} alert={q.freeAgents === 0} />
           </>
+        ) : variant === "limit" ? (
+          /* Am Limit: wartend/längste sind hier per Definition 0 — stattdessen Kapazität + Tageskontext */
+          <>
+            <Stat icon={PhoneOutgoing} value={q.active} label="aktiv" />
+            <Stat icon={Users} value={`${q.loggedInAgents}/${q.totalAgents}`} label="eingel./ges." alert alertClass="text-amber-300" />
+            <Stat icon={PhoneCall} value={q.slaTodayCalls ?? "—"} label="Anrufe heute" />
+            <Stat icon={Target} value={q.slaTodayPct !== null ? `${q.slaTodayPct}%` : "—"} label="SLA heute" />
+          </>
         ) : (
           liveStats
         )}
