@@ -8,10 +8,14 @@ import type { ODataList } from "@3cx-dash/types";
 import { DEFAULT_SETTINGS } from "@3cx-dash/types";
 import type { AppSettings } from "@3cx-dash/types";
 
-// Status-Werte, die "Anrufer wartet noch in der Queue" bedeuten (noch kein Agent verbunden).
-// Bewusst tolerant, bis an Live-Daten final verifiziert (sla-live nutzt "Ringing",
-// queue-data nutzt "Rerouting" — wir decken beide + "Routing" ab).
-const WAITING_STATUSES = new Set(["Rerouting", "Ringing", "Routing"]);
+// Status-Werte, die "Anrufer wartet noch in der Queue" bedeuten.
+// Live-verifiziert (12 Min Polling, 1080 Snapshots): "Rerouting" ist die Umleitung
+// eines BEREITS VERBUNDENEN Anrufs, "Routing" sind interne Vermittlungs-Legs
+// (Callee="ROUTER") — beide erzeugten massive Fehlalarme ("Wartezeit 247s" bei
+// laufendem Gespräch), weil LastChangeStatus == EstablishedAt (Anrufbeginn) ist
+// und damit die GESAMT-Anrufdauer misst. Nur "Ringing" bleibt: dort ist der Call
+// unverbunden und LastChangeStatus ≈ Wartebeginn.
+const WAITING_STATUSES = new Set(["Ringing"]);
 
 interface ActiveCallLive {
   Id: number;

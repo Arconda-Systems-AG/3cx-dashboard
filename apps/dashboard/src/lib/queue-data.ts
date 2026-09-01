@@ -54,7 +54,9 @@ export async function fetchEnrichedQueues(): Promise<EnrichedQueueData> {
 
     const loggedInCount = enrichedAgents.filter((a) => a.QueueStatus === "LoggedIn" && a.IsRegistered).length;
     const queueCalls = callsData.value.filter((c) => parseCallDn(c.Callee) === queue.Number);
-    const waitingCallCount = queueCalls.filter((c) => c.Status === "Rerouting").length;
+    // "Rerouting" ist KEIN Warten — es ist die Umleitung eines bereits verbundenen
+    // Anrufs (live-verifiziert, erzeugte Fehlalarme). Nur "Ringing" = unverbunden.
+    const waitingCallCount = queueCalls.filter((c) => c.Status === "Ringing").length;
 
     return {
       ...queue,
