@@ -9,6 +9,7 @@ import { useQueues, useDepartments } from "@/hooks/use-data";
 import { StatCard } from "./_components/StatCard";
 import { DataTable } from "./_components/DataTable";
 import { ChartPanel } from "./_components/Charts";
+import { SearchableSelect } from "@/components/searchable-select";
 
 const TAB_IDS: TabId[] = [
   "overview",
@@ -113,33 +114,27 @@ export default function StatisticsPage() {
           <div className="flex items-center gap-1">
             <Building2 className="h-3.5 w-3.5 text-muted" />
             <label className="text-xs text-muted">Abteilung</label>
-            <select
+            <SearchableSelect
               value={selectedGroup}
-              onChange={(e) => handleGroupChange(e.target.value)}
-              className="rounded-lg border border-glass bg-input px-2 py-1.5 text-xs text-body focus:outline-none focus:ring-2 focus:ring-primary/30 hover:border-primary/40 transition-colors cursor-pointer"
-              title="Nach Abteilung (Gruppe) filtern"
-            >
-              <option value="">Alle</option>
-              {departments.map((d) => (
-                <option key={d.id} value={String(d.id)}>{d.name}</option>
-              ))}
-            </select>
+              onChange={handleGroupChange}
+              options={departments.map((d) => ({ value: String(d.id), label: d.name }))}
+              allLabel="Alle"
+              placeholder="Abteilung suchen…"
+              className="w-44"
+            />
           </div>
 
           {/* Warteschlangen-Filter */}
           <div className="flex items-center gap-1">
             <label className="text-xs text-muted">Warteschlange</label>
-            <select
+            <SearchableSelect
               value={selectedQueue}
-              onChange={(e) => handleQueueChange(e.target.value)}
-              className="rounded-lg border border-glass bg-input px-2 py-1.5 text-xs text-body focus:outline-none focus:ring-2 focus:ring-primary/30 hover:border-primary/40 transition-colors cursor-pointer"
-              title="Nach Warteschlange filtern"
-            >
-              <option value="">Alle</option>
-              {queues.map((q) => (
-                <option key={q.Id} value={q.Number ?? String(q.Id)}>{q.Name}</option>
-              ))}
-            </select>
+              onChange={handleQueueChange}
+              options={queues.map((q) => ({ value: q.Number ?? String(q.Id), label: q.Name }))}
+              allLabel="Alle"
+              placeholder="Warteschlange suchen…"
+              className="w-52"
+            />
           </div>
 
           <div className="flex items-center gap-1">

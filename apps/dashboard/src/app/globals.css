@@ -155,6 +155,18 @@ select, input, textarea {
   color-scheme: dark;
 }
 
+/* Options-Liste explizit dunkel — color-scheme allein reicht nicht in jedem
+   Browser (z.B. Chrome/Windows mit hellem OS-Theme rendert sonst weiß) */
+select option,
+select optgroup {
+  background-color: #0c1826;
+  color: #e2e8f0;
+}
+select option:checked {
+  background-color: rgba(240, 128, 23, 0.25);
+  color: #f08017;
+}
+
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
