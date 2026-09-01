@@ -1,37 +1,44 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { GlassCard } from "@3cx-dash/ui";
 import { useCallHistory } from "@/hooks/use-data";
-import { formatDateTime, formatDurationMs } from "@/lib/utils";
-import { Search, Download, Phone, PhoneOff } from "lucide-react";
+import { formatDateTime } from "@/lib/utils";
+import { Search, Download, Phone, PhoneOff, ArrowRight } from "lucide-react";
+
+function fmtSecs(s: number): string {
+  if (s <= 0) return "–";
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  if (m >= 60) return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+  return `${m}:${String(sec).padStart(2, "0")}`;
+}
 
 export default function CallHistoryPage() {
   const [limit, setLimit] = useState(100);
-  const [extension, setExtension] = useState("");
-  const { data, isLoading } = useCallHistory({ limit });
-  const allEntries = data?.value ?? [];
+  const [days, setDays] = useState(7);
+  const [search, setSearch] = useState("");
+  const [q, setQ] = useState("");
 
-  // Nur nach Nebenstelle filtern (kein Datumsfilter – CallHistoryView unterstützt kein $filter)
-  const entries = useMemo(() => {
-    if (!extension) return allEntries;
-    const q = extension.toLowerCase();
-    return allEntries.filter((e) => {
-      const inSrc = (e.SrcDn ?? "").includes(q) || (e.SrcDisplayName ?? "").toLowerCase().includes(q);
-      const inDst = (e.DstDn ?? "").includes(q) || (e.DstDisplayName ?? "").toLowerCase().includes(q);
-      return inSrc || inDst;
-    });
-  }, [allEntries, extension]);
+  // Debounce: Suche erst 400ms nach der letzten Eingabe an den Server schicken
+  useEffect(() => {
+    const t = setTimeout(() => setQ(search.trim()), 400);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const { data, isLoading } = useCallHistory({ limit, days, q });
+  const entries = data?.value ?? [];
 
   function exportCsv() {
-    const header = "Zeitpunkt;Von;Nach;Status;Dauer\n";
+    const header = "Zeitpunkt;Von;Nach;Angenommen von;Status;Gespräch\n";
     const rows = entries.map((e) =>
       [
-        formatDateTime(e.SegmentStartTime ?? ""),
-        e.SrcDisplayName ?? e.SrcDn ?? "–",
-        e.DstDisplayName ?? e.DstDn ?? "–",
-        e.CallAnswered ? "Angenommen" : "Nicht angenommen",
-        formatDurationMs(e.Duration ?? 0),
+        formatDateTime(e.startedAt),
+        e.srcName ?? e.srcNumber ?? "–",
+        e.dstName ?? e.dstNumber ?? "–",
+        e.answeredBy ?? "",
+        e.answered ? "Angenommen" : "Nicht angenommen",
+        fmtSecs(e.durationSeconds),
       ].join(";")
     );
     const blob = new Blob([header + rows.join("\n")], { type: "text/csv;charset=utf-8;" });
@@ -43,9 +50,8 @@ export default function CallHistoryPage() {
     URL.revokeObjectURL(url);
   }
 
-  // Datum-Range der geladenen Daten ermitteln
-  const dateRange = allEntries.length > 0
-    ? `${formatDateTime(allEntries[allEntries.length - 1]?.SegmentStartTime ?? "")} – ${formatDateTime(allEntries[0]?.SegmentStartTime ?? "")}`
+  const dateRange = entries.length > 0
+    ? `${formatDateTime(entries[entries.length - 1]?.startedAt ?? "")} – ${formatDateTime(entries[0]?.startedAt ?? "")}`
     : null;
 
   return (
@@ -79,14 +85,24 @@ export default function CallHistoryPage() {
             <option value={200}>200 Einträge</option>
             <option value={500}>500 Einträge</option>
           </select>
+          <select
+            value={days}
+            onChange={(e) => setDays(Number(e.target.value))}
+            className="rounded-lg border border-glass bg-input px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            <option value={1}>Heute + gestern</option>
+            <option value={7}>7 Tage</option>
+            <option value={30}>30 Tage</option>
+            <option value={90}>90 Tage</option>
+          </select>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
             <input
               type="text"
-              placeholder="Nebenstelle filtern..."
-              value={extension}
-              onChange={(e) => setExtension(e.target.value)}
-              className="w-48 rounded-lg border border-glass bg-input pl-9 pr-3 py-2 text-sm text-body placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30"
+              placeholder="Nebenstelle, Warteschlange, Nummer..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-72 rounded-lg border border-glass bg-input pl-9 pr-3 py-2 text-sm text-body placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
           </div>
         </div>
@@ -101,40 +117,44 @@ export default function CallHistoryPage() {
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted">Von</th>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted">Nach</th>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted">Dauer</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted">Gespräch</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={5} className="py-12 text-center text-sm text-muted">Lade... (CallHistoryView kann bis zu 25s brauchen)</td></tr>
+                <tr><td colSpan={5} className="py-12 text-center text-sm text-muted">Lade...</td></tr>
               ) : entries.length === 0 ? (
                 <tr><td colSpan={5} className="py-12 text-center text-sm text-muted">Keine Einträge gefunden</td></tr>
               ) : (
-                entries.map((entry, i) => (
-                  <tr key={entry.SegmentId ?? i} className="border-b border-glass/50 hover:bg-[var(--hover-row)] transition-colors">
+                entries.map((entry) => (
+                  <tr key={entry.id} className="border-b border-glass/50 hover:bg-[var(--hover-row)] transition-colors">
                     <td className="px-4 py-3 text-sm text-body whitespace-nowrap">
-                      {formatDateTime(entry.SegmentStartTime ?? "")}
+                      {formatDateTime(entry.startedAt)}
                     </td>
                     <td className="px-4 py-3">
                       <div>
-                        <p className="text-sm text-body">{entry.SrcDisplayName ?? "–"}</p>
-                        <p className="text-xs text-muted">{entry.SrcDn ?? ""}</p>
+                        <p className="text-sm text-body">{entry.srcName ?? entry.srcNumber ?? "–"}</p>
+                        <p className="text-xs text-muted">{entry.srcName ? entry.srcNumber ?? "" : ""}</p>
                       </div>
                     </td>
                     <td className="px-4 py-3">
                       <div>
-                        <p className="text-sm text-body">{entry.DstDisplayName ?? "–"}</p>
-                        <p className="text-xs text-muted">{entry.DstDn ?? ""}</p>
+                        <p className="text-sm text-body">{entry.dstName ?? entry.dstNumber ?? "–"}</p>
+                        {entry.answeredBy && entry.answeredBy !== entry.dstName && (
+                          <p className="flex items-center gap-1 text-xs text-emerald-400/80">
+                            <ArrowRight className="h-3 w-3" />{entry.answeredBy}
+                          </p>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className={`flex items-center gap-1.5 text-xs font-medium ${entry.CallAnswered ? "text-emerald-400" : "text-red-400"}`}>
-                        {entry.CallAnswered ? <Phone className="h-3 w-3" /> : <PhoneOff className="h-3 w-3" />}
-                        {entry.CallAnswered ? "Angenommen" : "Nicht angenommen"}
+                      <div className={`flex items-center gap-1.5 text-xs font-medium ${entry.answered ? "text-emerald-400" : "text-red-400"}`}>
+                        {entry.answered ? <Phone className="h-3 w-3" /> : <PhoneOff className="h-3 w-3" />}
+                        {entry.answered ? "Angenommen" : "Nicht angenommen"}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-sm tabular-nums text-secondary">
-                      {formatDurationMs(entry.Duration ?? 0)}
+                      {fmtSecs(entry.durationSeconds)}
                     </td>
                   </tr>
                 ))
@@ -143,7 +163,9 @@ export default function CallHistoryPage() {
           </table>
         </div>
         <div className="border-t border-glass px-4 py-3">
-          <p className="text-xs text-muted">{entries.length} Einträge angezeigt</p>
+          <p className="text-xs text-muted">
+            {entries.length} Einträge angezeigt · Quelle: CDR-Datenbank · Suche umfasst alle Stationen eines Anrufs (auch Warteschlangen)
+          </p>
         </div>
       </GlassCard>
     </div>

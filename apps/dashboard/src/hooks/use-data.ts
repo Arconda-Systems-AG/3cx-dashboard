@@ -77,19 +77,33 @@ export function usePhoneDevices() {
   return useSWR<ODataList<PhoneDevice>>("/api/devices", fetcher, { refreshInterval: 30_000 });
 }
 
+// Anrufprotokoll aus der CDR-DB; q durchsucht Nebenstellen UND Warteschlangen
+// (alle Segmente eines Anrufs, serverseitig).
+export interface CdrHistoryEntry {
+  id: string;
+  startedAt: string;
+  answered: boolean;
+  answeredBy: string | null;
+  srcName: string | null;
+  srcNumber: string | null;
+  dstName: string | null;
+  dstNumber: string | null;
+  durationSeconds: number;
+}
+
 export function useCallHistory(params: {
   days?: number;
-  extension?: string;
+  q?: string;
   limit?: number;
   offset?: number;
 } = {}) {
   const query = new URLSearchParams();
   if (params.days) query.set("days", String(params.days));
-  if (params.extension) query.set("extension", params.extension);
+  if (params.q) query.set("q", params.q);
   if (params.limit) query.set("limit", String(params.limit));
   if (params.offset) query.set("offset", String(params.offset));
 
-  return useSWR<ODataList<any>>(
+  return useSWR<{ value: CdrHistoryEntry[]; error?: string }>(
     `/api/calls/history?${query.toString()}`,
     fetcher,
     { revalidateOnFocus: false }
