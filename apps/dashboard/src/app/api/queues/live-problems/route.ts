@@ -120,11 +120,20 @@ export async function GET() {
         const waitLimit = q.SLATime && q.SLATime > 0 ? q.SLATime : t.waitSeconds;
         const sla = slaTodayByQueue.get(number);
 
+        // Freie Agenten = eingeloggt, registriert UND nicht im Gespräch
+        const freeAgents = (q.Agents ?? []).filter(
+          (a: any) => a.QueueStatus === "LoggedIn" && a.IsRegistered && !a.HasActiveCall
+        ).length;
+
         const acuteProblems: string[] = [];
         if (waiting > t.maxWaiting) acuteProblems.push(`Überlastung: ${waiting} wartende Anrufer`);
         if (longestWait > waitLimit) acuteProblems.push(`Wartezeit ${longestWait}s > ${waitLimit}s`);
-        if (loggedIn === 0 && (waiting > 0 || active > 0))
-          acuteProblems.push(`Kein Agent eingeloggt bei ${waiting + active} Anruf(en)`);
+        if (freeAgents === 0 && (waiting > 0 || active > 0))
+          acuteProblems.push(
+            loggedIn === 0
+              ? `Kein Agent eingeloggt bei ${waiting + active} Anruf(en)`
+              : `Kein freier Agent (${loggedIn} im Gespräch) bei ${waiting + active} Anruf(en)`
+          );
 
         // SLA-Sorgenkind nur mit genug Volumen (sonst rauscht es bei 341 Queues)
         const slaProblem =
@@ -139,6 +148,7 @@ export async function GET() {
           waiting,
           active,
           loggedInAgents: loggedIn,
+          freeAgents,
           totalAgents: (q.Agents ?? []).length,
           longestWaitSeconds: longestWait,
           waitLimit,

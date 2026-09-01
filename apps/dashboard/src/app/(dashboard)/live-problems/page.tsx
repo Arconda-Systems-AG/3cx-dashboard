@@ -52,7 +52,7 @@ function ProblemCard({ q }: { q: LiveProblemQueue }) {
           <>
             <Stat icon={PhoneCall} value={q.waiting} label="wartend" />
             <Stat icon={Clock} value={fmtWait(q.longestWaitSeconds)} label="längste" />
-            <Stat icon={Users} value={`${q.loggedInAgents}/${q.totalAgents}`} label="Agenten" alert={q.loggedInAgents === 0} />
+            <Stat icon={Users} value={`${q.freeAgents} frei`} label={`${q.loggedInAgents} eingel.`} alert={q.freeAgents === 0} />
             <Stat icon={TrendingDown} value={q.slaTodayPct !== null ? `${q.slaTodayPct}%` : "—"} label="SLA heute" />
           </>
         ) : (
@@ -60,7 +60,7 @@ function ProblemCard({ q }: { q: LiveProblemQueue }) {
             <Stat icon={PhoneCall} value={q.slaTodayCalls ?? "—"} label="Anrufe" />
             <Stat icon={CheckCircle2} value={q.slaTodayWithin ?? "—"} label={`≤${q.waitLimit}s`} />
             <Stat icon={Clock} value={q.slaTodayOver ?? "—"} label={`>${q.waitLimit}s`} alert={(q.slaTodayOver ?? 0) > 0} />
-            <Stat icon={Users} value={`${q.loggedInAgents}/${q.totalAgents}`} label="Agenten" alert={q.loggedInAgents === 0} />
+            <Stat icon={Users} value={`${q.freeAgents} frei`} label={`${q.loggedInAgents} eingel.`} alert={q.freeAgents === 0} />
           </>
         )}
       </div>

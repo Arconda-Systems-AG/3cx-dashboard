@@ -41,6 +41,7 @@ export interface LiveProblemQueue {
   waiting: number;
   active: number;
   loggedInAgents: number;
+  freeAgents: number;
   totalAgents: number;
   longestWaitSeconds: number;
   waitLimit: number;
