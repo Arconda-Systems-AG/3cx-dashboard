@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mandant-arconda
+  labels:
+    app.kubernetes.io/name: 3cx-dashboard
+    app.kubernetes.io/instance: arconda
+    app.kubernetes.io/managed-by: kubectl

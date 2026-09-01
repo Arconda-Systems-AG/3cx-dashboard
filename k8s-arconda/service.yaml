@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: threecx-dashboard-arconda
+  namespace: mandant-arconda
+  labels:
+    app: 3cx-dashboard-arconda
+spec:
+  type: LoadBalancer
+  selector:
+    app: 3cx-dashboard-arconda
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3031
+      protocol: TCP

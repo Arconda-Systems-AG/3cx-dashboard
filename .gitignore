@@ -24,3 +24,5 @@ pnpm-debug.log*
 # K8s secrets
 k8s/secret.yaml
 logs/
+k8s-arconda/secret.yaml
+k8s-arconda/logs/
