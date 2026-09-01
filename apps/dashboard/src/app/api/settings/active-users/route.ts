@@ -7,5 +7,5 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   }
   trackAccess(request);
-  return NextResponse.json({ users: getActiveUsers() });
+  return NextResponse.json({ users: getActiveUsers(24 * 60 * 60 * 1000) });
 }

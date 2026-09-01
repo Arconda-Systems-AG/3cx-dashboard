@@ -1778,7 +1778,7 @@ function AccessEmailsSection() {
       ) : (
         <div className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-xs text-muted">Gerade von extern angemeldet (letzte 15 Min)</label>
+            <label className="mb-1.5 block text-xs text-muted">Von extern angemeldet (letzte 24 Std.)</label>
             {activeUsers.length === 0 ? (
               <p className="text-xs text-muted">Niemand — oder nur interne Zugriffe (ohne Cloudflare-Anmeldung).</p>
             ) : (
@@ -1795,8 +1795,9 @@ function AccessEmailsSection() {
                     <span className="text-[10px] text-muted">
                       {u.lastSeenSecondsAgo < 60
                         ? "jetzt aktiv"
-                        : `vor ${Math.round(u.lastSeenSecondsAgo / 60)} Min`}
-                      {u.activeSinceMinutes > 0 && ` · seit ${u.activeSinceMinutes} Min`}
+                        : u.lastSeenSecondsAgo < 3600
+                          ? `vor ${Math.round(u.lastSeenSecondsAgo / 60)} Min`
+                          : `vor ${Math.round(u.lastSeenSecondsAgo / 3600)} Std.`}
                     </span>
                   </div>
                 ))}
