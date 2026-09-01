@@ -53,16 +53,19 @@ export async function fetchEnrichedQueues(): Promise<EnrichedQueueData> {
     });
 
     const loggedInCount = enrichedAgents.filter((a) => a.QueueStatus === "LoggedIn" && a.IsRegistered).length;
+    // Live-verifiziert: Bei Agenten-Annahme wechselt der Callee zur Extension.
+    // Callee == Queue-DN heißt also "wartet noch in dieser Queue" (Warteschleife/
+    // klingelnd/Umleitung) — unabhängig vom Status. Verbundene Gespräche der Queue
+    // laufen unter Callee=<Agent> und werden über die Agenten gezählt.
     const queueCalls = callsData.value.filter((c) => parseCallDn(c.Callee) === queue.Number);
-    // "Rerouting" ist KEIN Warten — es ist die Umleitung eines bereits verbundenen
-    // Anrufs (live-verifiziert, erzeugte Fehlalarme). Nur "Ringing" = unverbunden.
-    const waitingCallCount = queueCalls.filter((c) => c.Status === "Ringing").length;
+    const waitingCallCount = queueCalls.length;
+    const agentActiveCalls = enrichedAgents.filter((a) => a.HasActiveCall).length;
 
     return {
       ...queue,
       Agents: enrichedAgents,
       LoggedInAgents: loggedInCount,
-      ActiveCallCount: queueCalls.length,
+      ActiveCallCount: agentActiveCalls,
       WaitingCallCount: waitingCallCount,
     };
   });

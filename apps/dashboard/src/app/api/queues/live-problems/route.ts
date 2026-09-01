@@ -8,14 +8,13 @@ import type { ODataList } from "@3cx-dash/types";
 import { DEFAULT_SETTINGS } from "@3cx-dash/types";
 import type { AppSettings } from "@3cx-dash/types";
 
-// Status-Werte, die "Anrufer wartet noch in der Queue" bedeuten.
-// Live-verifiziert (12 Min Polling, 1080 Snapshots): "Rerouting" ist die Umleitung
-// eines BEREITS VERBUNDENEN Anrufs, "Routing" sind interne Vermittlungs-Legs
-// (Callee="ROUTER") — beide erzeugten massive Fehlalarme ("Wartezeit 247s" bei
-// laufendem Gespräch), weil LastChangeStatus == EstablishedAt (Anrufbeginn) ist
-// und damit die GESAMT-Anrufdauer misst. Nur "Ringing" bleibt: dort ist der Call
-// unverbunden und LastChangeStatus ≈ Wartebeginn.
-const WAITING_STATUSES = new Set(["Ringing"]);
+// "Anrufer wartet noch in Queue X" wird über den CALLEE erkannt, nicht den Status:
+// Live-verifiziert (01.09): Bei Annahme wechselt der Callee zur Agenten-Extension
+// (37/38 verbundene Gespräche hatten Callee=Extension). Solange Callee die Queue-DN
+// ist, hat KEIN Agent angenommen — der Anruf wartet (Talking = Warteschleife/Ansage,
+// Ringing = klingelt, Rerouting = Umleitungs-Moment). Interne Vermittlungs-Legs
+// (Callee="ROUTER") matchen keine Queue-DN und fallen automatisch raus.
+// Wartezeit = serverNow − EstablishedAt (== LastChangeStatus, konstant = Anrufbeginn).
 
 interface ActiveCallLive {
   Id: number;
@@ -64,7 +63,9 @@ export async function GET() {
     // 1) Angereicherte Queues (Wartende, eingeloggte Agenten, SLATime)
     const { queues } = await fetchEnrichedQueues();
 
-    // 2) Live-Wartezeit pro Queue aus ActiveCalls (LastChangeStatus)
+    // 2) Live-Wartezeit pro Queue aus ActiveCalls: Warter = Callee ist eine Queue-DN
+    //    (siehe Kommentar oben), Wartezeit seit Anrufbeginn (LastChangeStatus == EstablishedAt).
+    const queueNumbers = new Set(queues.map((q: any) => String(q.Number)));
     const callsData = await xapiFetch<ODataList<ActiveCallLive>>(
       "ActiveCalls?$select=Id,Caller,Callee,Status,LastChangeStatus,ServerNow"
     ).catch(() => ({ value: [] as ActiveCallLive[] }));
@@ -73,8 +74,8 @@ export async function GET() {
       : Date.now();
     const longestWaitByQueue = new Map<string, number>();
     for (const c of callsData.value) {
-      if (!WAITING_STATUSES.has(c.Status) || !c.LastChangeStatus) continue;
       const q = parseDn(c.Callee);
+      if (!queueNumbers.has(q) || !c.LastChangeStatus) continue;
       const secs = Math.floor((serverNow - Date.parse(c.LastChangeStatus)) / 1000);
       if (secs > (longestWaitByQueue.get(q) ?? -1)) longestWaitByQueue.set(q, secs);
     }
@@ -161,10 +162,14 @@ export async function GET() {
               : `Kein freier Agent (${loggedIn} im Gespräch), ${waiting} warten`
           );
 
-        // Am Limit (Vorwarnung): kein freier Agent, Gespräche laufen, aber niemand wartet
+        // Am Limit (Vorwarnung): Agenten eingeloggt, aber KEINER frei (egal ob durch
+        // Queue-Calls oder anderweitig belegt) und niemand wartet. loggedIn > 0 nötig,
+        // sonst fluten nachts alle unbesetzten Queues die Ansicht.
         const atLimitText =
-          freeAgents === 0 && waiting === 0 && active > 0
-            ? `Am Limit: ${active} Gespräch(e) · kein freier Agent`
+          freeAgents === 0 && waiting === 0 && loggedIn > 0
+            ? active > 0
+              ? `Am Limit: ${active} Gespräch(e) · kein freier Agent`
+              : `Am Limit: kein freier Agent (${loggedIn} eingeloggt, alle belegt)`
             : null;
 
         // SLA-Sorgenkind nur mit genug Volumen (sonst rauscht es bei 341 Queues)
