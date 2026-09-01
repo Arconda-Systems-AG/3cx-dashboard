@@ -135,10 +135,10 @@ export default function LiveProblemsPage() {
   const { data, error, isLoading } = useLiveProblems();
 
   const all = data?.queues ?? [];
-  // Akut-Sektion zeigt ALLE akuten Queues (auch SLA-Sorgenkinder — die erscheinen
-  // dann doppelt: oben als akute Karte, unten stabil in der SLA-Liste).
+  // Akut- und Limit-Sektion zeigen ALLE betroffenen Queues (auch SLA-Sorgenkinder —
+  // die erscheinen dann doppelt: oben als akute/Limit-Karte, unten stabil in der SLA-Liste).
   const acuteCards = all.filter((q) => q.acute);
-  const limitCards = all.filter((q) => q.atLimit && !q.acute && !q.isSlaProblem);
+  const limitCards = all.filter((q) => q.atLimit && !q.acute);
   const slaCards = all.filter((q) => q.isSlaProblem);
   const allClear = !error && !data?.error && all.length === 0 && !isLoading;
 
