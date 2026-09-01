@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSystems } from "@/hooks/use-data";
+import { useSystems, useCustomerLogo } from "@/hooks/use-data";
 import {
   LayoutDashboard,
   Users,
@@ -33,6 +33,7 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const { data: systemsData } = useSystems();
+  const { data: logoData } = useCustomerLogo();
   const activeSystem = systemsData?.systems?.find((s) => s.id === systemsData.activeSystemId);
   const [collapsed, setCollapsed] = useState(false);
 
@@ -118,6 +119,17 @@ export function Sidebar() {
           })}
         </ul>
       </nav>
+
+      {/* Kunden-Logo über dem Anlagen-Block */}
+      {!collapsed && logoData?.logoUrl && (
+        <div className="px-4 pb-3">
+          <img
+            src={logoData.logoUrl}
+            alt="Kundenlogo"
+            className="max-h-12 w-full rounded-lg bg-white/90 object-contain px-2 py-1.5"
+          />
+        </div>
+      )}
 
       {/* Footer – aktive Anlage */}
       {!collapsed && (
