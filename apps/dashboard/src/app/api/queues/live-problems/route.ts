@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { trackAccess } from "@/lib/access-tracker";
 import { promises as fs } from "fs";
 import path from "path";
 import { xapiFetch } from "@/lib/threecx-client";
@@ -60,7 +61,8 @@ function isBusinessHours(): boolean {
   return mins >= 7 * 60 && mins < 18 * 60;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  trackAccess(request);
   try {
     const settings = await loadSettings();
     const activeSystem = settings.systems?.find((s) => s.id === settings.activeSystemId);

@@ -61,7 +61,7 @@ export function Sidebar() {
         {collapsed ? (
           <span className="text-xs font-black tracking-widest text-heading">A</span>
         ) : (
-          <img src="/arconda-logo-white.png" alt="ARCONDA.systems" className="h-6 w-auto object-contain" />
+          <img src="/arconda-logo-white.png" alt="ARCONDA.systems" className="h-8 w-auto object-contain" />
         )}
 
         {!collapsed && (
@@ -126,7 +126,7 @@ export function Sidebar() {
           <img
             src={logoData.logoUrl}
             alt="Kundenlogo"
-            className="max-h-12 w-full rounded-lg bg-white/90 object-contain px-2 py-1.5"
+            className="max-h-24 w-full object-contain"
           />
         </div>
       )}

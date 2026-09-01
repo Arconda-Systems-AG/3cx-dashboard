@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { trackAccess } from "@/lib/access-tracker";
 import { getAccessToken, getActiveSystem } from "@/lib/threecx-client";
 
 // 3CX-Status gecacht — verhindert CrashLoopBackOff wenn 3CX kurz nicht erreichbar ist
@@ -7,7 +8,8 @@ let cachedConnected = false;
 let lastCheck = 0;
 const CHECK_INTERVAL_MS = 30_000;
 
-export async function GET() {
+export async function GET(request: Request) {
+  trackAccess(request);
   const now = Date.now();
   if (now - lastCheck > CHECK_INTERVAL_MS) {
     lastCheck = now;

@@ -1698,6 +1698,22 @@ function AccessEmailsSection() {
   const [newEmail, setNewEmail] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [activeUsers, setActiveUsers] = useState<
+    Array<{ email: string; lastSeenSecondsAgo: number; activeSinceMinutes: number }>
+  >([]);
+
+  // Wer greift gerade von extern zu (15-Min-Fenster, alle 15s aktualisiert)
+  useEffect(() => {
+    let stop = false;
+    const load = () =>
+      fetch("/api/settings/active-users")
+        .then((r) => (r.ok ? r.json() : { users: [] }))
+        .then((d) => { if (!stop) setActiveUsers(d.users ?? []); })
+        .catch(() => {});
+    load();
+    const id = setInterval(load, 15_000);
+    return () => { stop = true; clearInterval(id); };
+  }, []);
 
   useEffect(() => {
     fetch("/api/settings/access-emails")
