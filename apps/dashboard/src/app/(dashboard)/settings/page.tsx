@@ -1778,6 +1778,32 @@ function AccessEmailsSection() {
       ) : (
         <div className="space-y-4">
           <div>
+            <label className="mb-1.5 block text-xs text-muted">Gerade von extern angemeldet (letzte 15 Min)</label>
+            {activeUsers.length === 0 ? (
+              <p className="text-xs text-muted">Niemand — oder nur interne Zugriffe (ohne Cloudflare-Anmeldung).</p>
+            ) : (
+              <div className="space-y-1">
+                {activeUsers.map((u) => (
+                  <div
+                    key={u.email}
+                    className="flex items-center justify-between rounded-lg bg-surface-subtle px-3 py-1.5"
+                  >
+                    <span className="flex items-center gap-2 text-xs text-body">
+                      <span className={`h-2 w-2 rounded-full ${u.lastSeenSecondsAgo < 60 ? "bg-emerald-400" : "bg-amber-400"}`} />
+                      {u.email}
+                    </span>
+                    <span className="text-[10px] text-muted">
+                      {u.lastSeenSecondsAgo < 60
+                        ? "jetzt aktiv"
+                        : `vor ${Math.round(u.lastSeenSecondsAgo / 60)} Min`}
+                      {u.activeSinceMinutes > 0 && ` · seit ${u.activeSinceMinutes} Min`}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div>
             <label className="mb-1.5 block text-xs text-muted">Erlaubte Domains (alle Adressen @domain)</label>
             <div className="flex flex-wrap gap-1.5">
               {domains.map((d) => (
