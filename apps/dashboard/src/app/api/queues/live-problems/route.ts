@@ -231,10 +231,10 @@ export async function GET() {
       generatedAt: new Date(serverNow).toISOString(),
       thresholds: t,
       totalQueues: queues.length,
-      // Akut-Sektion = reine Live-Probleme (akut, aber SLA ok)
-      acuteCount: problemQueues.filter((q) => q.acute && !q.isSlaProblem).length,
-      // Am-Limit-Sektion = kein freier Agent, alle im Gespräch, niemand wartet (SLA ok, nicht akut)
-      atLimitCount: problemQueues.filter((q) => q.atLimit && !q.acute && !q.isSlaProblem).length,
+      // Zählweise = Sektionen der Seite (Doppelanzeige: SLA-Sorgenkinder
+      // erscheinen ZUSÄTZLICH als akut/Limit-Karte)
+      acuteCount: problemQueues.filter((q) => q.acute).length,
+      atLimitCount: problemQueues.filter((q) => q.atLimit && !q.acute).length,
       // SLA-Sektion = alle mit schlechter Tages-SLA (stabil), inkl. der gerade akuten
       slaCount: problemQueues.filter((q) => q.isSlaProblem).length,
       problemCount: problemQueues.length,
