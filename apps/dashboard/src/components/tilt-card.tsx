@@ -14,12 +14,11 @@ interface TiltCardProps {
 }
 
 /**
- * Statische Glas-Kachel.
- * Der frühere Maus-Over-Effekt (Shimmer + Shadow) wurde entfernt: die
- * Style-Änderung beim Hover triggerte ein Repaint, wodurch die
- * backdrop-blur-Kacheln neu gerendert wurden und dünne Seam-Linien auf
- * ALLEN Kacheln (nicht nur Nachbarn) entstanden. Ohne Hover-Repaint tritt
- * das Artefakt nicht mehr auf.
+ * Statische Kachel mit solider Fläche (kein backdrop-blur).
+ * backdrop-blur erzeugte bei jedem Repaint (Live-Update, Scroll) dünne
+ * Seam-Linien auf den Kacheln. Ersetzt durch bg-surface-elevated (opak),
+ * dadurch entfällt das Artefakt vollständig. Look bleibt eine dunkle
+ * abgesetzte Kachel.
  */
 export function TiltCard({
   children,
@@ -29,7 +28,7 @@ export function TiltCard({
   return (
     <div
       style={style}
-      className={`relative rounded-3xl border border-glass bg-surface-glass backdrop-blur-xl overflow-hidden ${className}`}
+      className={`relative rounded-3xl border border-glass bg-surface-elevated overflow-hidden ${className}`}
     >
       {children}
     </div>
