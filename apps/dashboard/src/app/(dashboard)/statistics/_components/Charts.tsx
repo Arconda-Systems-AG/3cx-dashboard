@@ -591,6 +591,75 @@ export function ChartPanel({ title, rows, fields, type = "barchart" }: ChartPane
 
   const activeNumericFields = numericFields.slice(0, 3);
 
+  // Horizontale Balken als reine CSS-Liste (Grafana-Bargauge-Optik, wie das
+  // offizielle 3CX-Plugin): Label links, Wert rechts, Balken darunter.
+  // Ersetzt den Recharts-Pfad, der bei Re-Renders während der Animation
+  // Balken mit Breite 0 hängen ließ (nur der längste blieb sichtbar).
+  if (isHorizontal) {
+    const maxVal = Math.max(
+      1,
+      ...data.flatMap((d) => activeNumericFields.map((f) => (d[f] as number) || 0))
+    );
+    return (
+      <div className="rounded-xl border border-glass bg-surface-subtle p-4">
+        <p className="mb-3 text-xs font-semibold text-secondary">{title}</p>
+        {activeNumericFields.length > 1 && (
+          <div className="mb-2 flex flex-wrap gap-3">
+            {activeNumericFields.map((f, i) => (
+              <span key={f} className="flex items-center gap-1.5 text-[10px] text-muted">
+                <span className="h-2 w-2 rounded-sm" style={{ background: getBarColor(f, i) }} />
+                {translateLabel(f)}
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="space-y-2">
+          {visibleData.map((d, idx) => (
+            <div key={`${d.name}-${idx}`}>
+              <div className="mb-0.5 flex items-baseline justify-between gap-2">
+                <span className="truncate text-xs text-body" title={String(d.name)}>
+                  {d.name || "–"}
+                </span>
+                <span className="shrink-0 text-xs font-semibold tabular-nums text-secondary">
+                  {activeNumericFields
+                    .map((f) => ((d[f] as number) || 0).toLocaleString("de-DE"))
+                    .join(" / ")}
+                </span>
+              </div>
+              {activeNumericFields.map((f, i) => (
+                <div key={f} className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-white/5">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${Math.max(0.5, (((d[f] as number) || 0) / maxVal) * 100)}%`,
+                      background: getBarColor(f, i),
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+        {hiddenCount > 0 && (
+          <button
+            onClick={() => setShowAll(true)}
+            className="mt-2 w-full rounded-lg border border-glass bg-surface-muted py-1.5 text-xs text-secondary hover:text-heading hover:bg-surface-subtle transition-colors"
+          >
+            + {hiddenCount} weitere anzeigen
+          </button>
+        )}
+        {showAll && data.length > MAX_VISIBLE_BARS && (
+          <button
+            onClick={() => setShowAll(false)}
+            className="mt-2 w-full rounded-lg border border-glass bg-surface-muted py-1.5 text-xs text-secondary hover:text-heading hover:bg-surface-subtle transition-colors"
+          >
+            Weniger anzeigen
+          </button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-xl border border-glass bg-surface-subtle p-4">
       <p className="mb-3 text-xs font-semibold text-secondary">{title}</p>
