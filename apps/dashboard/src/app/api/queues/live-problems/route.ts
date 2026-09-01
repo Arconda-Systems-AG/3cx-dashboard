@@ -49,6 +49,17 @@ function parseDn(field: string): string {
   return (field ?? "").split(" ")[0];
 }
 
+// Geschäftszeiten (wie KI-Analyse): Mo–Fr 07–18, Sa 09–13, So zu (Europe/Berlin).
+// Gate für die "Unbesetzt"-Meldung — sonst fluten nachts alle Queues die Ansicht.
+function isBusinessHours(): boolean {
+  const berlin = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Berlin" }));
+  const day = berlin.getDay(); // 0=So
+  const mins = berlin.getHours() * 60 + berlin.getMinutes();
+  if (day === 0) return false;
+  if (day === 6) return mins >= 9 * 60 && mins < 13 * 60;
+  return mins >= 7 * 60 && mins < 18 * 60;
+}
+
 export async function GET() {
   try {
     const settings = await loadSettings();
@@ -162,14 +173,20 @@ export async function GET() {
               : `Kein freier Agent (${loggedIn} im Gespräch), ${waiting} warten`
           );
 
-        // Am Limit (Vorwarnung): Agenten eingeloggt, aber KEINER frei (egal ob durch
-        // Queue-Calls oder anderweitig belegt) und niemand wartet. loggedIn > 0 nötig,
-        // sonst fluten nachts alle unbesetzten Queues die Ansicht.
+        // Am Limit (Vorwarnung): kein freier Agent, niemand wartet. Zwei Fälle:
+        // (a) Agenten eingeloggt, aber alle belegt (auch durch fremde Calls).
+        // (b) UNBESETZT: 0 eingeloggt — nur während Geschäftszeiten und nur für
+        //     Queues mit relevantem Tagesverkehr (sonst fluten nachts/inaktive
+        //     Queues die Ansicht).
         const atLimitText =
-          freeAgents === 0 && waiting === 0 && loggedIn > 0
-            ? active > 0
-              ? `Am Limit: ${active} Gespräch(e) · kein freier Agent`
-              : `Am Limit: kein freier Agent (${loggedIn} eingeloggt, alle belegt)`
+          freeAgents === 0 && waiting === 0
+            ? loggedIn > 0
+              ? active > 0
+                ? `Am Limit: ${active} Gespräch(e) · kein freier Agent`
+                : `Am Limit: kein freier Agent (${loggedIn} eingeloggt, alle belegt)`
+              : sla && sla.calls >= t.slaMinCalls && isBusinessHours()
+                ? `Unbesetzt: 0 Agenten eingeloggt (${sla.calls} Anrufe heute)`
+                : null
             : null;
 
         // SLA-Sorgenkind nur mit genug Volumen (sonst rauscht es bei 341 Queues)
