@@ -14,11 +14,11 @@ interface TiltCardProps {
 }
 
 /**
- * Statische Kachel mit solider Fläche (kein backdrop-blur).
- * backdrop-blur erzeugte bei jedem Repaint (Live-Update, Scroll) dünne
- * Seam-Linien auf den Kacheln. Ersetzt durch bg-surface-elevated (opak),
- * dadurch entfällt das Artefakt vollständig. Look bleibt eine dunkle
- * abgesetzte Kachel.
+ * Kachel mit solider Fläche (kein backdrop-blur) und dezentem CSS-Hover.
+ * backdrop-blur erzeugte bei jedem Repaint Seam-Linien — daher opake
+ * bg-surface-elevated. Der Hover ist rein CSS (Transform + Border), ohne
+ * JS-State/Maus-Tracking, dadurch keine Repaint-Artefakte und keine
+ * ausufernden Schatten auf Nachbarkacheln.
  */
 export function TiltCard({
   children,
@@ -28,7 +28,7 @@ export function TiltCard({
   return (
     <div
       style={style}
-      className={`relative rounded-3xl border border-glass bg-surface-elevated overflow-hidden ${className}`}
+      className={`relative rounded-3xl border border-glass bg-surface-elevated overflow-hidden transition-[transform,border-color] duration-200 hover:-translate-y-0.5 hover:border-primary/40 ${className}`}
     >
       {children}
     </div>

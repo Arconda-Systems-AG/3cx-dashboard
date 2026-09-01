@@ -13,7 +13,7 @@ export function GlassCard({ children, className = "", hover = false, ...props }:
     <div
       {...props}
       className={`rounded-3xl border border-glass bg-surface-elevated shadow-[var(--shadow-glass)] ${
-        hover ? "transition-transform duration-300 hover:-translate-y-0.5" : ""
+        hover ? "transition-[transform,border-color] duration-200 hover:-translate-y-0.5 hover:border-primary/40" : ""
       } ${className}`}
     >
       {children}
