@@ -39,6 +39,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import type { QueueAgent } from "@3cx-dash/types";
 import { TiltCard } from "@/components/tilt-card";
 import { SearchableSelect } from "@/components/searchable-select";
 
@@ -502,7 +503,14 @@ export default function DashboardPage() {
               // Auslastung: wie viele angemeldete Agenten telefonieren gerade
               const agentsInCall = (queue.Agents ?? []).filter((a) => a.HasActiveCall).length;
               const isExpanded = expandedQueues.has(queue.Id);
-              const visibleAgents = isExpanded ? queue.Agents : queue.Agents?.slice(0, 4);
+              // Angemeldete zuerst (Gespräch > angemeldet frei > abgemeldet) —
+              // sonst wirkt eine gut besetzte Queue eingeklappt wie unterbesetzt
+              const agentRank = (a: QueueAgent) =>
+                a.QueueStatus === "LoggedIn" && a.IsRegistered
+                  ? (a.HasActiveCall ? 0 : 1)
+                  : 2;
+              const sortedAgents = [...(queue.Agents ?? [])].sort((a, b) => agentRank(a) - agentRank(b));
+              const visibleAgents = isExpanded ? sortedAgents : sortedAgents.slice(0, 4);
               const hiddenCount = totalAgents - 4;
 
               const profileBadge: Record<string, { label: string; cls: string }> = {
