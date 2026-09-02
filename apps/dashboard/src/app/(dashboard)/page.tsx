@@ -503,12 +503,14 @@ export default function DashboardPage() {
               // Auslastung: wie viele angemeldete Agenten telefonieren gerade
               const agentsInCall = (queue.Agents ?? []).filter((a) => a.HasActiveCall).length;
               const isExpanded = expandedQueues.has(queue.Id);
-              // Angemeldete zuerst (Gespräch > angemeldet frei > abgemeldet) —
-              // sonst wirkt eine gut besetzte Queue eingeklappt wie unterbesetzt
-              const agentRank = (a: QueueAgent) =>
-                a.QueueStatus === "LoggedIn" && a.IsRegistered
-                  ? (a.HasActiveCall ? 0 : 1)
-                  : 2;
+              // Angemeldete zuerst (Gespräch > angemeldet frei > abgemeldet > OFFLINE
+              // als Letztes) — sonst wirkt eine gut besetzte Queue eingeklappt
+              // wie unterbesetzt
+              const agentRank = (a: QueueAgent) => {
+                if (a.QueueStatus === "LoggedIn" && a.IsRegistered) return a.HasActiveCall ? 0 : 1;
+                if (a.QueueStatus === "LoggedIn" && !a.IsRegistered) return 3; // Offline
+                return 2; // Abgemeldet
+              };
               const sortedAgents = [...(queue.Agents ?? [])].sort((a, b) => agentRank(a) - agentRank(b));
               const visibleAgents = isExpanded ? sortedAgents : sortedAgents.slice(0, 4);
               const hiddenCount = totalAgents - 4;
