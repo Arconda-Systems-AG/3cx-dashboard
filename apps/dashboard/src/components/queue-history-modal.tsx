@@ -98,6 +98,7 @@ export function QueueHistoryModal({
     zeit: fmtTime(s.t),
     Wartend: s.waiting,
     Frei: s.free,
+    "Im Gespräch": Math.max(0, s.loggedIn - s.free),
     Eingeloggt: s.loggedIn,
     "Längste Wartezeit": s.longestWait,
   }));
@@ -157,7 +158,7 @@ export function QueueHistoryModal({
         ) : (
           <div className="space-y-5">
             <div>
-              <p className="mb-1 text-xs font-semibold text-secondary">Wartende · freie Agenten · eingeloggt</p>
+              <p className="mb-1 text-xs font-semibold text-secondary">Wartende · freie Agenten · im Gespräch · eingeloggt</p>
               <ResponsiveContainer width="100%" height={200}>
                 <LineChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
@@ -167,6 +168,7 @@ export function QueueHistoryModal({
                   <Legend wrapperStyle={{ fontSize: 10 }} iconType="plainline" />
                   <Line type="monotone" dataKey="Wartend" stroke="#ef4444" strokeWidth={2} dot={false} />
                   <Line type="monotone" dataKey="Frei" stroke="#10b981" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="Im Gespräch" stroke="#f59e0b" strokeWidth={2} dot={false} />
                   <Line type="monotone" dataKey="Eingeloggt" stroke="#64748b" strokeWidth={1.5} strokeDasharray="4 3" dot={false} />
                 </LineChart>
               </ResponsiveContainer>
