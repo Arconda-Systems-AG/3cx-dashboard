@@ -190,10 +190,20 @@ export async function POST(request: NextRequest) {
     const { loadTodaySnapshots } = await import("@/lib/snapshots");
     const globalSnapshots = await loadTodaySnapshots();
     const deptQueueNames = new Set(queuesSummary.map((q) => q.name));
-    const filteredSnapshots = globalSnapshots.map((snap) => ({
-      ...snap,
-      queues: snap.queues.filter((q) => deptQueueNames.has(q.name)),
-    }));
+    const filteredSnapshots = globalSnapshots.map((snap) => {
+      const deptQueues = snap.queues.filter((q) => deptQueueNames.has(q.name));
+      // calls/talking aus den Abteilungs-Queues ableiten — die Snapshot-Werte
+      // sind SYSTEMWEIT und ließen die KI sonst System-Peaks (z.B. 52 Anrufe
+      // ganz Dello) mit den Agenten EINER Abteilung vergleichen.
+      const inCall = deptQueues.reduce((s, q) => s + q.inCall, 0);
+      const waiting = deptQueues.reduce((s, q) => s + q.waiting, 0);
+      return {
+        ...snap,
+        queues: deptQueues,
+        calls: inCall + waiting,
+        talking: inCall,
+      };
+    });
     trend = buildAiTrendContext(filteredSnapshots);
   }
 
@@ -282,12 +292,12 @@ export async function POST(request: NextRequest) {
     `    angenommen: Anrufe die tatsächlich von einem Agenten angenommen wurden\n` +
     `    abgebrochen: Anrufe die NIE ein Agent angenommen hat\n` +
     `    nicht_in_20s: Anrufe die NICHT innerhalb 20s von einem Agenten angenommen wurden (SLA-Verletzung; end-to-end gemessen: vom Eintritt in die ERSTE Queue bis zur Agenten-Annahme, über Overflow-Weiterleitungen hinweg)\n` +
-    `    avg_wartezeit_s / max_wartezeit_s: Durchschnittliche/maximale Wartezeit bis zur Annahme in Sekunden (end-to-end)\n` +
+    `    avg_wartezeit_s / max_wartezeit_s: Durchschnittliche/maximale Wartezeit bis zur Annahme in Sekunden (end-to-end). WICHTIG: NUR über die ANGENOMMENEN Anrufe gerechnet — nie angenommene Anrufe haben keine Annahme-Wartezeit und fliessen NICHT ein. Ein niedriger Durchschnitt widerspricht also NICHT einer hohen nicht_in_20s-Quote; formuliere das nie als Widerspruch und nenne den Wert als "Ø der Angenommenen".\n` +
     `    abwurf1/abwurf2: Anrufe die zur 1./2. Overflow-Queue weitergeleitet wurden\n` +
     `    WICHTIG: Alle Werte sind der EINGANGS-Queue zugeordnet (erste Queue des Anrufs). Overflow-Ziel-Queues (Namen mit Suffix wie " 20", " 40", "Abwurf", "(alle)") erscheinen NICHT separat — sie sind nur Weiterleitungsziele. Bei SLA-Problemen ist IMMER die Eingangs-Queue der Verursacher, NIE die Overflow-Queue.\n` +
     `- 'datenbank_heute.stundenverteilung': Anrufvolumen pro Stunde ({"08":23,"09":45,...})\n` +
     `- 'datenbank_heute.queues': Pro-Queue-Statistik mit nicht_in_20s und avg_wartezeit_s\n` +
-    `- 'verlauf_heute': Echtzeit-Snapshots der Agenten-Besetzung über den heutigen Tag\n\n` +
+    `- 'verlauf_heute': Echtzeit-Snapshots der Agenten-Besetzung über den heutigen Tag. Bei einer Abteilungs-Analyse sind ALLE Werte darin (auch Anruf-Peaks) auf diese Abteilung bezogen.\n\n` +
     `Hinweise:\n` +
     `- Öffnungszeiten: Mo–Fr 07:00–18:00, Sa 09:00–13:00, So geschlossen\n` +
     `- Anrufe/Besetzungsprobleme außerhalb der Öffnungszeiten IGNORIEREN\n` +
