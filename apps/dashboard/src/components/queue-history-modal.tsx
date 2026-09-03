@@ -130,6 +130,13 @@ export function QueueHistoryModal({
         </div>
 
         {/* CDR-Statistik-Zeile (letzte 3h, end-to-end) */}
+        {data?.cdr && data.cdr.calls === 0 && (
+          <p className="mb-3 rounded-lg border border-amber-400/30 bg-amber-400/5 px-3 py-2 text-xs text-amber-200">
+            Keine Anrufe kamen in den letzten 3 Std. ZUERST in dieser Warteschlange an — vermutlich ist
+            sie ein Überlauf-Ziel (z.B. &quot;… 20/40/Abwurf&quot;). Die Anruf-/SLA-Statistik wird der
+            Eingangs-Warteschlange zugerechnet; der Live-Verlauf unten zeigt trotzdem, was hier real passierte.
+          </p>
+        )}
         {data?.cdr && (
           <div className="mb-4 grid grid-cols-3 gap-2 sm:grid-cols-6">
             <Stat icon={PhoneCall} value={data.cdr.calls} label="Anrufe 3h" />
