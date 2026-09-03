@@ -10,6 +10,7 @@ import {
   Target,
   Clock,
   PhoneOutgoing,
+  UserX,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -36,6 +37,8 @@ interface HistoryResponse {
     slaPct: number | null;
     avgWaitSeconds: number;
     maxWaitSeconds: number;
+    lostCallers?: number;
+    retriedOk?: number;
   } | null;
 }
 
@@ -139,13 +142,16 @@ export function QueueHistoryModal({
           </p>
         )}
         {data?.cdr && (
-          <div className="mb-4 grid grid-cols-3 gap-2 sm:grid-cols-6">
+          <div className="mb-4 grid grid-cols-4 gap-2 sm:grid-cols-7">
             <Stat icon={PhoneCall} value={data.cdr.calls} label="Anrufe 3h" />
             <Stat icon={CheckCircle2} value={data.cdr.answered} label="angenommen" />
             <Stat icon={Target} value={data.cdr.slaPct !== null ? `${data.cdr.slaPct}%` : "—"} label="in SLA" alert={data.cdr.slaPct !== null && data.cdr.slaPct < 50} alertClass="text-violet-300" />
             <Stat icon={Clock} value={fmtWait(data.cdr.avgWaitSeconds)} label="Ø Wartezeit" />
             <Stat icon={Clock} value={fmtWait(data.cdr.maxWaitSeconds)} label="max. Wartezeit" />
             <Stat icon={PhoneOutgoing} value={data.cdr.calls - data.cdr.answered} label="verpasst" alert={data.cdr.calls - data.cdr.answered > 0} />
+            <div title={`${data.cdr.lostCallers ?? 0} Anrufer erreichten in 3h nie jemanden · ${data.cdr.retriedOk ?? 0} kamen nach Fehlversuchen doch durch`}>
+              <Stat icon={UserX} value={data.cdr.lostCallers ?? 0} label="verlorene Anrufer" alert={(data.cdr.lostCallers ?? 0) > 0} alertClass="text-rose-400" />
+            </div>
           </div>
         )}
 

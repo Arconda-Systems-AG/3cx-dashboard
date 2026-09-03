@@ -205,6 +205,8 @@ export interface TodayStats {
   max_wait_queue: string;     // Queue-Name mit längster Wartezeit
   abwurf1_reached: number;    // Calls die Abwurf-Queue 1 erreichten
   abwurf2_reached: number;    // Calls die Abwurf-Queue 2 erreichten
+  lost_callers?: number;      // eindeutige Anrufer, die HEUTE nie angenommen wurden (Wiederwähler dedupliziert)
+  lost_retried_ok?: number;   // Anrufer mit Fehlversuchen, die später doch angenommen wurden
 }
 
 export interface SlaViolation {

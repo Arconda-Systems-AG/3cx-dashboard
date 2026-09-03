@@ -22,6 +22,7 @@ import {
   Clock,
   PhoneIncoming,
   PhoneMissed,
+  UserX,
   CheckCircle2,
   Timer,
   TrendingDown,
@@ -239,7 +240,7 @@ export default function DashboardPage() {
       )}
 
       {/* ── Tages-KPIs + Echtzeit (8 Kacheln) ── */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-9">
           {/* 1 — Eingehend */}
           <TiltCard glowColor="rgba(59,130,246,0.3)" className="p-4">
             <div className="absolute inset-x-0 top-0 h-[2px] bg-blue-500 opacity-70" />
@@ -287,6 +288,24 @@ export default function DashboardPage() {
               {today ? v : "–"}
             </p>
             <p className="mt-1 text-xs font-medium text-muted">Abgebrochen</p>
+          </TiltCard>
+          ); })()}
+
+          {/* 4b — Verlorene Anrufer (Wiederwähler dedupliziert) */}
+          {(() => { const v = today?.lost_callers ?? 0; const retried = today?.lost_retried_ok ?? 0; return (
+          <TiltCard
+            glowColor={v > 0 ? "rgba(244,63,94,0.3)" : "rgba(16,185,129,0.3)"}
+            className="p-4"
+            title={`${v} Anrufer haben heute nie jemanden erreicht · ${retried} weitere kamen nach Fehlversuchen später doch durch (Wiederwähler nur 1× gezählt, nur erkennbare Rufnummern)`}
+          >
+            <div className={`absolute inset-x-0 top-0 h-[2px] ${v > 0 ? "bg-rose-500" : "bg-emerald-500"} opacity-70`} />
+            <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${v > 0 ? "bg-rose-500/10" : "bg-emerald-500/10"}`}>
+              <UserX className={`h-3.5 w-3.5 ${v > 0 ? "text-rose-400" : "text-emerald-400"}`} />
+            </div>
+            <p className={`text-2xl font-bold tabular-nums tracking-tight ${v > 0 ? "text-rose-400" : "text-emerald-400"}`}>
+              {today ? v : "–"}
+            </p>
+            <p className="mt-1 text-xs font-medium text-muted">Verlorene Anrufer</p>
           </TiltCard>
           ); })()}
 

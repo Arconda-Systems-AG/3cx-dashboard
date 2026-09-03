@@ -42,7 +42,8 @@ export async function GET(request: Request) {
           q.cdr_id,
           q.cdr_started_at,
           q.destination_dn_name,
-          q.continued_in_cdr_id
+          q.continued_in_cdr_id,
+          q.source_participant_phone_number AS anrufer
         FROM public.cdroutput q
         WHERE q.destination_dn_type = 'queue'
           AND q.source_participant_is_incoming = true
@@ -66,11 +67,24 @@ export async function GET(request: Request) {
         SELECT iqc.main_call_history_id,
                iqc.destination_dn_name,
                iqc.continued_in_cdr_id,
+               iqc.anrufer,
                a.answer_ts,
                CASE WHEN a.answer_ts IS NOT NULL AND a.answer_ts >= iqc.cdr_started_at
                     THEN EXTRACT(EPOCH FROM (a.answer_ts - iqc.cdr_started_at)) END AS wait_seconds
         FROM incoming_queue_calls iqc
         LEFT JOIN answers a USING (main_call_history_id)
+      ),
+      -- Anrufer-Sicht (Wiederwähler dedupliziert): verloren = keiner der
+      -- heutigen Versuche dieser Rufnummer wurde je angenommen
+      lost AS (
+        SELECT COUNT(DISTINCT w1.anrufer) FILTER (WHERE NOT EXISTS (
+                 SELECT 1 FROM waits w2 WHERE w2.anrufer = w1.anrufer AND w2.answer_ts IS NOT NULL
+               )) AS lost_callers,
+               COUNT(DISTINCT w1.anrufer) FILTER (WHERE EXISTS (
+                 SELECT 1 FROM waits w2 WHERE w2.anrufer = w1.anrufer AND w2.answer_ts IS NOT NULL
+               )) AS retried_ok
+        FROM waits w1
+        WHERE w1.answer_ts IS NULL AND COALESCE(w1.anrufer, '') != ''
       ),
       abwurf1 AS (
         SELECT DISTINCT iqc.main_call_history_id
@@ -102,7 +116,9 @@ export async function GET(request: Request) {
         (SELECT ROUND(wait_seconds::numeric, 0)::int FROM max_wait)                       AS max_wait_seconds,
         (SELECT destination_dn_name FROM max_wait)                                        AS max_wait_queue,
         (SELECT COUNT(*)::int FROM abwurf1)                                               AS abwurf1_reached,
-        (SELECT COUNT(*)::int FROM abwurf2)                                               AS abwurf2_reached
+        (SELECT COUNT(*)::int FROM abwurf2)                                               AS abwurf2_reached,
+        (SELECT lost_callers::int FROM lost)                                              AS lost_callers,
+        (SELECT retried_ok::int FROM lost)                                                AS lost_retried_ok
       FROM waits;
     `;
 
@@ -119,6 +135,8 @@ export async function GET(request: Request) {
       max_wait_queue: String(row.max_wait_queue ?? ""),
       abwurf1_reached: Number(row.abwurf1_reached ?? 0),
       abwurf2_reached: Number(row.abwurf2_reached ?? 0),
+      lost_callers: Number(row.lost_callers ?? 0),
+      lost_retried_ok: Number(row.lost_retried_ok ?? 0),
     };
 
     return NextResponse.json(stats);

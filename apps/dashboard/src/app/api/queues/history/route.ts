@@ -30,7 +30,8 @@ export async function GET(request: Request) {
         const res = await client.query(
           `WITH incoming AS (
              SELECT DISTINCT ON (q.main_call_history_id)
-               q.main_call_history_id, q.destination_dn_number, q.cdr_started_at
+               q.main_call_history_id, q.destination_dn_number, q.cdr_started_at,
+               q.source_participant_phone_number AS anrufer
              FROM public.cdroutput q
              WHERE q.destination_dn_type = 'queue'
                AND q.source_participant_is_incoming = true
@@ -47,18 +48,30 @@ export async function GET(request: Request) {
              GROUP BY ext.main_call_history_id
            ),
            waits AS (
-             SELECT i.destination_dn_number, a.answer_ts,
+             SELECT i.destination_dn_number, i.anrufer, a.answer_ts,
                CASE WHEN a.answer_ts IS NOT NULL AND a.answer_ts >= i.cdr_started_at
                     THEN EXTRACT(EPOCH FROM (a.answer_ts - i.cdr_started_at)) END AS ws
              FROM incoming i
              LEFT JOIN answers a USING (main_call_history_id)
              WHERE i.destination_dn_number = $1
+           ),
+           lost AS (
+             SELECT COUNT(DISTINCT w1.anrufer) FILTER (WHERE NOT EXISTS (
+                      SELECT 1 FROM waits w2 WHERE w2.anrufer = w1.anrufer AND w2.answer_ts IS NOT NULL
+                    )) AS lost_callers,
+                    COUNT(DISTINCT w1.anrufer) FILTER (WHERE EXISTS (
+                      SELECT 1 FROM waits w2 WHERE w2.anrufer = w1.anrufer AND w2.answer_ts IS NOT NULL
+                    )) AS retried_ok
+             FROM waits w1
+             WHERE w1.answer_ts IS NULL AND COALESCE(w1.anrufer, '') != ''
            )
            SELECT COUNT(*)::int AS calls,
                   COUNT(answer_ts)::int AS answered,
                   COUNT(*) FILTER (WHERE ws <= 20)::int AS within_sla,
                   COALESCE(ROUND(AVG(ws)::numeric, 0), 0)::int AS avg_wait_s,
-                  COALESCE(ROUND(MAX(ws)::numeric, 0), 0)::int AS max_wait_s
+                  COALESCE(ROUND(MAX(ws)::numeric, 0), 0)::int AS max_wait_s,
+                  (SELECT lost_callers::int FROM lost) AS lost_callers,
+                  (SELECT retried_ok::int FROM lost) AS retried_ok
            FROM waits`,
           [queue]
         );
@@ -71,6 +84,8 @@ export async function GET(request: Request) {
           slaPct: calls > 0 ? Math.round((Number(r.within_sla ?? 0) / calls) * 1000) / 10 : null,
           avgWaitSeconds: Number(r.avg_wait_s ?? 0),
           maxWaitSeconds: Number(r.max_wait_s ?? 0),
+          lostCallers: Number(r.lost_callers ?? 0),
+          retriedOk: Number(r.retried_ok ?? 0),
         };
       } finally {
         client.release();
