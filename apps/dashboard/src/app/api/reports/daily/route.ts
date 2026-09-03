@@ -88,10 +88,11 @@ function buildHtml(
     { label: "Angenommen",   value: `${answerRate}%`,  color: answerRate >= 80 ? "#16a34a" : answerRate >= 60 ? "#d97706" : "#dc2626", sub: `${today.answered} Anrufe` },
     { label: "SLA ≤ 20 Sek.", value: `${slaRate}%`,   color: slaRate >= 80 ? "#16a34a" : slaRate >= 60 ? "#d97706" : "#dc2626",   sub: `${today.not_in_20s} überschritten` },
     { label: "Abbrüche",     value: `${abandonRate}%`, color: abandonRate <= 10 ? "#16a34a" : abandonRate <= 25 ? "#d97706" : "#dc2626", sub: `${today.abandoned} Anrufe` },
+    { label: "Verlorene Anrufer", value: String(today.lost_callers ?? 0), color: (today.lost_callers ?? 0) === 0 ? "#16a34a" : "#e11d48", sub: `${today.lost_retried_ok ?? 0} später doch erreicht` },
   ] : [];
 
   const kpiCells = kpis.map((k) => `
-    <td width="25%" style="padding:0 5px;">
+    <td width="20%" style="padding:0 5px;">
       <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:14px 10px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06);">
         <div style="font-size:24px;font-weight:700;color:${k.color};line-height:1;">${k.value}</div>
         <div style="font-size:10px;font-weight:600;color:#374151;margin-top:4px;text-transform:uppercase;letter-spacing:.05em;">${k.label}</div>

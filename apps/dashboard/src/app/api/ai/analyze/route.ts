@@ -260,6 +260,8 @@ export async function POST(request: NextRequest) {
       max_wartezeit_queue: dbStats.today.max_wait_queue,
       abwurf1: dbStats.today.abwurf1_reached,
       abwurf2: dbStats.today.abwurf2_reached,
+      verlorene_anrufer: dbStats.today.lost_callers ?? 0,
+      wiederwaehler_spaeter_erreicht: dbStats.today.lost_retried_ok ?? 0,
       stundenverteilung: dbStats.stundenverteilung,
       queues: dbStats.queues,
     };
@@ -311,6 +313,8 @@ export async function POST(request: NextRequest) {
     `    nicht_in_20s: Anrufe die NICHT innerhalb 20s von einem Agenten angenommen wurden (SLA-Verletzung; end-to-end gemessen: vom Eintritt in die ERSTE Queue bis zur Agenten-Annahme, über Overflow-Weiterleitungen hinweg)\n` +
     `    avg_wartezeit_s / max_wartezeit_s: Durchschnittliche/maximale Wartezeit bis zur Annahme in Sekunden (end-to-end). WICHTIG: NUR über die ANGENOMMENEN Anrufe gerechnet — nie angenommene Anrufe haben keine Annahme-Wartezeit und fliessen NICHT ein. Ein niedriger Durchschnitt widerspricht also NICHT einer hohen nicht_in_20s-Quote; formuliere das nie als Widerspruch und nenne den Wert als "Ø der Angenommenen".\n` +
     `    abwurf1/abwurf2: Anrufe die zur 1./2. Overflow-Queue weitergeleitet wurden\n` +
+    `    verlorene_anrufer: EINDEUTIGE Rufnummern, die heute NIE einen Agenten erreichten (Wiederwähler nur 1x gezählt) — die ehrliche Schadenszahl, nutze sie statt der rohen Abbruch-Anzahl wenn du über verlorene Kunden sprichst\n` +
+    `    wiederwaehler_spaeter_erreicht: Anrufer mit Fehlversuchen, die spaeter doch durchkamen (relativiert die Abbruchzahl)\n` +
     `    WICHTIG: Alle Werte sind der EINGANGS-Queue zugeordnet (erste Queue des Anrufs). Overflow-Ziel-Queues (Namen mit Suffix wie " 20", " 40", "Abwurf", "(alle)") erscheinen NICHT separat — sie sind nur Weiterleitungsziele. Bei SLA-Problemen ist IMMER die Eingangs-Queue der Verursacher, NIE die Overflow-Queue.\n` +
     `- 'datenbank_heute.stundenverteilung': Anrufvolumen pro Stunde ({"08":23,"09":45,...})\n` +
     `- 'datenbank_heute.queues': Pro-Queue-Statistik mit nicht_in_20s und avg_wartezeit_s\n` +

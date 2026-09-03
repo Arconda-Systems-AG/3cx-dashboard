@@ -44,7 +44,8 @@ export async function collectFullDayStats(queueFilter?: string[]): Promise<FullD
       WITH incoming_queue_calls AS (
         SELECT DISTINCT ON (q.main_call_history_id)
           q.main_call_history_id, q.cdr_id, q.cdr_started_at,
-          q.destination_dn_name, q.continued_in_cdr_id
+          q.destination_dn_name, q.continued_in_cdr_id,
+          q.source_participant_phone_number AS anrufer
         FROM public.cdroutput q
         WHERE q.destination_dn_type = 'queue'
           AND q.source_participant_is_incoming = true
@@ -62,7 +63,7 @@ export async function collectFullDayStats(queueFilter?: string[]): Promise<FullD
       ),
       waits AS (
         SELECT iqc.main_call_history_id, iqc.destination_dn_name, iqc.continued_in_cdr_id,
-               a.answer_ts,
+               iqc.anrufer, a.answer_ts,
                CASE WHEN a.answer_ts IS NOT NULL AND a.answer_ts >= iqc.cdr_started_at
                     THEN EXTRACT(EPOCH FROM (a.answer_ts - iqc.cdr_started_at)) END AS wait_seconds
         FROM incoming_queue_calls iqc
@@ -81,6 +82,16 @@ export async function collectFullDayStats(queueFilter?: string[]): Promise<FullD
         SELECT destination_dn_name, wait_seconds FROM waits
         WHERE wait_seconds IS NOT NULL
         ORDER BY wait_seconds DESC LIMIT 1
+      ),
+      lost AS (
+        SELECT COUNT(DISTINCT w1.anrufer) FILTER (WHERE NOT EXISTS (
+                 SELECT 1 FROM waits w2 WHERE w2.anrufer = w1.anrufer AND w2.answer_ts IS NOT NULL
+               )) AS lost_callers,
+               COUNT(DISTINCT w1.anrufer) FILTER (WHERE EXISTS (
+                 SELECT 1 FROM waits w2 WHERE w2.anrufer = w1.anrufer AND w2.answer_ts IS NOT NULL
+               )) AS retried_ok
+        FROM waits w1
+        WHERE w1.answer_ts IS NULL AND COALESCE(w1.anrufer, '') != ''
       )
       SELECT
         COUNT(*)::int                                                    AS total_incoming,
@@ -91,7 +102,9 @@ export async function collectFullDayStats(queueFilter?: string[]): Promise<FullD
         (SELECT ROUND(wait_seconds::numeric, 0)::int FROM max_wait)      AS max_wait_seconds,
         (SELECT destination_dn_name FROM max_wait)                       AS max_wait_queue,
         (SELECT COUNT(*)::int FROM abwurf1)                              AS abwurf1_reached,
-        (SELECT COUNT(*)::int FROM abwurf2)                              AS abwurf2_reached
+        (SELECT COUNT(*)::int FROM abwurf2)                              AS abwurf2_reached,
+        (SELECT lost_callers::int FROM lost)                             AS lost_callers,
+        (SELECT retried_ok::int FROM lost)                               AS lost_retried_ok
       FROM waits
     `;
 
@@ -166,6 +179,8 @@ export async function collectFullDayStats(queueFilter?: string[]): Promise<FullD
       max_wait_queue: String(row.max_wait_queue ?? ""),
       abwurf1_reached: Number(row.abwurf1_reached ?? 0),
       abwurf2_reached: Number(row.abwurf2_reached ?? 0),
+      lost_callers: Number(row.lost_callers ?? 0),
+      lost_retried_ok: Number(row.lost_retried_ok ?? 0),
     };
 
     const stundenverteilung: Record<string, number> = {};
