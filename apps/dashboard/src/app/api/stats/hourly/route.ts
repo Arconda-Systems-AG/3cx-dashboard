@@ -32,21 +32,25 @@ export async function GET(request: Request) {
       ? `AND c.destination_dn_number = ANY($${params.push(queueFilter)})`
       : "";
 
+    // Angenommen = Extension-Segment MIT cdr_answered_at (echte Agenten-Annahme).
+    // Klingel-Legs ohne answered_at zählten hier früher fälschlich als angenommen —
+    // das Chart widersprach dann den (korrekten) end-to-end-Zahlen der KI/Kacheln.
     const sql = `
       SELECT
         date_trunc('hour', sub.first_start AT TIME ZONE 'Europe/Berlin') AS hour,
         COUNT(*)::int                                                                     AS total,
-        COUNT(sub.reached_ext)::int                                                       AS answered,
-        COUNT(CASE WHEN sub.reached_ext IS NULL THEN 1 END)::int                           AS abandoned
+        COUNT(sub.answer_ts)::int                                                         AS answered,
+        COUNT(CASE WHEN sub.answer_ts IS NULL THEN 1 END)::int                            AS abandoned
       FROM (
         SELECT
           c.main_call_history_id,
           MIN(c.cdr_started_at)                                                              AS first_start,
-          MAX(CASE WHEN ext.destination_dn_type = 'extension' THEN 1 ELSE NULL END)         AS reached_ext
+          MIN(ext.cdr_answered_at)                                                           AS answer_ts
         FROM public.cdroutput c
         LEFT JOIN public.cdroutput ext
           ON ext.main_call_history_id = c.main_call_history_id
           AND ext.destination_dn_type = 'extension'
+          AND ext.cdr_answered_at IS NOT NULL
         WHERE c.destination_dn_type = 'queue'
           AND c.source_participant_is_incoming = true
           AND c.source_entity_type != 'queue'

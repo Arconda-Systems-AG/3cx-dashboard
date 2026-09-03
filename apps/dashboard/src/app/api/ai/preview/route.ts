@@ -91,7 +91,8 @@ async function collectDbPreview(settings: AppSettings) {
         ORDER BY main_call_history_id, cdr_started_at
       ),
       answered AS (
-        SELECT DISTINCT main_call_history_id FROM public.cdroutput WHERE destination_dn_type = 'extension'
+        SELECT DISTINCT main_call_history_id FROM public.cdroutput
+        WHERE destination_dn_type = 'extension' AND cdr_answered_at IS NOT NULL
       )
       SELECT i.destination_dn_name AS queue,
         COUNT(*)::int AS anrufe,
