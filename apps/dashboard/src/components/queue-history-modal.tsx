@@ -113,7 +113,7 @@ export function QueueHistoryModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
       <div
-        className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-glass bg-surface-elevated p-5"
+        className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-glass bg-[#0f172a] p-5"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-start justify-between gap-2">

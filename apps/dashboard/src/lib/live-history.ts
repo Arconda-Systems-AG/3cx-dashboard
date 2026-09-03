@@ -4,12 +4,15 @@ import { xapiFetch } from "@/lib/threecx-client";
 import { fetchEnrichedQueues } from "@/lib/queue-data";
 import type { ODataList } from "@3cx-dash/types";
 
-// Ringpuffer der Live-Kennzahlen pro Queue (3h) auf dem Settings-PVC.
-// Serverseitiger Timer (Start via instrumentation.ts) — sammelt unabhängig
-// davon, ob jemand das Dashboard offen hat. Kennzahlen, die es in der CDR-DB
-// NICHT gibt: Wartende, freie Agenten, eingeloggt, längste aktuelle Wartezeit.
+// Ringpuffer der Live-Kennzahlen pro Queue (3h). Sampling in den RAM
+// (Standard alle 15s, LIVE_HISTORY_SAMPLE_SECONDS), Flush auf das
+// Settings-PVC nur 1×/Minute — sonst würde bei feinem Intervall die
+// komplette Datei (mehrere MB) im Sekundentakt gelesen+geschrieben.
+// Start via instrumentation.ts; sammelt unabhängig von offenen Browsern.
 
-const SAMPLE_INTERVAL_MS = 60_000;
+const SAMPLE_INTERVAL_MS =
+  Math.max(5, Number(process.env.LIVE_HISTORY_SAMPLE_SECONDS) || 15) * 1000;
+const FLUSH_INTERVAL_MS = 60_000;
 const WINDOW_MS = 3 * 60 * 60 * 1000;
 
 export interface LiveSample {
@@ -25,13 +28,31 @@ function historyPath(): string {
   return path.join(dir, "live-history.json");
 }
 
-export async function loadHistory(): Promise<LiveSample[]> {
+// ─── RAM-Puffer (einmal pro Node-Prozess) ────────────────────────────────────
+const g = globalThis as unknown as {
+  __liveHistoryBuf?: LiveSample[];
+  __liveHistoryTimers?: boolean;
+  __liveHistoryDirty?: boolean;
+};
+
+async function loadFromDisk(): Promise<LiveSample[]> {
   try {
     const raw = JSON.parse(await fs.readFile(historyPath(), "utf-8"));
     return Array.isArray(raw) ? raw : [];
   } catch {
     return [];
   }
+}
+
+function trim(buf: LiveSample[]): LiveSample[] {
+  const cutoff = Date.now() - WINDOW_MS;
+  return buf.filter((s) => Date.parse(s.t) >= cutoff);
+}
+
+/** Historie für die API: RAM-Puffer (falls initialisiert), sonst Platte. */
+export async function loadHistory(): Promise<LiveSample[]> {
+  if (g.__liveHistoryBuf) return trim(g.__liveHistoryBuf);
+  return trim(await loadFromDisk());
 }
 
 interface ActiveCallLive {
@@ -74,26 +95,38 @@ async function takeSample(): Promise<void> {
     ];
   }
 
-  const cutoff = Date.now() - WINDOW_MS;
-  const history = (await loadHistory()).filter((s) => Date.parse(s.t) >= cutoff);
-  history.push(sample);
+  g.__liveHistoryBuf = trim([...(g.__liveHistoryBuf ?? []), sample]);
+  g.__liveHistoryDirty = true;
+}
+
+async function flushToDisk(): Promise<void> {
+  if (!g.__liveHistoryDirty || !g.__liveHistoryBuf) return;
+  g.__liveHistoryDirty = false;
   const p = historyPath();
   await fs.mkdir(path.dirname(p), { recursive: true });
   // atomar: erst temp, dann rename — halbe Dateien bei Absturz vermeiden
-  await fs.writeFile(p + ".tmp", JSON.stringify(history), "utf-8");
+  await fs.writeFile(p + ".tmp", JSON.stringify(trim(g.__liveHistoryBuf)), "utf-8");
   await fs.rename(p + ".tmp", p);
 }
 
-// ─── Timer (einmal pro Node-Prozess) ─────────────────────────────────────────
-const g = globalThis as unknown as { __liveHistoryTimer?: ReturnType<typeof setInterval> };
-
 export function startLiveHistoryCollector(): void {
-  if (g.__liveHistoryTimer) return;
-  g.__liveHistoryTimer = setInterval(() => {
+  if (g.__liveHistoryTimers) return;
+  g.__liveHistoryTimers = true;
+
+  // Beim Start die Historie von der Platte übernehmen (überlebt Neustarts,
+  // Verlust bei Absturz: maximal die letzte unflushed Minute)
+  void loadFromDisk().then((disk) => {
+    g.__liveHistoryBuf = trim([...disk, ...(g.__liveHistoryBuf ?? [])]);
+  });
+
+  setInterval(() => {
     takeSample().catch(() => {
-      // XAPI nicht erreichbar o.ä. — Sample überspringen, nächste Minute erneut
+      // XAPI nicht erreichbar o.ä. — Sample überspringen
     });
   }, SAMPLE_INTERVAL_MS);
+  setInterval(() => {
+    flushToDisk().catch(() => {});
+  }, FLUSH_INTERVAL_MS);
   // Erstes Sample zeitnah nach dem Start
   setTimeout(() => takeSample().catch(() => {}), 10_000);
 }
