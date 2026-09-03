@@ -209,20 +209,37 @@ export async function POST(request: NextRequest) {
 
   // ─── currentData für KI-Prompt ────────────────────────────────────────────
 
+  // Bei Abteilungs-Analyse auch die ECHTZEIT-Zähler auf die Abteilung filtern —
+  // sonst vergleicht die KI systemweite Talking-Zahlen (z.B. 42 in ganz Dello)
+  // mit den Agenten einer Abteilung und meldet Schein-Diskrepanzen.
+  const deptAgentNumbers = new Set(queues.flatMap((q) => (q.Agents ?? []).map((a) => a.Number)));
+  const scopedQueueNums = new Set(queues.map((q) => String(q.Number)));
+  const scopedCalls = queueFilter
+    ? activeCalls.filter((c) => {
+        const caller = String(c.Caller ?? "").split(" ")[0];
+        const callee = String(c.Callee ?? "").split(" ")[0];
+        return (
+          deptAgentNumbers.has(caller) ||
+          deptAgentNumbers.has(callee) ||
+          scopedQueueNums.has(caller) ||
+          scopedQueueNums.has(callee)
+        );
+      })
+    : activeCalls;
+
   // Warter = Callee ist eine Queue-DN (bei Agenten-Annahme wechselt der Callee
   // zur Extension — live-verifiziert). Status allein ist kein Warte-Indikator.
-  const queueNums = new Set(allQueues.map((q) => String(q.Number)));
-  const waitingInQueue = activeCalls.filter((c) =>
-    queueNums.has(String(c.Callee ?? "").split(" ")[0])
+  const waitingInQueue = scopedCalls.filter((c) =>
+    scopedQueueNums.has(String(c.Callee ?? "").split(" ")[0])
   ).length;
 
   const currentData: Record<string, unknown> = {
     zeitpunkt: new Date().toISOString(),
-    aktive_anrufe_gesamt: activeCalls.length,
+    aktive_anrufe_gesamt: scopedCalls.length,
     aktive_anrufe_status: {
-      talking: activeCalls.filter((c) => c.Status === "Talking").length,
-      ringing: activeCalls.filter((c) => c.Status === "Ringing").length,
-      held: activeCalls.filter((c) => c.Status === "Held").length,
+      talking: scopedCalls.filter((c) => c.Status === "Talking").length,
+      ringing: scopedCalls.filter((c) => c.Status === "Ringing").length,
+      held: scopedCalls.filter((c) => c.Status === "Held").length,
       wartend_in_queue: waitingInQueue,
     },
     warteschlangen: queuesSummary,
@@ -276,7 +293,7 @@ export async function POST(request: NextRequest) {
     `Aktuell: ${berlinDay}, ${berlinTime} Uhr — Betrieb ${isOpen ? "GEÖFFNET" : "GESCHLOSSEN"} (${openingHours})\n` +
     `3CX-Daten:\n${JSON.stringify(currentData)}\n\n` +
     `Felderklärungen:\n` +
-    `- 'aktive_anrufe_gesamt': Anzahl aktiver Gespräche/Anrufe im System gerade (systemweit, nicht gefiltert)\n` +
+    `- 'aktive_anrufe_gesamt': Anzahl aktiver Gespräche/Anrufe gerade. Bei einer Abteilungs-Analyse NUR die Anrufe dieser Abteilung (Agenten + Queues) — vergleiche sie nie mit systemweiten Werten\n` +
     `- 'aktive_anrufe_status.talking': Davon aktive Gespräche (Teilnehmer verbunden)\n` +
     `- 'aktive_anrufe_status.ringing': Davon klingelnd (noch nicht angenommen)\n` +
     `- 'aktive_anrufe_status.held': Davon in der Warteschleife gehalten\n` +
