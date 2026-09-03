@@ -2,6 +2,16 @@
 
 import { useState, useEffect, useRef } from "react";
 import { GlassCard, LedIndicator } from "@3cx-dash/ui";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  CartesianGrid,
+} from "recharts";
 import { useSettings, updateSettings, useSystems, useGroups } from "@/hooks/use-data";
 import { useHealth } from "@/hooks/use-data";
 import {
@@ -1342,6 +1352,7 @@ export default function SettingsPage() {
   const [authPw, setAuthPw] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
   const [authBusy, setAuthBusy] = useState(false);
+  const [tab, setTab] = useState<"allgemein" | "telemetrie">("allgemein");
 
   useEffect(() => {
     fetch("/api/settings/auth")
@@ -1412,6 +1423,26 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-bold text-heading">Einstellungen</h1>
         <p className="text-sm text-muted">Telefonanlagen verwalten und App-Konfiguration</p>
       </div>
+
+      {/* Tab-Leiste */}
+      <div className="flex gap-1 rounded-xl border border-glass bg-surface-subtle p-1 w-fit">
+        {([["allgemein", "Allgemein"], ["telemetrie", "Anlagen-Telemetrie"]] as const).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
+              tab === key ? "bg-primary/15 text-primary" : "text-secondary hover:text-heading"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "telemetrie" ? (
+        <TelemetryTab />
+      ) : (
+        <>
 
       {/* ── Telefonanlagen ── */}
       <GlassCard className="p-5">
@@ -1685,6 +1716,8 @@ export default function SettingsPage() {
 
       {/* ── Sicherheit: Einstellungs-Passwort ── */}
       <SecuritySection />
+      </>
+      )}
     </div>
   );
 }
@@ -1951,5 +1984,167 @@ function SecuritySection() {
         </button>
       </form>
     </GlassCard>
+  );
+}
+
+// ── Anlagen-Telemetrie: CPU/RAM/Disk der 3CX (Historie aus der Anlage) ──
+interface TelemetryPoint {
+  t: string;
+  cpu: number;
+  ramPct: number;
+  vramPct: number;
+  diskFreeGb: number;
+}
+interface TelemetryCurrent {
+  t: string;
+  cpu: number;
+  ramPct: number;
+  ramUsedGb: number;
+  ramTotalGb: number;
+  vramPct: number;
+  diskFreeGb: number;
+  diskTotalGb: number;
+  diskUsedPct: number;
+  uptimeDays: number;
+}
+
+function TelemetryTab() {
+  const [hours, setHours] = useState(24);
+  const [data, setData] = useState<{ points: TelemetryPoint[]; current: TelemetryCurrent | null } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let stop = false;
+    setData(null);
+    setError(null);
+    const load = () =>
+      fetch(`/api/settings/telemetry?hours=${hours}`)
+        .then(async (r) => {
+          const d = await r.json();
+          if (stop) return;
+          if (r.ok) setData(d);
+          else setError(d.error ?? `HTTP ${r.status}`);
+        })
+        .catch((e) => { if (!stop) setError(String(e)); });
+    load();
+    const id = setInterval(load, 120_000);
+    return () => { stop = true; clearInterval(id); };
+  }, [hours]);
+
+  const chartData = (data?.points ?? []).map((p) => ({
+    zeit: new Date(p.t).toLocaleString("de-DE", {
+      timeZone: "Europe/Berlin",
+      ...(hours > 48 ? { day: "2-digit", month: "2-digit" } : {}),
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+    "CPU %": p.cpu,
+    "RAM %": p.ramPct,
+    "Virt. RAM %": p.vramPct,
+    "Disk frei (GB)": p.diskFreeGb,
+  }));
+
+  const axis = { fontSize: 10, fill: "#94a3b8" };
+  const ttStyle = {
+    background: "rgba(10, 22, 40, 0.95)",
+    border: "1px solid rgba(255,255,255,0.12)",
+    borderRadius: 8,
+    fontSize: 11,
+  };
+  const c = data?.current;
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted">
+          CPU-, Speicher- und Disk-Werte direkt aus der Telefonanlage (2-Min-Raster)
+        </p>
+        <select
+          value={hours}
+          onChange={(e) => setHours(Number(e.target.value))}
+          className="rounded-lg border border-glass bg-input px-3 py-1.5 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary/30"
+        >
+          <option value={6}>6 Stunden</option>
+          <option value={24}>24 Stunden</option>
+          <option value={72}>3 Tage</option>
+          <option value={168}>7 Tage</option>
+        </select>
+      </div>
+
+      {error && (
+        <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          Telemetrie nicht abrufbar: {error}
+        </div>
+      )}
+      {!data && !error && <p className="py-10 text-center text-sm text-muted">Lade Telemetrie…</p>}
+
+      {c && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+          <GlassCard className="p-4 text-center">
+            <p className={`text-2xl font-bold ${c.cpu > 80 ? "text-red-400" : c.cpu > 50 ? "text-amber-300" : "text-emerald-400"}`}>{c.cpu}%</p>
+            <p className="text-xs text-muted">CPU</p>
+          </GlassCard>
+          <GlassCard className="p-4 text-center">
+            <p className={`text-2xl font-bold ${c.ramPct > 90 ? "text-red-400" : c.ramPct > 75 ? "text-amber-300" : "text-heading"}`}>{c.ramPct}%</p>
+            <p className="text-xs text-muted">RAM ({c.ramUsedGb}/{c.ramTotalGb} GB)</p>
+          </GlassCard>
+          <GlassCard className="p-4 text-center">
+            <p className="text-2xl font-bold text-heading">{c.vramPct}%</p>
+            <p className="text-xs text-muted">Virt. Speicher</p>
+          </GlassCard>
+          <GlassCard className="p-4 text-center">
+            <p className={`text-2xl font-bold ${c.diskUsedPct > 90 ? "text-red-400" : c.diskUsedPct > 75 ? "text-amber-300" : "text-heading"}`}>{c.diskUsedPct}%</p>
+            <p className="text-xs text-muted">Disk ({c.diskFreeGb} GB frei)</p>
+          </GlassCard>
+          <GlassCard className="p-4 text-center">
+            <p className="text-2xl font-bold text-heading">{c.uptimeDays}</p>
+            <p className="text-xs text-muted">Tage Uptime</p>
+          </GlassCard>
+        </div>
+      )}
+
+      {chartData.length > 1 && (
+        <>
+          <GlassCard className="p-4">
+            <p className="mb-2 text-xs font-semibold text-secondary">CPU-Auslastung (%)</p>
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                <XAxis dataKey="zeit" tick={axis} tickLine={false} minTickGap={50} />
+                <YAxis tick={axis} tickLine={false} axisLine={false} domain={[0, 100]} />
+                <Tooltip contentStyle={ttStyle} />
+                <Line type="monotone" dataKey="CPU %" stroke="#f08017" strokeWidth={1.5} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </GlassCard>
+          <GlassCard className="p-4">
+            <p className="mb-2 text-xs font-semibold text-secondary">Speicher (%)</p>
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                <XAxis dataKey="zeit" tick={axis} tickLine={false} minTickGap={50} />
+                <YAxis tick={axis} tickLine={false} axisLine={false} domain={[0, 100]} />
+                <Tooltip contentStyle={ttStyle} />
+                <Legend wrapperStyle={{ fontSize: 10 }} iconType="plainline" />
+                <Line type="monotone" dataKey="RAM %" stroke="#10b981" strokeWidth={1.5} dot={false} />
+                <Line type="monotone" dataKey="Virt. RAM %" stroke="#64748b" strokeWidth={1.5} strokeDasharray="4 3" dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </GlassCard>
+          <GlassCard className="p-4">
+            <p className="mb-2 text-xs font-semibold text-secondary">Freier Festplattenplatz (GB)</p>
+            <ResponsiveContainer width="100%" height={160}>
+              <LineChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                <XAxis dataKey="zeit" tick={axis} tickLine={false} minTickGap={50} />
+                <YAxis tick={axis} tickLine={false} axisLine={false} />
+                <Tooltip contentStyle={ttStyle} />
+                <Line type="monotone" dataKey="Disk frei (GB)" stroke="#8b5cf6" strokeWidth={1.5} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </GlassCard>
+        </>
+      )}
+    </div>
   );
 }
