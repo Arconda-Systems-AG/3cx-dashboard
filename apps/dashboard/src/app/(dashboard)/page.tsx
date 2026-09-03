@@ -42,6 +42,7 @@ import {
 import type { QueueAgent } from "@3cx-dash/types";
 import { TiltCard } from "@/components/tilt-card";
 import { SearchableSelect } from "@/components/searchable-select";
+import { QueueHistoryModal } from "@/components/queue-history-modal";
 
 function parseDn(field: string): string {
   return (field ?? "").split(" ")[0];
@@ -84,6 +85,7 @@ export default function DashboardPage() {
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const autoTriggeredRef = useRef<string>("");
   const [expandedQueues, setExpandedQueues] = useState<Set<number>>(new Set());
+  const [historyQueue, setHistoryQueue] = useState<{ number: string; name: string } | null>(null);
 
   const activeCalls = callsData?.value ?? [];
   const extensions = extensionsData?.value ?? [];
@@ -523,7 +525,7 @@ export default function DashboardPage() {
               };
 
               return (
-                <TiltCard key={queue.Id} maxTilt={6} glowColor={hasActiveCalls ? "rgba(245,158,11,0.25)" : "rgba(240,128,23,0.15)"} className="p-4">
+                <TiltCard key={queue.Id} maxTilt={6} glowColor={hasActiveCalls ? "rgba(245,158,11,0.25)" : "rgba(240,128,23,0.15)"} className="p-4" onClick={() => setHistoryQueue({ number: String(queue.Number), name: queue.Name })} title="Klick: Verlauf der letzten 3 Stunden">
                   <div className="mb-3 flex items-start justify-between">
                     <div>
                       <div className="flex items-center gap-1.5">
@@ -639,7 +641,7 @@ export default function DashboardPage() {
                         })}
                         {hiddenCount > 0 && (
                           <button
-                            onClick={() => toggleExpand(queue.Id)}
+                            onClick={(e) => { e.stopPropagation(); toggleExpand(queue.Id); }}
                             className="flex items-center gap-1 px-2 text-xs text-primary hover:text-primary/80 transition-colors"
                           >
                             {isExpanded
@@ -770,6 +772,10 @@ export default function DashboardPage() {
           </div>
         );
       })()}
+
+    {historyQueue && (
+      <QueueHistoryModal number={historyQueue.number} name={historyQueue.name} onClose={() => setHistoryQueue(null)} />
+    )}
     </>
   );
 }

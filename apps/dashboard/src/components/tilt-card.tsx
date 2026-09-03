@@ -11,6 +11,9 @@ interface TiltCardProps {
   glowColor?: string;
   /** Zusätzliche Inline-Styles */
   style?: CSSProperties;
+  /** Optional: macht die Kachel klickbar */
+  onClick?: () => void;
+  title?: string;
 }
 
 /**
@@ -24,11 +27,15 @@ export function TiltCard({
   children,
   className = "",
   style,
+  onClick,
+  title,
 }: TiltCardProps) {
   return (
     <div
       style={style}
-      className={`relative rounded-3xl border border-glass bg-surface-elevated overflow-hidden transition-[transform,border-color] duration-200 hover:-translate-y-0.5 hover:border-primary/40 ${className}`}
+      onClick={onClick}
+      title={title}
+      className={`relative rounded-3xl border border-glass bg-surface-elevated overflow-hidden transition-[transform,border-color] duration-200 hover:-translate-y-0.5 hover:border-primary/40 ${onClick ? "cursor-pointer" : ""} ${className}`}
     >
       {children}
     </div>

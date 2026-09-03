@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import useSWR from "swr";
+import { useState } from "react";
 import { useLiveProblems, type LiveProblemQueue } from "@/hooks/use-data";
+import { QueueHistoryModal } from "@/components/queue-history-modal";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -12,20 +12,8 @@ import {
   PhoneOutgoing,
   Gauge,
   Target,
-  X,
-  History,
   type LucideIcon,
 } from "lucide-react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-  CartesianGrid,
-} from "recharts";
 
 function fmtWait(s: number): string {
   if (s < 60) return `${s}s`;
@@ -65,128 +53,6 @@ type Variant = "acute" | "limit" | "sla";
  * Violett (kühl) trennt auf der Blau-Gelb-Achse — funktioniert auch bei
  * Rot-Grün-Sehschwäche; Icon + Rahmenstil trennen sogar in Graustufen.
  */
-interface HistoryResponse {
-  queue: string;
-  samples: Array<{ t: string; waiting: number; free: number; loggedIn: number; longestWait: number }>;
-  cdr: {
-    calls: number;
-    answered: number;
-    withinSla: number;
-    slaPct: number | null;
-    avgWaitSeconds: number;
-    maxWaitSeconds: number;
-  } | null;
-}
-
-const historyFetcher = (url: string) => fetch(url).then((r) => r.json());
-
-function fmtTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
-}
-
-/** Klick-Modal: 3h-Verlauf (Ringpuffer) + CDR-Statistik der letzten 3h */
-function HistoryModal({ queue, onClose }: { queue: LiveProblemQueue; onClose: () => void }) {
-  const { data, isLoading } = useSWR<HistoryResponse>(
-    `/api/queues/history?queue=${encodeURIComponent(queue.number)}`,
-    historyFetcher,
-    { refreshInterval: 60_000 }
-  );
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  const chartData = (data?.samples ?? []).map((s) => ({
-    zeit: fmtTime(s.t),
-    Wartend: s.waiting,
-    Frei: s.free,
-    Eingeloggt: s.loggedIn,
-    "Längste Wartezeit": s.longestWait,
-  }));
-
-  const axis = { fontSize: 10, fill: "#94a3b8" };
-  const tooltipStyle = {
-    background: "rgba(10, 22, 40, 0.95)",
-    border: "1px solid rgba(255,255,255,0.12)",
-    borderRadius: 8,
-    fontSize: 11,
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
-      <div
-        className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-glass bg-surface-elevated p-5"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mb-4 flex items-start justify-between gap-2">
-          <div>
-            <h3 className="flex items-center gap-2 text-lg font-semibold text-heading">
-              <History className="h-5 w-5 text-primary" />
-              {queue.name}
-            </h3>
-            <p className="text-xs text-muted">Warteschlange {queue.number} · Verlauf der letzten 3 Stunden</p>
-          </div>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-muted hover:bg-surface-muted hover:text-heading">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* CDR-Statistik-Zeile (letzte 3h, end-to-end) */}
-        {data?.cdr && (
-          <div className="mb-4 grid grid-cols-3 gap-2 sm:grid-cols-6">
-            <Stat icon={PhoneCall} value={data.cdr.calls} label="Anrufe 3h" />
-            <Stat icon={CheckCircle2} value={data.cdr.answered} label="angenommen" />
-            <Stat icon={Target} value={data.cdr.slaPct !== null ? `${data.cdr.slaPct}%` : "—"} label="in SLA" alert={data.cdr.slaPct !== null && data.cdr.slaPct < 50} alertClass="text-violet-300" />
-            <Stat icon={Clock} value={fmtWait(data.cdr.avgWaitSeconds)} label="Ø Wartezeit" />
-            <Stat icon={Clock} value={fmtWait(data.cdr.maxWaitSeconds)} label="max. Wartezeit" />
-            <Stat icon={PhoneOutgoing} value={data.cdr.calls - data.cdr.answered} label="verpasst" alert={data.cdr.calls - data.cdr.answered > 0} />
-          </div>
-        )}
-
-        {isLoading ? (
-          <p className="py-10 text-center text-sm text-muted">Lade Verlauf…</p>
-        ) : chartData.length < 2 ? (
-          <p className="py-10 text-center text-sm text-muted">
-            Noch zu wenig Verlaufsdaten — der Sammler läuft seit dem letzten Neustart und füllt sich minütlich.
-          </p>
-        ) : (
-          <div className="space-y-5">
-            <div>
-              <p className="mb-1 text-xs font-semibold text-secondary">Wartende · freie Agenten · eingeloggt</p>
-              <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
-                  <XAxis dataKey="zeit" tick={axis} tickLine={false} minTickGap={40} />
-                  <YAxis tick={axis} tickLine={false} axisLine={false} allowDecimals={false} />
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Legend wrapperStyle={{ fontSize: 10 }} iconType="plainline" />
-                  <Line type="monotone" dataKey="Wartend" stroke="#ef4444" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="Frei" stroke="#10b981" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="Eingeloggt" stroke="#64748b" strokeWidth={1.5} strokeDasharray="4 3" dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            <div>
-              <p className="mb-1 text-xs font-semibold text-secondary">Längste aktuelle Wartezeit (Sekunden)</p>
-              <ResponsiveContainer width="100%" height={140}>
-                <LineChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
-                  <XAxis dataKey="zeit" tick={axis} tickLine={false} minTickGap={40} />
-                  <YAxis tick={axis} tickLine={false} axisLine={false} allowDecimals={false} />
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Line type="monotone" dataKey="Längste Wartezeit" stroke="#f59e0b" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 function ProblemCard({ q, variant, onClick }: { q: LiveProblemQueue; variant: Variant; onClick?: () => void }) {
   const frame =
     variant === "acute"
@@ -358,7 +224,7 @@ export default function LiveProblemsPage() {
       )}
 
       {historyQueue && (
-        <HistoryModal queue={historyQueue} onClose={() => setHistoryQueue(null)} />
+        <QueueHistoryModal number={historyQueue.number} name={historyQueue.name} onClose={() => setHistoryQueue(null)} />
       )}
     </div>
   );
